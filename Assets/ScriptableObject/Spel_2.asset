@@ -10,11 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
-  m_Name: Nomal 1
+  m_Name: Spel_2
   m_EditorClassIdentifier: 
-  cardName: "\uB299\uACE0 \uBCD1\uB4E0 \uAC15\uB3C4\uB2E8"
-  description: "\uAE30\uBCF8 \uC801\uC778 \uC77C\uBC18 \uD558\uC218\uC778"
-  cardArtwork: {fileID: 21300000, guid: d30e4abc445c74045b767ce40f6444ad, type: 3}
-  manaCost: 1
-  attack: 1
-  health: 1
+  cardType: 1
+  minionTribe: 0
+  spellType: 2
+  cardName: "\uAC15\uD654++"
+  description: "\uBAA8\uB4E0 \uC544\uAD70 \uD558\uC218\uC778\uC5D0\uAC8C  2/2\uB97C
+    \uBD80\uC5EC\uD55C\uB2E4"
+  cardArtwork: {fileID: 21300000, guid: a85cd6d39db7c1e4eb3d61e18ab5c016, type: 3}
+  manaCost: 5
+  attack: 6
+  health: 7

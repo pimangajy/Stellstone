@@ -27,34 +27,8 @@ public class FieldCardController : MonoBehaviour
     public float effectDuration = 0.5f;
 
     [Header("공격 조준 효과 설정")]
-    [Tooltip("공격 조준 시 카드가 떠오르는 높이입니다.")]
     public float aimingFloatHeight = 0.8f;
-    [Tooltip("공격 조준 애니메이션의 속도입니다.")]
     public float aimingAnimDuration = 0.2f;
-
-    // ★★★ 추가된 변수 ★★★
-    [Tooltip("마우스를 따라다닐 커스텀 커서 오브젝트입니다.")]
-    public GameObject cursorPrefab;
-    [Tooltip("커서가 보드 위를 떠다닐 높이입니다.")]
-    public float cursorFloatHeight = 0.1f;
-
-    [Header("포물선 조준선 설정")]
-    [Tooltip("조준선 입자로 사용할 프리팹입니다.")]
-    public GameObject aimingDotPrefab;
-    [Tooltip("조준선을 구성할 입자의 개수입니다. (풀링 개수)")]
-    public int aimingDotCount = 20; // 이제 이 개수는 풀링에만 사용됩니다.
-    // public float dotsPerUnitDistance = 2f; // 이 변수는 더 이상 필요 없으므로 제거했습니다.
-    [Tooltip("포물선 궤도의 정점 높이입니다.")]
-    public float aimingCurveHeight = 2.0f;
-    [Tooltip("입자가 궤도를 따라 흐르는 속도입니다.")]
-    public float aimingDotSpeed = 1.5f;
-    [Tooltip("입자의 진행도에 따른 투명도 변화 곡선입니다.")]
-    public AnimationCurve dotAlphaCurve;
-
-    // --- 조준선 풀링 관련 변수 ---
-    private List<GameObject> aimingDotPool = new List<GameObject>();
-    private List<Renderer> aimingDotRenderers = new List<Renderer>();
-    private float[] aimingDotProgress;
 
     // --- 상태 및 목표 변수 ---
     private GameObject cursorInstance; // ★★★ 생성된 커서의 '실물(인스턴스)'을 담을 변수
@@ -90,29 +64,6 @@ public class FieldCardController : MonoBehaviour
         // 시작 시 목표 위치를 현재 위치로 초기화하여 순간이동 방지
         targetPosition = transform.position;
         targetRotation = neutralRotation;
-
-        // ★★★ 핵심 수정: 게임 시작 시 커서 프리팹으로 인스턴스를 '생성'합니다. ★★★
-        if (cursorPrefab != null)
-        {
-            // 1. 커서를 실제로 생성하고, 그 인스턴스를 변수에 저장합니다.
-            cursorInstance = Instantiate(cursorPrefab);
-            // 2. 생성된 커서를 즉시 비활성화하여 숨깁니다.
-            cursorInstance.SetActive(false);
-        }
-
-        // 조준선 오브젝트 풀 생성
-        if (aimingDotPrefab != null)
-        {
-            aimingDotProgress = new float[aimingDotCount];
-            for (int i = 0; i < aimingDotCount; i++)
-            {
-                GameObject dot = Instantiate(aimingDotPrefab);
-                dot.SetActive(false);
-                aimingDotPool.Add(dot);
-                aimingDotRenderers.Add(dot.GetComponent<Renderer>());
-                aimingDotProgress[i] = (float)i / aimingDotCount;
-            }
-        }
     }
 
     void Update()
@@ -129,8 +80,6 @@ public class FieldCardController : MonoBehaviour
             // 1. 커서 위치 업데이트
             UpdateCursorPosition();
 
-            // 2. 조준선 궤도 및 입자 위치/투명도 업데이트
-            UpdateAimingLine();
         }
     }
 
@@ -224,50 +173,35 @@ public class FieldCardController : MonoBehaviour
         Destroy(gameObject, 1f); // 1초 후 파괴
     }
 
-    // ★★★ 추가된 함수: 카드를 클릭했을 때 호출됩니다. ★★★
     private void OnMouseDown()
     {
-        // 소환 중(Tweening)이거나, 드래그 중이거나, 이미 조준 중일 때는 아무것도 하지 않습니다.
         if (DOTween.IsTweening(transform) || isBeingDragged || isAiming) return;
 
         Debug.Log(gameObject.name + " 클릭! 공격 준비 시작.");
         isAiming = true;
 
-        // ★★★ 추가: 커스텀 커서 활성화 및 기본 커서 숨기기 ★★★
-        if (cursorInstance != null) cursorInstance.SetActive(true);
-        Cursor.visible = false;
+        // ★★★ 핵심: AimingManager에게 조준 시작을 요청합니다. ★★★
+        // 자기 자신의 transform을 시작점으로 넘겨줍니다.
+        AimingManager.Instance.StartAiming(this.gameObject);
 
-        // ★★★ 이제 풀에 있는 모든 입자를 활성화합니다. ★★★
-        foreach (var dot in aimingDotPool)
-        {
-            dot.SetActive(true);
-        }
-
-        // 카드를 조준 높이만큼 부드럽게 위로 띄웁니다.
+        // 카드를 위로 띄우는 애니메이션은 그대로 실행합니다.
         transform.DOLocalMoveY(aimingFloatHeight, aimingAnimDuration).SetEase(Ease.OutQuad);
     }
 
-    // ★★★ 추가된 함수: 카드에서 마우스 클릭을 뗐을 때 호출됩니다. ★★★
     private void OnMouseUp()
     {
-        // 조준 중인 상태가 아니면 아무것도 하지 않습니다.
         if (!isAiming) return;
 
-        Debug.Log("클릭 해제. 공격 취소.");
+        Debug.Log("클릭 해제. 공격 시도.");
         isAiming = false;
 
-        // ★★★ 추가: 커스텀 커서 비활성화 및 기본 커서 보이기 ★★★
-        if (cursorInstance != null) cursorInstance.SetActive(false);
-        Cursor.visible = true;
+        // ★★★ 핵심: AimingManager에게 조준 중단을 요청합니다. ★★★
+        AimingManager.Instance.StopAiming();
 
-        // ★★★ 조준선 입자 비활성화 ★★★
-        foreach (var dot in aimingDotPool)
-        {
-            dot.SetActive(false);
-        }
+        // 여기에 공격 대상을 확인하는 로직을 추가합니다.
+        // Raycast 등으로 마우스 아래에 EnemyCardTarget이 있는지 확인...
 
-        // 나중에 여기에 공격 대상을 확인하는 로직을 추가할 수 있습니다.
-        // 지금은 공격을 취소하고 원래 자리로 돌아옵니다.
+        // 공격을 취소하고 원래 자리로 돌아옵니다.
         transform.DOLocalMove(restingPosition, aimingAnimDuration).SetEase(Ease.OutCubic);
     }
 
@@ -276,43 +210,10 @@ public class FieldCardController : MonoBehaviour
     /// </summary>
     private void UpdateCursorPosition()
     {
-        if (cursorInstance == null) return;
 
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, 100f, gameBoardLayer))
-        {
-            Vector3 cursorTargetPosition = hit.point + new Vector3(0, cursorFloatHeight, 0);
-            cursorInstance.transform.position = Vector3.Lerp(cursorInstance.transform.position, cursorTargetPosition, Time.deltaTime * moveSpeed * 2f);
-        }
     }
 
-    /// <summary>
-    /// 포물선 조준선을 업데이트하는 함수 (로직 단순화)
-    /// </summary>
-    private void UpdateAimingLine()
-    {
-        if (aimingDotPool.Count == 0 || cursorInstance == null) return;
 
-        Vector3 startPoint = transform.position;
-        Vector3 endPoint = cursorInstance.transform.position;
-        Vector3 controlPoint = (startPoint + endPoint) / 2 + Vector3.up * aimingCurveHeight;
-
-        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
-
-        // ★★★ 핵심 수정: 이제 거리를 계산하지 않고, 항상 모든 입자를 업데이트합니다. ★★★
-        for (int i = 0; i < aimingDotPool.Count; i++)
-        {
-            aimingDotProgress[i] = (aimingDotProgress[i] + Time.deltaTime * aimingDotSpeed) % 1.0f;
-            Vector3 position = GetPointOnBezierCurve(startPoint, controlPoint, endPoint, aimingDotProgress[i]);
-            aimingDotPool[i].transform.position = position;
-
-            // 투명도 계산 및 적용
-            float alpha = dotAlphaCurve.Evaluate(aimingDotProgress[i]);
-            propBlock.SetColor("_Color", new Color(1, 1, 1, alpha));
-            aimingDotRenderers[i].SetPropertyBlock(propBlock);
-        }
-    }
 
     private Vector3 GetPointOnBezierCurve(Vector3 p0, Vector3 p1, Vector3 p2, float t)
     {

@@ -24,6 +24,10 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     private bool isOverPlayArea = false;
     private float thresholdY;
 
+    // ★★★ 주문 타입별 상태를 관리하는 새로운 변수들 ★★★
+    private bool isAimingFromHand = false; // 단일 주문을 손에서 조준 중인가?
+    private bool isCastingAoeSpell = false; // 광역 주문을 시전 중인가?
+
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
@@ -41,6 +45,19 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         originalSiblingIndex = transform.GetSiblingIndex();
         thresholdY = Screen.height * playAreaThreshold;
 
+        // ★★★ 드래그 시작 시 카드 타입 확인 ★★★
+        CardData data = handCardController.cardData;
+        if (data.cardType == CardType.주문 && data.spellType == SpellType.단일_대상)
+        {
+            // 단일 대상 주문이면, 손에서 조준 상태로 전환
+            isAimingFromHand = true;
+            // ★★★ 핵심: AimingManager에게 조준 시작을 요청합니다. ★★★
+            // 이 카드(UI)의 transform을 시작점으로 넘겨줍니다.
+            AimingManager.Instance.StartAiming(this.gameObject);
+            Debug.Log("단일 대상 주문 조준 시작!");
+        }
+
+        // 일반적인 드래그 준비
         transform.SetParent(transform.root);
         transform.SetAsLastSibling();
         canvasGroup.blocksRaycasts = false;
@@ -48,8 +65,13 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
 
     public void OnDrag(PointerEventData eventData)
     {
-        bool currentlyOver = eventData.position.y > thresholdY;
+        if (isAimingFromHand)
+        {
+            return;
+        }
 
+        // --- 하수인 / 광역 주문 드래그 로직 ---
+        bool currentlyOver = eventData.position.y > thresholdY;
         if (currentlyOver && !isOverPlayArea)
         {
             isOverPlayArea = true;
@@ -61,16 +83,12 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
             OnLeavePlayArea();
         }
 
-        // ★★★ 핵심 변경점 ★★★
         if (isOverPlayArea && fieldCardController != null)
         {
-            // 이제 필드 카드의 움직임을 직접 계산하지 않고,
-            // FieldCardController에게 마우스 정보만 넘겨주고 움직이라고 명령합니다.
             fieldCardController.UpdateDragTarget(eventData.position, eventData.delta);
         }
         else
         {
-            // 핸드 카드(UI)는 여전히 여기서 직접 위치를 제어합니다.
             rectTransform.position = eventData.position;
         }
     }
@@ -79,6 +97,30 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     {
         canvasGroup.blocksRaycasts = true;
 
+        // --- 단일 대상 주문 발동 ---
+        if (isAimingFromHand)
+        {
+            // ★★★ 핵심: AimingManager에게 조준 중단을 요청합니다. ★★★
+            AimingManager.Instance.StopAiming();
+            isAimingFromHand = false;
+
+            // 타겟 확인 로직 (예시)
+            if (eventData.pointerEnter != null && eventData.pointerEnter.GetComponent<EnemyCardTarget>() != null)
+            {
+                Debug.Log(eventData.pointerEnter.name + "에 단일 주문 발동!");
+                // 주문 효과 적용...
+                Destroy(gameObject); // 주문 카드 파괴
+                HandManager.Instance.RemoveCardFromHand(handCardController);
+            }
+            else
+            {
+                // 유효한 타겟이 아니면 핸드로 복귀
+                ReturnToHand();
+            }
+            return;
+        }
+
+        // --- 하수인 / 광역 주문 발동 ---
         if (isOverPlayArea && fieldCardInstance != null)
         {
             FieldSlot targetSlot = null;
@@ -87,17 +129,21 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
                 targetSlot = eventData.pointerEnter.GetComponent<FieldSlot>();
             }
 
-            if (targetSlot != null && targetSlot.IsAvailable())
+            // 하수인 배치
+            if (handCardController.cardData.cardType == CardType.하수인 && targetSlot != null && targetSlot.IsAvailable())
             {
                 targetSlot.OccupySlot(fieldCardController);
                 fieldCardController.StartPlacementAnimation(targetSlot.transform);
-
-                // ★★★ 수정된 부분 ★★★
-                // HandManager에게 이 카드가 손에서 제거되었음을 알립니다.
-                // HandManager가 리스트 관리와 카드 정렬을 모두 책임집니다.
                 HandManager.Instance.RemoveCardFromHand(handCardController);
-
-                // UI 카드 오브젝트를 파괴합니다.
+                Destroy(gameObject);
+            }
+            // 광역 주문 발동
+            else if (handCardController.cardData.cardType == CardType.주문 && handCardController.cardData.spellType == SpellType.범위_광역)
+            {
+                Debug.Log("광역 주문 발동!");
+                // 필드 카드를 특정 위치로 이동시켜 발동 연출 시작
+                // 예: fieldCardController.CastAoeSpell(spellCastPosition);
+                HandManager.Instance.RemoveCardFromHand(handCardController);
                 Destroy(gameObject);
             }
             else
