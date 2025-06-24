@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: Nomal
   m_EditorClassIdentifier: 
-  cardName: "\uD558\uC218\uC778"
+  cardName: "\uB09C\uD3ED\uD55C \uAC15\uB3C4\uB2E8"
   description: "\uAE30\uBCF8 \uC801\uC778 \uC77C\uBC18 \uD558\uC218\uC778"
-  cardArtwork: {fileID: 0}
+  cardArtwork: {fileID: 21300000, guid: 1501e58bbc3816d4880fb6b22b0a3dd4, type: 3}
   manaCost: 2
   attack: 2
   health: 3

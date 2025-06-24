@@ -4,25 +4,22 @@ using UnityEngine;
 
 public class FieldSlot : MonoBehaviour
 {
-    // private으로 선언하여 외부에서 직접 수정하는 것을 막고,
-    // [SerializeField]를 사용하여 인스펙터에서만 확인 가능하게 합니다.
-    [SerializeField] private bool isOccupied = false;
+    [SerializeField] private FieldCardController occupiedCard = null;
 
     /// <summary>
     /// 이 슬롯에 카드를 놓을 수 있는지 여부를 반환합니다.
     /// </summary>
     public bool IsAvailable()
     {
-        return !isOccupied;
+        return occupiedCard == null;
     }
 
     /// <summary>
-    /// 이 슬롯을 점유 상태로 변경합니다.
+    /// 이 슬롯을 점유 상태로 변경하고, 어떤 카드가 차지했는지 기록합니다.
     /// </summary>
-    public void OccupySlot()
+    public void OccupySlot(FieldCardController card)
     {
-        isOccupied = true;
-
+        occupiedCard = card;
     }
 
     /// <summary>
@@ -30,6 +27,14 @@ public class FieldSlot : MonoBehaviour
     /// </summary>
     public void VacateSlot()
     {
-        isOccupied = false;
+        occupiedCard = null;
+    }
+
+    /// <summary>
+    /// 이 슬롯에 있는 카드의 컨트롤러를 반환합니다. 카드가 없으면 null을 반환합니다.
+    /// </summary>
+    public FieldCardController GetOccupiedCard()
+    {
+        return occupiedCard;
     }
 }

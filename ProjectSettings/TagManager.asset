@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - DropZone
+  - PlayerCursor
   layers:
   - Default
   - TransparentFX

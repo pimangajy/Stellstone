@@ -12,14 +12,14 @@ public class GameManager : MonoBehaviour
     [Tooltip("카드가 추가될 플레이어의 손(Hand) 패널입니다.")]
     public Transform playerHandTransform; // 인스펙터에서 핸드 패널을 연결해 주세요.
 
-    private HandArranger handArranger; // 핸드 정렬을 위한 스크립트 참조
+    private HandManager handManager; // 핸드 정렬을 위한 스크립트 참조
 
     void Start()
     {
         // playerHandTransform에 HandArranger 스크립트가 있는지 확인하고 가져옵니다.
         if (playerHandTransform != null)
         {
-            handArranger = playerHandTransform.GetComponent<HandArranger>();
+            handManager = playerHandTransform.GetComponent<HandManager>();
         }
     }
 
@@ -42,12 +42,13 @@ public class GameManager : MonoBehaviour
         GameObject newCard = Instantiate(cardPrefab, playerHandTransform);
         // 램덤 색 부여
         newCard.GetComponent<Image>().color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
+        newCard.GetComponent<CardInHandController>().Initialize();
         Debug.Log(newCard.name + " 카드를 핸드에 추가했습니다.");
 
         // 2. 카드가 추가되었으므로, 핸드 정렬 스크립트를 호출하여 카드 위치를 다시 정렬합니다.
-        if (handArranger != null)
+        if (handManager != null)
         {
-            handArranger.ArrangeCards();
+            handManager.ArrangeCards();
         }
     }
 }

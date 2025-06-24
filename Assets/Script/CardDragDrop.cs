@@ -15,10 +15,12 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     private CanvasGroup canvasGroup;
     private Transform originalParent;
     private int originalSiblingIndex;
+    private CardInHandController handCardController; // 이 카드의 데이터 및 상태 관리자
 
     // --- 상태 관리 변수 ---
     private GameObject fieldCardInstance;
     private FieldCardController fieldCardController; // 필드 카드 컨트롤러 참조
+    private CardDisplay cardDisplay;
     private bool isOverPlayArea = false;
     private float thresholdY;
 
@@ -26,6 +28,7 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     {
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
+        handCardController = GetComponent<CardInHandController>();
         if (canvasGroup == null)
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
@@ -84,34 +87,21 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
                 targetSlot = eventData.pointerEnter.GetComponent<FieldSlot>();
             }
 
-            // ★★★ 핵심 수정: 슬롯이 존재하고, '비어있는지' 확인합니다. ★★★
             if (targetSlot != null && targetSlot.IsAvailable())
             {
-                Debug.Log(targetSlot.name + "에 카드를 성공적으로 놓았습니다!");
-
-                // 슬롯을 점유 상태로 변경합니다.
-                targetSlot.OccupySlot();
-
-                // 필드 카드의 배치 애니메이션을 호출합니다.
+                targetSlot.OccupySlot(fieldCardController);
                 fieldCardController.StartPlacementAnimation(targetSlot.transform);
 
-                // ★★★ 핵심 수정 부분 ★★★
+                // ★★★ 수정된 부분 ★★★
+                // HandManager에게 이 카드가 손에서 제거되었음을 알립니다.
+                // HandManager가 리스트 관리와 카드 정렬을 모두 책임집니다.
+                HandManager.Instance.RemoveCardFromHand(handCardController);
 
-                // 1. 핸드 정렬 스크립트의 참조를 미리 가져옵니다.
-                HandArranger handArranger = originalParent.GetComponent<HandArranger>();
-
-                // 2. 핸드에 있던 UI 카드를 먼저 파괴합니다.
+                // UI 카드 오브젝트를 파괴합니다.
                 Destroy(gameObject);
-
-                // 3. 파괴된 후, 핸드 정렬을 호출하여 남은 카드들을 재정렬합니다.
-                if (handArranger != null)
-                {
-                    handArranger.ArrangeCards();
-                }
             }
             else
             {
-                // 유효한 슬롯이 아니므로 핸드로 돌아갑니다.
                 Destroy(fieldCardInstance);
                 ReturnToHand();
             }
@@ -125,19 +115,27 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     void OnEnterPlayArea(PointerEventData eventData)
     {
         canvasGroup.alpha = 0;
-        if (fieldCardPrefab != null)
+
+        if (handCardController == null || handCardController.cardData == null || fieldCardPrefab == null)
         {
-            // 1. 필드 카드를 생성합니다. (임시 위치는 화면 밖으로 설정하여 깜빡임을 방지합니다)
-            fieldCardInstance = Instantiate(fieldCardPrefab, new Vector3(0, -1000, 0), Quaternion.identity);
+            Debug.LogError("카드 정보가 없거나 필드 카드 프리팹이 지정되지 않았습니다!");
+            return;
+        }
 
-            // 2. 생성된 필드 카드에서 컨트롤러 컴포넌트를 가져옵니다.
-            fieldCardController = fieldCardInstance.GetComponent<FieldCardController>();
+        fieldCardInstance = Instantiate(fieldCardPrefab, new Vector3(0, -1000, 0), Quaternion.identity);
+        fieldCardController = fieldCardInstance.GetComponent<FieldCardController>();
 
-            // 3. 컨트롤러에게 초기 위치를 설정하라고 명령합니다.
-            if (fieldCardController != null)
-            {
-                fieldCardController.SetInitialPosition(eventData.position);
-            }
+        if (fieldCardController != null)
+        {
+            // ★★★ 이제 Initialize 함수 호출 하나로 모든 설정(데이터, 스탯, 시각적 표현)이 끝납니다. ★★★
+            fieldCardController.Initialize(
+                handCardController.cardData,
+                handCardController.attackModifier,
+                handCardController.healthModifier
+            );
+
+            fieldCardController.SetInitialPosition(eventData.position);
+            fieldCardController.StartDragging();
         }
     }
 
@@ -156,10 +154,10 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         canvasGroup.alpha = 1;
         transform.SetParent(originalParent);
         transform.SetSiblingIndex(originalSiblingIndex);
-        HandArranger handArranger = originalParent.GetComponent<HandArranger>();
-        if (handArranger != null)
+        HandManager handManager = originalParent.GetComponent<HandManager>();
+        if (handManager != null)
         {
-            handArranger.ArrangeCards();
+            handManager.ArrangeCards();
         }
     }
 }
