@@ -182,7 +182,7 @@ public class FieldCardController : MonoBehaviour
 
         // ★★★ 핵심: AimingManager에게 조준 시작을 요청합니다. ★★★
         // 자기 자신의 transform을 시작점으로 넘겨줍니다.
-        AimingManager.Instance.StartAiming(this.gameObject);
+        AimingManager.Instance.StartAiming(this.gameObject);    
 
         // 카드를 위로 띄우는 애니메이션은 그대로 실행합니다.
         transform.DOLocalMoveY(aimingFloatHeight, aimingAnimDuration).SetEase(Ease.OutQuad);

@@ -51,6 +51,7 @@ public class AimingManager : MonoBehaviour
 
     // --- 오브젝트 풀링 변수 ---
     private List<GameObject> aimingDotPool = new List<GameObject>();
+    private List<Renderer> aimingDotRenderers = new List<Renderer>(); // ★★★ 렌더러 컴포넌트를 미리 저장할 리스트
     private float[] aimingDotProgress;
 
     /// <summary>
@@ -72,6 +73,8 @@ public class AimingManager : MonoBehaviour
                 GameObject dot = Instantiate(aimingDotPrefab);
                 dot.SetActive(false);
                 aimingDotPool.Add(dot);
+                // ★★★ 생성 시점에 렌더러를 미리 찾아 저장해 둡니다. ★★★
+                aimingDotRenderers.Add(dot.GetComponent<Renderer>());
                 aimingDotProgress[i] = (float)i / aimingDotCount;
             }
         }
@@ -92,13 +95,15 @@ public class AimingManager : MonoBehaviour
     public void StartAiming(GameObject starter)
     {
         startObject = starter;
-        // UI 오브젝트인지 확인하기 위해 RectTransform 컴포넌트를 가져옵니다.
-        startRectTransform = starter.GetComponent<RectTransform>();
+        startRectTransform = starter.GetComponent<RectTransform>(); // UI 카드인지 확인
 
         isAiming = true;
         Cursor.visible = false;
         if (cursorInstance != null) cursorInstance.SetActive(true);
-        foreach (var dot in aimingDotPool) dot.SetActive(true);
+        foreach (var dot in aimingDotPool)
+        {
+            dot.SetActive(true);
+        }
     }
 
     /// <summary>
@@ -131,7 +136,7 @@ public class AimingManager : MonoBehaviour
 
         Vector3 startPoint;
 
-        // ★★★ 핵심 수정: UI 카드인지, 3D 필드 카드인지 확인합니다. ★★★
+        // ★★★ 핵심 수정: UI 카드인지, 3D 필드 카드인지 확인하여 시작점을 계산합니다. ★★★
         if (startRectTransform != null) // RectTransform이 있다면 UI 오브젝트입니다.
         {
             // UI의 스크린 좌표를 3D 월드 좌표로 변환합니다.
@@ -143,8 +148,8 @@ public class AimingManager : MonoBehaviour
             }
             else
             {
-                // 레이캐스트 실패 시 대체 위치
-                startPoint = startRectTransform.position;
+                // UI 카드의 위치를 3D 공간으로 변환합니다. (카메라와의 거리를 10으로 가정)
+                startPoint = Camera.main.ScreenToWorldPoint(new Vector3(startRectTransform.position.x, startRectTransform.position.y, 10f));
             }
         }
         else // 일반 3D 오브젝트입니다.
@@ -152,8 +157,11 @@ public class AimingManager : MonoBehaviour
             startPoint = startObject.transform.position;
         }
 
+
         Vector3 endPoint = cursorInstance.transform.position;
         Vector3 controlPoint = (startPoint + endPoint) / 2 + Vector3.up * aimingCurveHeight;
+
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
 
         for (int i = 0; i < aimingDotPool.Count; i++)
         {
@@ -161,8 +169,15 @@ public class AimingManager : MonoBehaviour
             Vector3 position = GetPointOnBezierCurve(startPoint, controlPoint, endPoint, aimingDotProgress[i]);
             aimingDotPool[i].transform.position = position;
 
-            float scaleValue = dotCurve.Evaluate(aimingDotProgress[i]);
-            aimingDotPool[i].transform.localScale = Vector3.one * scaleValue;
+            float alphaValue = dotCurve.Evaluate(aimingDotProgress[i]);
+
+            Renderer dotRenderer = aimingDotRenderers[i];
+            if (dotRenderer != null)
+            {
+                dotRenderer.GetPropertyBlock(propBlock);
+                propBlock.SetColor("_Color", new Color(1, 1, 1, alphaValue));
+                dotRenderer.SetPropertyBlock(propBlock);
+            }
         }
     }
 
