@@ -1225,18 +1225,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 265d477403f23f041a5553137a466e8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cardInHandPrefab: {fileID: 6201881943158959009, guid: 8a84bcc6f0f2a2f4195857b66d902420, type: 3}
+  handPanel: {fileID: 693870579}
   drawableCards:
   - {fileID: 11400000, guid: 90bf6762cd2200647acff02ffe31f130, type: 2}
   - {fileID: 11400000, guid: ea46054015dd3c143ae095270e1c0a6b, type: 2}
   - {fileID: 11400000, guid: d01134816129dd34aae733a689cf97a3, type: 2}
   - {fileID: 11400000, guid: 5e5d697a5fcf41c4caf67a95c8a1c89e, type: 2}
   - {fileID: 11400000, guid: 03331bc8c51d5f14687d456e4732d134, type: 2}
-  cardInHandPrefab: {fileID: 6201881943158959009, guid: 8a84bcc6f0f2a2f4195857b66d902420, type: 3}
-  handPanel: {fileID: 693870579}
   arcRadius: 1400
   maxArcAngle: 180
   anglePerCard: 4
-  yOffset: -1700
+  yOffset: -1550
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -2659,7 +2659,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e06fcec56ec4054a9152df40f463029, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cursorPrefab: {fileID: 919132149155446097, guid: d12410441b066834983c2d22f4d4971d, type: 3}
+  cursorPrefab: {fileID: 1115823167268186173, guid: 2e792991cc8227548ae167c1481c157d, type: 3}
   cursorFloatHeight: 1
   cursorMoveSpeed: 20
   boardLayer:

@@ -273,7 +273,6 @@ public class FieldCardController : MonoBehaviour
     /// </summary>
     private void PlayRiseAnimation()
     {
-        Debug.Log("1단계: 상승 애니메이션 시작");
 
         Sequence riseSequence = DOTween.Sequence();
 
@@ -293,7 +292,6 @@ public class FieldCardController : MonoBehaviour
     /// </summary>
     private void OnRiseComplete()
     {
-        Debug.Log("2단계: 상승 완료. 특수 연출 대기...");
 
         // 이 곳에서 원하는 특수 효과(파티클, 사운드 등)를 재생할 수 있습니다.
         // 지금은 임시로 '연출 시간'만큼 기다렸다가 다음 단계를 진행합니다.
@@ -317,7 +315,6 @@ public class FieldCardController : MonoBehaviour
     /// </summary>
     private void PlayLandAnimation()
     {
-        Debug.Log("3단계: 착지 애니메이션 시작");
 
         Sequence landSequence = DOTween.Sequence();
        

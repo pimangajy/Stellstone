@@ -641,12 +641,10 @@ GameObject:
   - component: {fileID: 3241943868870438872}
   - component: {fileID: 2747410629339834884}
   - component: {fileID: 3013702596713979239}
-  - component: {fileID: 2190411610072851002}
-  - component: {fileID: 3868996092766091398}
   - component: {fileID: 8532963422366894665}
   - component: {fileID: -7631573127147735492}
   m_Layer: 5
-  m_Name: HandCard
+  m_Name: HandCard_Afterimage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -727,34 +725,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &2190411610072851002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6201881943158959009}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d35b6dec911b14542a10b13be9b12ef1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  hoverScaleMultiplier: 1.2
---- !u!114 &3868996092766091398
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6201881943158959009}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7215f91014565de4396f36d6df6d1bb8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  fieldCardPrefab: {fileID: 3502702891989582137, guid: da75d0b185ce6f749b18fe4fec3d4163, type: 3}
-  ghostCardPrefab: {fileID: 6201881943158959009, guid: 7c159d9644515944a9c67b9d81cd2126, type: 3}
-  playAreaThreshold: 0.2
 --- !u!114 &8532963422366894665
 MonoBehaviour:
   m_ObjectHideFlags: 0
