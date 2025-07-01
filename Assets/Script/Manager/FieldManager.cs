@@ -30,6 +30,56 @@ public class FieldManager : MonoBehaviour
 
 
     /// <summary>
+    /// 주어진 카드의 타겟팅 규칙에 맞는 모든 필드 카드를 하이라이트합니다.
+    /// </summary>
+    public void HighlightValidTargets(CardData sourceCard)
+    {
+        Debug.Log("필드 전체에 하이라이트 표시");
+        if (sourceCard == null) return;
+
+        TargetRule rule = sourceCard.targetRule;
+
+        // 모든 슬롯을 순회하며 규칙에 맞는 카드를 찾습니다.
+        foreach (var slot in playerSlots)
+        {
+            FieldCardController card = slot.GetOccupiedCard();
+            if (card != null)
+            {
+                // 아군 전용 규칙이거나 모두 가능한 규칙일 때
+                bool canTarget = (rule == TargetRule.아군_전용 || rule == TargetRule.모두_가능);
+                card.SetTargetable(canTarget);
+            }
+        }
+        foreach (var slot in enemySlots)
+        {
+            FieldCardController card = slot.GetOccupiedCard();
+            if (card != null)
+            {
+                // 적군 전용 규칙이거나 모두 가능한 규칙일 때
+                bool canTarget = (rule == TargetRule.적군_전용 || rule == TargetRule.모두_가능);
+                card.SetTargetable(canTarget);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 필드의 모든 하이라이트를 끕니다.
+    /// </summary>
+    public void ClearAllHighlights()
+    {
+        foreach (var slot in playerSlots)
+        {
+            FieldCardController card = slot.GetOccupiedCard();
+            if (card != null) card.SetTargetable(false);
+        }
+        foreach (var slot in enemySlots)
+        {
+            FieldCardController card = slot.GetOccupiedCard();
+            if (card != null) card.SetTargetable(false);
+        }
+    }
+
+    /// <summary>
     /// 두 하수인 간의 전투를 지휘합니다.
     /// </summary>
     public void RequestCombat(FieldCardController attacker, FieldCardController target)

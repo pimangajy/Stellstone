@@ -55,6 +55,11 @@ public class FieldCardController : MonoBehaviour
     [Tooltip("이 카드가 적의 카드이면 체크합니다.")]
     public bool enermy = false; // ★★★ 아군/적군 구분용 변수
 
+    [Header("참조")]
+    [Tooltip("타겟팅되었을 때 활성화될 하이라이트 오브젝트입니다.")]
+    public GameObject highlightEffect;
+    public bool isTargetable { get; private set; } = false; // ★★★ 외부에서 읽기만 가능한 상태 변수
+
     // 외부에서는 이 프로퍼티를 통해 값을 '읽기만' 할 수 있습니다.
     public int CurrentAttack => currentAttack;
     public int CurrentHealth => currentHealth;
@@ -67,6 +72,11 @@ public class FieldCardController : MonoBehaviour
         // 시작 시 목표 위치를 현재 위치로 초기화하여 순간이동 방지
         targetPosition = transform.position;
         targetRotation = neutralRotation;
+
+        
+        // 시작 시 하이라이트 효과를 확실히 끕니다.
+        if (highlightEffect != null) highlightEffect.SetActive(false);
+        
     }
 
     void Update()
@@ -108,6 +118,19 @@ public class FieldCardController : MonoBehaviour
             cardDisplay.ApplyCardData();
             // 그 다음, 버프가 적용된 현재 스탯으로 숫자만 다시 갱신합니다.
             UpdateStatDisplay();
+        }
+    }
+
+    /// <summary>
+    /// 이 카드의 하이라이트 및 타겟 가능 상태를 설정합니다.
+    /// FieldManager가 이 함수를 호출하여 타겟을 지정합니다.
+    /// </summary>
+    public void SetTargetable(bool isTargetable)
+    {
+        this.isTargetable = isTargetable;
+        if (highlightEffect != null)
+        {
+            highlightEffect.SetActive(isTargetable);
         }
     }
 

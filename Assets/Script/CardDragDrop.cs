@@ -150,26 +150,8 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
             targetController = eventData.pointerEnter.GetComponent<FieldCardController>();
         }
 
-        if (targetController != null)
-        {
-            // 이 주문 카드의 타겟팅 규칙을 가져옵니다.
-            TargetRule rule = handCardController.cardData.targetRule;
-
-            // 규칙에 따라 타겟이 유효한지 판별합니다.
-            if (rule == TargetRule.아군_전용 && targetController.enermy)
-            {
-                ReturnToHand(); 
-                return;
-            }
-            else if (rule == TargetRule.적군_전용 && !targetController.enermy)
-            {
-                ReturnToHand();
-                return;
-            }
-        }
-
-        // ★★★ 핵심 수정: 유효한 타겟(FieldCardController가 있고, '적' 카드인 경우)을 확인합니다.
-        if (targetController != null && handCardController.cardData.cardType == CardType.주문)
+        // ★★★ 핵심 수정: 유효한 타겟(FieldCardController가 있고, isTargetable 상태로 유효성을 확인합니다.
+        if (targetController != null && targetController.isTargetable)
         {
             // 마나를 소모하고 주문을 처리합니다.
             PlayerManaManager.Instance.SpendMana(handCardController.CurrentMana);
@@ -265,6 +247,7 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         {
             isAimingFromHand = true;
             AimingManager.Instance.StartAiming(ghostCardInstance);
+            FieldManager.Instance.HighlightValidTargets(data);
         }
         else
         {
@@ -315,6 +298,7 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
             isAimingFromHand = false;
         }
         DestroyFieldCard();
+        FieldManager.Instance.ClearAllHighlights();
 
         // UI 카드를 원래의 부모, 순서, 상태로 되돌립니다.
         canvasGroup.blocksRaycasts = true;

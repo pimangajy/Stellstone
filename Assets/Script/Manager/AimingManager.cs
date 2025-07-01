@@ -88,6 +88,7 @@ public class AimingManager : MonoBehaviour
 
         UpdateCursorPosition();
         UpdateAimingLine();
+        UpdateTargetingVisuals();
     }
 
     // <summary>
@@ -115,6 +116,22 @@ public class AimingManager : MonoBehaviour
         Cursor.visible = true;
         if (cursorInstance != null) cursorInstance.SetActive(false);
         foreach (var dot in aimingDotPool) dot.SetActive(false);
+    }
+
+    /// <summary>
+    /// 조준 중인 타겟의 상태에 따라 커서 모양(색상)을 변경합니다.
+    /// </summary>
+    private void UpdateTargetingVisuals()
+    {
+        // if (cursorRenderer == null) return;
+
+        // FieldCardController target = FindTargetUnderMouse();
+
+        // ★★★ 핵심 수정: 이제 타겟의 isTargetable 상태만 확인합니다. ★★★
+        // bool isValid = (target != null && target.isTargetable);
+
+        // 유효성에 따라 커서의 머티리얼 색상을 변경합니다.
+        // cursorRenderer.material.color = isValid ? validTargetColor : invalidTargetColor;
     }
 
     private void UpdateCursorPosition()
