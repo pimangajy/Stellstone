@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7721027657130487374}
   - component: {fileID: 6275406849671671002}
   - component: {fileID: 2346157650498464626}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Torus
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -94,7 +94,7 @@ GameObject:
   - component: {fileID: 7610975508663754502}
   - component: {fileID: 7678930816303988107}
   - component: {fileID: 2124768645482003605}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Target
   m_TagString: PlayerCursor
   m_Icon: {fileID: 0}
@@ -179,7 +179,7 @@ GameObject:
   - component: {fileID: 1031282066762166235}
   - component: {fileID: 5449100164287507052}
   - component: {fileID: 7319187233991895388}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Cylinder
   m_TagString: Untagged
   m_Icon: {fileID: 0}

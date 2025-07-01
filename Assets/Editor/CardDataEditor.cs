@@ -22,7 +22,8 @@ public class CardDataEditor : Editor
         {
             do
             {
-                if (prop.name != "attack" && prop.name != "health" && prop.name != "minionTribe" && prop.name != "spellType" && prop.name != "EquipmentType")
+                if (prop.name != "attack" && prop.name != "health" && prop.name != "minionTribe" && prop.name != "spellType" && prop.name != "EquipmentType" 
+                    && prop.name != "targetRule")
                 {
                     EditorGUILayout.PropertyField(prop, true);
                 }
@@ -45,6 +46,7 @@ public class CardDataEditor : Editor
             case CardType.주문:
                 EditorGUILayout.LabelField("주문 전용 스탯", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("spellType"), new GUIContent("타입"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("targetRule"), new GUIContent("대상"));
                 break;
                 
             case CardType.장비:

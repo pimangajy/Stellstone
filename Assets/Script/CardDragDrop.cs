@@ -108,53 +108,119 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     /// </summary>
     public void OnEndDrag(PointerEventData eventData)
     {
-        // 단일 주문 조준 중이었다면, 그 결과를 먼저 처리합니다.
-        if (isAimingFromHand)
+        // 1. 마나가 부족하면, 카드를 손으로 되돌리고 함수를 즉시 종료합니다.
+        if (!PlayerManaManager.Instance.CanSpendMana(handCardController.CurrentMana))
         {
-            AimingManager.Instance.StopAiming(); // 조준선 비활성화
-            isAimingFromHand = false;
-
-            // 마우스 커서 아래에 유효한 타겟(아군 또는 적 카드)이 있는지 확인합니다.
-            if (eventData.pointerEnter != null && (eventData.pointerEnter.GetComponent<FieldCardController>() != null || eventData.pointerEnter.GetComponent<EnemyCardTarget>() != null))
-            {
-                Debug.Log(eventData.pointerEnter.name + "에 단일 주문 발동!");
-                DestroyGhostCard(); // 잔상 제거
-                HandManager.Instance.RemoveCardFromHand(handCardController); // 핸드에서 카드 정보 제거
-                Destroy(gameObject); // 핸드 카드 오브젝트 파괴
-            }
-            else
-            {
-                ReturnToHand(); // 유효한 타겟이 아니면 핸드로 복귀
-            }
-            return; // 주문 처리가 끝났으므로 함수를 종료합니다.
+            Debug.Log("마나가 부족합니다!");
+            ReturnToHand();
+            return; // 여기서 모든 동작을 중단합니다.
         }
 
-        // 필드 위에 카드가 있는 상태로 드래그를 끝냈다면, 그 결과를 처리합니다.
-        if (isOverPlayArea && fieldCardInstance != null)
+        // 1. 단일 주문 조준 중이었다면, 주문 처리 로직을 실행합니다.
+        if (isAimingFromHand)
         {
-            FieldSlot targetSlot = null;
-            if (eventData.pointerEnter != null)
-            {
-                targetSlot = eventData.pointerEnter.GetComponent<FieldSlot>();
-            }
+            ResolveAimingDrop(eventData);
+        }
+        // 2. 필드 위에 카드가 있는 상태였다면, 필드 처리 로직을 실행합니다.
+        else if (isOverPlayArea && fieldCardInstance != null)
+        {
+            // 마나를 소모하고 필드 드롭을 처리합니다.
+            PlayerManaManager.Instance.SpendMana(handCardController.CurrentMana);
+            ResolveFieldDrop(eventData);
+        }
+        // 3. 그 외의 모든 경우 (잘못된 위치), 핸드로 복귀합니다.
+        else
+        {
+            ReturnToHand();
+        }
+    }
 
-            // 하수인 카드이고, 유효한 빈 슬롯 위에 놓았다면
-            if (handCardController.cardData.cardType == CardType.하수인 && targetSlot != null && targetSlot.IsAvailable())
+    /// <summary>
+    /// 단일 대상 주문을 사용했을 때의 결과를 처리합니다.
+    /// </summary>
+    private void ResolveAimingDrop(PointerEventData eventData)
+    {
+        AimingManager.Instance.StopAiming();
+        isAimingFromHand = false;
+
+        FieldCardController targetController = null;
+        if (eventData.pointerEnter != null)
+        {
+            // 마우스 아래에 있는 카드의 FieldCardController를 가져옵니다.
+            targetController = eventData.pointerEnter.GetComponent<FieldCardController>();
+        }
+
+        if (targetController != null)
+        {
+            // 이 주문 카드의 타겟팅 규칙을 가져옵니다.
+            TargetRule rule = handCardController.cardData.targetRule;
+
+            // 규칙에 따라 타겟이 유효한지 판별합니다.
+            if (rule == TargetRule.아군_전용 && targetController.enermy)
             {
-                DestroyGhostCard(); // 잔상 제거
-                targetSlot.OccupySlot(fieldCardController); // 슬롯을 점유 상태로 변경
-                fieldCardController.StartPlacementAnimation(targetSlot.transform); // 배치 애니메이션 시작
-                HandManager.Instance.RemoveCardFromHand(handCardController); // 핸드에서 카드 정보 제거
-                Destroy(gameObject); // 핸드 카드 오브젝트 파괴
+                ReturnToHand(); 
+                return;
             }
-            else
+            else if (rule == TargetRule.적군_전용 && !targetController.enermy)
             {
-                ReturnToHand(); // 유효하지 않은 슬롯이거나 다른 타입의 카드일 경우 핸드로 복귀
+                ReturnToHand();
+                return;
             }
+        }
+
+        // ★★★ 핵심 수정: 유효한 타겟(FieldCardController가 있고, '적' 카드인 경우)을 확인합니다.
+        if (targetController != null && handCardController.cardData.cardType == CardType.주문)
+        {
+            // 마나를 소모하고 주문을 처리합니다.
+            PlayerManaManager.Instance.SpendMana(handCardController.CurrentMana);
+
+            Debug.Log(targetController.cardData.cardName + "에 단일 주문 발동!");
+            CardEffectManager.Instance.ExecuteEffects(handCardController.cardData, targetController);
+
+            DestroyGhostCard();
+            HandManager.Instance.RemoveCardFromHand(handCardController);
+            Destroy(gameObject);
         }
         else
         {
-            ReturnToHand(); // 필드 위가 아닌 곳에서 드래그를 끝냈을 경우
+            ReturnToHand(); // 유효한 타겟이 아니면 핸드로 복귀
+        }
+    }
+
+    /// <summary>
+    /// 필드 위에서 드롭했을 때의 결과를 처리합니다.
+    /// </summary>
+    private void ResolveFieldDrop(PointerEventData eventData)
+    {
+        FieldSlot targetSlot = null;
+        if (eventData.pointerEnter != null)
+        {
+            targetSlot = eventData.pointerEnter.GetComponent<FieldSlot>();
+        }
+
+        // 하수인 카드이고, 유효한 빈 슬롯 위에 놓았다면 배치합니다.
+        if (handCardController.cardData.cardType == CardType.하수인 && targetSlot != null && targetSlot.IsAvailable())
+        {
+            DestroyGhostCard();
+            targetSlot.OccupySlot(fieldCardController);
+            fieldCardController.StartPlacementAnimation(targetSlot.transform);
+            HandManager.Instance.RemoveCardFromHand(handCardController);
+            Destroy(gameObject);
+        }
+        // 광역 주문이라면 즉시 발동합니다. (이 부분은 추후 확장 가능)
+        else if (handCardController.cardData.cardType == CardType.주문)
+        {
+            Debug.Log(handCardController.cardData.cardName + " 광역 주문 발동!");
+            CardEffectManager.Instance.ExecuteEffects(handCardController.cardData, null);
+
+            DestroyGhostCard();
+            DestroyFieldCard();
+            HandManager.Instance.RemoveCardFromHand(handCardController);
+            Destroy(gameObject);
+        }
+        else
+        {
+            ReturnToHand(); // 유효하지 않은 슬롯이라면 핸드로 복귀
         }
     }
 
@@ -205,6 +271,7 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
             if (fieldCardPrefab != null)
             {
                 fieldCardInstance = Instantiate(fieldCardPrefab);
+                fieldCardInstance.layer = LayerMask.NameToLayer("DraggedCard");
                 fieldCardController = fieldCardInstance.GetComponent<FieldCardController>();
                 if (fieldCardController != null)
                 {
@@ -269,7 +336,6 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     {
         if (ghostCardInstance != null)
         {
-            Debug.Log("잔상 파괴");
             Destroy(ghostCardInstance);
         }
     }

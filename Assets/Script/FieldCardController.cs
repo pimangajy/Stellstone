@@ -36,7 +36,6 @@ public class FieldCardController : MonoBehaviour
     private Vector3 targetPosition;
     private Quaternion targetRotation;
     private bool isAiming = false; // ★★★ 공격 조준 상태를 나타내는 변수
-    public bool enermy = false;  // 적인지 아닌지 확인
 
     private Vector3 originalScale;
     private Quaternion neutralRotation;
@@ -51,6 +50,10 @@ public class FieldCardController : MonoBehaviour
     // [SerializeField]를 사용하여 인스펙터에서 디버깅용으로 확인합니다.
     [SerializeField] private int currentAttack;
     [SerializeField] private int currentHealth;
+
+    [Header("소유권 정보")]
+    [Tooltip("이 카드가 적의 카드이면 체크합니다.")]
+    public bool enermy = false; // ★★★ 아군/적군 구분용 변수
 
     // 외부에서는 이 프로퍼티를 통해 값을 '읽기만' 할 수 있습니다.
     public int CurrentAttack => currentAttack;
@@ -78,7 +81,7 @@ public class FieldCardController : MonoBehaviour
         if (isAiming)
         {
             // 1. 커서 위치 업데이트
-            UpdateCursorPosition();
+            // UpdateCursorPosition();
 
         }
     }
@@ -111,7 +114,7 @@ public class FieldCardController : MonoBehaviour
     /// <summary>
     /// 피해를 받는 함수
     /// </summary>
-    public void TakeDamage(int damage)
+    public void TakeDamage(int damage, CardData cardData)
     {
         currentHealth -= damage;
         Debug.Log(cardData.cardName + "이 " + damage + " 피해를 입었습니다. 남은 체력: " + currentHealth);
@@ -119,7 +122,7 @@ public class FieldCardController : MonoBehaviour
         // 화면 갱신
         UpdateStatDisplay();
 
-        if (currentHealth <= 0)
+        if (cardData.keywords.Contains(Keyword.치명타) || currentHealth <= 0)
         {
             Die();
         }
@@ -173,44 +176,66 @@ public class FieldCardController : MonoBehaviour
         Destroy(gameObject, 1f); // 1초 후 파괴
     }
 
+    /// <summary>
+    /// 카드를 클릭했을 때 호출됩니다.
+    /// </summary>
     private void OnMouseDown()
     {
-        if (DOTween.IsTweening(transform) || isBeingDragged || isAiming) return;
+        if (enermy || DOTween.IsTweening(transform) || isBeingDragged || isAiming) return;
 
-        Debug.Log(gameObject.name + " 클릭! 공격 준비 시작.");
         isAiming = true;
 
-        // ★★★ 핵심: AimingManager에게 조준 시작을 요청합니다. ★★★
-        // 자기 자신의 transform을 시작점으로 넘겨줍니다.
-        AimingManager.Instance.StartAiming(this.gameObject);    
+        // ★★★ 핵심 수정: AimingManager에게 조준을 시작하고, 완료 후 실행할 함수(HandleAttackResult)를 등록합니다.
+        AimingManager.Instance.StartAiming(this.gameObject);
 
-        // 카드를 위로 띄우는 애니메이션은 그대로 실행합니다.
         transform.DOLocalMoveY(aimingFloatHeight, aimingAnimDuration).SetEase(Ease.OutQuad);
     }
 
+    /// <summary>
+    /// 카드에서 마우스 클릭을 뗐을 때 호출됩니다.
+    /// </summary>
     private void OnMouseUp()
     {
-        if (!isAiming) return;
-
-        Debug.Log("클릭 해제. 공격 시도.");
+        if (enermy || !isAiming) return;
         isAiming = false;
-
-        // ★★★ 핵심: AimingManager에게 조준 중단을 요청합니다. ★★★
         AimingManager.Instance.StopAiming();
 
-        // 여기에 공격 대상을 확인하는 로직을 추가합니다.
-        // Raycast 등으로 마우스 아래에 EnemyCardTarget이 있는지 확인...
+        // --- 직접 레이캐스트를 쏴서 타겟 찾기 ---
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        FieldCardController targetController = null;
 
-        // 공격을 취소하고 원래 자리로 돌아옵니다.
+        if (Physics.Raycast(ray, out hit))
+        {
+            targetController = hit.collider.GetComponent<FieldCardController>();
+        }
+
+        // 유효한 '적' 하수인 타겟을 찾았다면, FieldManager에게 전투를 요청합니다.
+        if (targetController != null && targetController.enermy == true)
+        {
+            FieldManager.Instance.RequestCombat(this, targetController);
+        }
+
+        // 카드는 원래 자리로 돌아옵니다.
         transform.DOLocalMove(restingPosition, aimingAnimDuration).SetEase(Ease.OutCubic);
     }
 
     /// <summary>
-    /// 커서의 위치를 업데이트하는 함수
+    /// AimingManager가 조준 결과를 알려주면 호출될 콜백 함수입니다.
     /// </summary>
-    private void UpdateCursorPosition()
+    /// <param name="target">AimingManager가 찾아낸 타겟. 없으면 null입니다.</param>
+    private void HandleAttackResult(FieldCardController target)
     {
+        // 유효한 타겟(FieldCardController가 있고, '적' 카드인 경우)을 찾았다면 공격을 실행합니다.
+        if (target != null && target.enermy == true)
+        {
+            Debug.Log(this.cardData.cardName + "이(가) " + target.cardData.cardName + "을(를) 공격합니다!");
 
+            CardEffectManager.Instance.ExecuteEffects(this.cardData, target);
+        }
+
+        // 공격이 성공했든 실패했든, 카드는 원래 자리로 돌아옵니다.
+        transform.DOLocalMove(restingPosition, aimingAnimDuration).SetEase(Ease.OutCubic);
     }
 
 
@@ -227,9 +252,26 @@ public class FieldCardController : MonoBehaviour
         isBeingDragged = true;
     }
 
+    // 추가된 함수: 자신과 모든 자식 오브젝트의 레이어를 재귀적으로 변경합니다. ★★★
+    private void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        if (obj == null) return;
+
+        obj.layer = newLayer;
+
+        /* 자식들도 레이어 변경
+        foreach (Transform child in obj.transform)
+        {
+            if (child == null) continue;
+            SetLayerRecursively(child.gameObject, newLayer);
+        }
+        */
+    }
+
     // CardDragDrop 스크립트가 호출할 시작 함수입니다.
     public void StartPlacementAnimation(Transform targetSlot)
     {
+        SetLayerRecursively(this.gameObject, LayerMask.NameToLayer("Default"));
         // 배치 애니메이션이 시작되면, 더 이상 드래그 상태가 아닙니다.
         isBeingDragged = false;
 

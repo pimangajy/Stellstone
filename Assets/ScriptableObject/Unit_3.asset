@@ -17,7 +17,12 @@ MonoBehaviour:
   spellType: 0
   cardName: "\uC9C4 \uAC15\uB3C4\uB2E8"
   description: "\uAC15\uD55C \uAC15\uB3C4\uB2E8"
-  cardArtwork: {fileID: 21300000, guid: 7d63ab4370687c947a40a6a40fccc986, type: 3}
+  cardArtwork: {fileID: 21300000, guid: 28e971aa607b7fc47aa452580386d34f, type: 3}
   manaCost: 5
   attack: 6
   health: 7
+  effects:
+  - effect: {fileID: 11400000, guid: 6fc14a08a8f4d4d46a4b7038f059be85, type: 2}
+    value1: 6
+    value2: 0
+  keywords: 00000000

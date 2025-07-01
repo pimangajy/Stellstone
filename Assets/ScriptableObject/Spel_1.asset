@@ -21,3 +21,9 @@ MonoBehaviour:
   manaCost: 2
   attack: 6
   health: 7
+  effects:
+  - effect: {fileID: 11400000, guid: bbe4f0d6ad057be44a218ae73ae9fa7b, type: 2}
+    value1: 2
+    value2: 2
+  keywords: 
+  targetRule: 1
