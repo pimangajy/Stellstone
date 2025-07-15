@@ -210,6 +210,7 @@ public class FieldCardController : MonoBehaviour
 
         // ★★★ 핵심 수정: AimingManager에게 조준을 시작하고, 완료 후 실행할 함수(HandleAttackResult)를 등록합니다.
         AimingManager.Instance.StartAiming(this.gameObject);
+        FieldManager.Instance.HighlightValidTargets(cardData, ActionType.MinionAttack);
 
         transform.DOLocalMoveY(aimingFloatHeight, aimingAnimDuration).SetEase(Ease.OutQuad);
     }
@@ -234,11 +235,11 @@ public class FieldCardController : MonoBehaviour
         }
 
         // 유효한 '적' 하수인 타겟을 찾았다면, FieldManager에게 전투를 요청합니다.
-        if (targetController != null && targetController.enermy == true)
+        if (targetController != null && targetController.enermy == true && targetController.highlightEffect.activeSelf)
         {
             FieldManager.Instance.RequestCombat(this, targetController);
         }
-
+        FieldManager.Instance.ClearAllHighlights();
         // 카드는 원래 자리로 돌아옵니다.
         transform.DOLocalMove(restingPosition, aimingAnimDuration).SetEase(Ease.OutCubic);
     }

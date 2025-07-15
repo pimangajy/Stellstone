@@ -1,18 +1,30 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+// 카드가 가질 수 있는 모든 상태를 정의합니다.
+public enum CardState
+{
+    Idle,       // 아무것도 안 하는 기본 상태
+    Arranging,  // HandManager에 의해 정렬되는 중인 상태
+    Hovering,   // 플레이어의 마우스가 올라와 있는 상태
+    Dragging    // 플레이어에 의해 드래그되는 중인 상태
+}
 public class CardInHandController : MonoBehaviour
 {
     [Header("데이터 및 참조")]
     public CardData cardData; // 원본 데이터
     private CardDisplay cardDisplay; // 시각적 표현을 담당하는 스크립트 참조
+    private RectTransform rectTransform;
 
     [Header("현재 상태 (수정치)")]
     public int attackModifier = 0;
     public int healthModifier = 0;
     public int manaModifier = 0;
+
+    public CardState currentState = CardState.Idle;
 
     // --- 계산된 최종 스탯 ---
     public int CurrentMana => cardData.manaCost + manaModifier;
@@ -23,6 +35,7 @@ public class CardInHandController : MonoBehaviour
     {
         // CardDisplay 스크립트의 참조를 미리 가져옵니다.
         cardDisplay = GetComponent<CardDisplay>();
+        rectTransform = GetComponent<RectTransform>();
     }
 
     // 카드가 생성되거나 데이터가 할당될 때 호출될 함수
@@ -74,5 +87,22 @@ public class CardInHandController : MonoBehaviour
 
         // 여기에 추가로, 수정치 값에 따라 텍스트 색상을 바꾸는 로직을 넣을 수 있습니다.
         // 예: attackModifier > 0 이면 attackText_UI.color = Color.green;
+    }
+
+
+    /// <summary>
+    /// 외부(주로 CardHoverEffect)에서 호출하여 현재 상태를 변경합니다.
+    /// </summary>
+    public void SetState(CardState newState)
+    {
+        currentState = newState;
+    }
+
+    /// <summary>
+    /// 외부에서 현재 상태를 확인할 수 있는 함수입니다.
+    /// </summary>
+    public CardState GetState()
+    {
+        return currentState;
     }
 }

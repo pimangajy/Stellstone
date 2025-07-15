@@ -6,6 +6,7 @@ TagManager:
   tags:
   - DropZone
   - PlayerCursor
+  - BackgroundDetector
   layers:
   - Default
   - TransparentFX
@@ -17,7 +18,7 @@ TagManager:
   - GameBoard
   - Cursor
   - CardState
-  - 
+  - MuseTextureLayer
   - 
   - 
   - 

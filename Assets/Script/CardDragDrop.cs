@@ -2,7 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using DG.Tweening; // ★★★ DOKill()을 사용하기 위해 필요합니다.
+using DG.Tweening;
+using System; // ★★★ DOKill()을 사용하기 위해 필요합니다.
 
 public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -30,10 +31,14 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     private bool isOverPlayArea = false;        // 마우스가 필드 영역 위에 있는지 여부
     private float thresholdY;                   // 필드 영역으로 인식될 실제 Y좌표
 
+    public static bool IsDraggingCard { get; private set; } = false; //어떤 카드든 드래그 중인지 알려주는 전역 변수 
+
     // --- 동적으로 생성/파괴되는 인스턴스 관리 변수들 ---
     private GameObject fieldCardInstance;       // 필드에 생성된 카드 인스턴스
     private FieldCardController fieldCardController; // 생성된 필드 카드의 컨트롤러
     private GameObject ghostCardInstance;       // 핸드에 남겨진 잔상 카드 인스턴스
+    private CanvasGroup backgroundCanvasGroup; // 배경의 CanvasGroup을 담을 변수
+
 
     // --- 주문 카드 상태 변수 ---
     private bool isAimingFromHand = false;      // 단일 주문을 손에서 조준 중인지 여부
@@ -47,6 +52,13 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
         handCardController = GetComponent<CardInHandController>();
+
+        // 게임 시작 시, 태그를 이용해 배경 감지 오브젝트의 CanvasGroup을 찾아 저장해 둡니다.
+        GameObject backgroundDetector = GameObject.FindWithTag("BackgroundDetector");
+        if (backgroundDetector != null)
+        {
+            backgroundCanvasGroup = backgroundDetector.GetComponent<CanvasGroup>();
+        }
     }
 
     /// <summary>
@@ -54,6 +66,13 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     /// </summary>
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // 이 카드의 RectTransform에 실행 중인 모든 DOTween 애니메이션을 즉시 멈춥니다.
+        rectTransform.DOKill();
+        // 드래그가 시작되었음을 전역에 알립니다.
+        IsDraggingCard = true;
+        // 카드 상태를 드래그 중으로 바꿈
+        handCardController.SetState(CardState.Arranging);
+
         // 드래그를 취소하고 되돌릴 때를 대비해, 시작 시점의 위치, 부모, 순서 정보를 모두 저장합니다.
         originalParent = transform.parent;
         originalSiblingIndex = transform.GetSiblingIndex();
@@ -68,6 +87,12 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         // 드래그 중인 카드 자체는 레이캐스트의 대상이 되지 않도록 하여,
         // 카드 뒤에 있는 필드 슬롯이나 다른 카드를 감지할 수 있게 합니다.
         canvasGroup.blocksRaycasts = false;
+
+        // 드래그가 시작되면, 배경이 마우스 이벤트를 받지 못하도록 합니다.
+        if (backgroundCanvasGroup != null)
+        {
+            backgroundCanvasGroup.blocksRaycasts = false;
+        }
     }
 
     /// <summary>
@@ -108,6 +133,17 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     /// </summary>
     public void OnEndDrag(PointerEventData eventData)
     {
+        // 드래그가 끝났음을 전역에 알립니다.
+        IsDraggingCard = false;
+        // 카드 상태를 가본 으로 변경
+        //handCardController.SetState(CardState.Idle);
+
+        // 드래그가 끝나면, 다시 배경이 마우스 이벤트를 받을 수 있도록 복원합니다.
+        if (backgroundCanvasGroup != null)
+        {
+            backgroundCanvasGroup.blocksRaycasts = true;
+        }
+
         // 1. 마나가 부족하면, 카드를 손으로 되돌리고 함수를 즉시 종료합니다.
         if (!PlayerManaManager.Instance.CanSpendMana(handCardController.CurrentMana))
         {
@@ -124,8 +160,6 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         // 2. 필드 위에 카드가 있는 상태였다면, 필드 처리 로직을 실행합니다.
         else if (isOverPlayArea && fieldCardInstance != null)
         {
-            // 마나를 소모하고 필드 드롭을 처리합니다.
-            PlayerManaManager.Instance.SpendMana(handCardController.CurrentMana);
             ResolveFieldDrop(eventData);
         }
         // 3. 그 외의 모든 경우 (잘못된 위치), 핸드로 복귀합니다.
@@ -133,6 +167,7 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         {
             ReturnToHand();
         }
+
     }
 
     /// <summary>
@@ -174,6 +209,9 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     /// </summary>
     private void ResolveFieldDrop(PointerEventData eventData)
     {
+        // 마나를 소모하고 필드 드롭을 처리합니다.
+        PlayerManaManager.Instance.SpendMana(handCardController.CurrentMana);
+
         FieldSlot targetSlot = null;
         if (eventData.pointerEnter != null)
         {
@@ -247,7 +285,7 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
         {
             isAimingFromHand = true;
             AimingManager.Instance.StartAiming(ghostCardInstance);
-            FieldManager.Instance.HighlightValidTargets(data);
+            FieldManager.Instance.HighlightValidTargets(data, ActionType.TargetedSpell);
         }
         else
         {
@@ -256,6 +294,10 @@ public class CardDragDrop : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
                 fieldCardInstance = Instantiate(fieldCardPrefab);
                 fieldCardInstance.layer = LayerMask.NameToLayer("DraggedCard");
                 fieldCardController = fieldCardInstance.GetComponent<FieldCardController>();
+                if (data.spellType == SpellType.범위_광역)
+                {
+                    //FieldManager.Instance.HighlightValidTargets(data, ActionType.TargetedSpell);
+                }
                 if (fieldCardController != null)
                 {
                     fieldCardController.Initialize(data, handCardController.attackModifier, handCardController.healthModifier);

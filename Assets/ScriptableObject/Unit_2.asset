@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: Unit_2
   m_EditorClassIdentifier: 
+  cardID: GZ_BW_002
   cardType: 0
   minionTribe: 1
   spellType: 0
@@ -26,3 +27,4 @@ MonoBehaviour:
     value1: 1
     value2: 0
   keywords: 04000000
+  targetRule: 0

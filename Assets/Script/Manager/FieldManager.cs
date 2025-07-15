@@ -1,7 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
+
+// 타겟팅을 요청하는 행동의 종류를 정의합니다.
+public enum ActionType
+{
+    MinionAttack,
+    TargetedSpell
+}
 public class FieldManager : MonoBehaviour
 {
     // --- 싱글톤 패턴 설정 ---
@@ -32,34 +40,73 @@ public class FieldManager : MonoBehaviour
     /// <summary>
     /// 주어진 카드의 타겟팅 규칙에 맞는 모든 필드 카드를 하이라이트합니다.
     /// </summary>
-    public void HighlightValidTargets(CardData sourceCard)
+    public void HighlightValidTargets(CardData sourceCard, ActionType actionType)
     {
-        Debug.Log("필드 전체에 하이라이트 표시");
-        if (sourceCard == null) return;
+        // 1. 먼저 모든 하이라이트를 끕니다.
+        ClearAllHighlights();
 
-        TargetRule rule = sourceCard.targetRule;
+        // 2. 유효한 타겟 목록을 가져옵니다.
+        List<FieldCardController> validTargets = GetValidTargets(sourceCard, actionType);
 
-        // 모든 슬롯을 순회하며 규칙에 맞는 카드를 찾습니다.
-        foreach (var slot in playerSlots)
+        // 3. 찾아낸 모든 타겟에 하이라이트를 켭니다. 
+        foreach (var target in validTargets)
         {
-            FieldCardController card = slot.GetOccupiedCard();
-            if (card != null)
+            target.SetTargetable(true);
+        }
+    }
+
+    /// <summary>
+    /// 유효한 타겟 목록을 계산하는 핵심 로직입니다.
+    /// </summary>
+    private List<FieldCardController> GetValidTargets(CardData sourceCard, ActionType actionType)
+    {
+        List<FieldCardController> finalTargets = new List<FieldCardController>();
+
+        // --- 하수인 공격일 경우의 타겟팅 로직 ---
+        if (actionType == ActionType.MinionAttack)
+        {
+            // 1. 모든 적 카드를 가져옵니다.
+            List<FieldCardController> allEnemyCards = GetAllCards(true);
+
+            // 2. 먼저 '은신'과 같이 타겟팅이 불가능한 카드들을 '제외'한 리스트를 만듭니다.
+            List<FieldCardController> targetableEnemies = allEnemyCards
+                .Where(card => !card.cardData.keywords.Contains(Keyword.은신))
+                .ToList();
+
+            // 3. 타겟팅 가능한 적들 중에서 '도발'을 가진 카드를 찾습니다.
+            List<FieldCardController> tauntCards = targetableEnemies
+                .Where(card => card.cardData.keywords.Contains(Keyword.도발))
+                .ToList();
+
+            // 4. '도발' 카드가 있다면, 그들이 최종 타겟입니다.
+            if (tauntCards.Count > 0)
             {
-                // 아군 전용 규칙이거나 모두 가능한 규칙일 때
-                bool canTarget = (rule == TargetRule.아군_전용 || rule == TargetRule.모두_가능);
-                card.SetTargetable(canTarget);
+                finalTargets = tauntCards;
+            }
+            // 5. '도발' 카드가 없다면, 타겟팅 가능한 모든 적이 최종 타겟입니다.
+            else
+            {
+                finalTargets = targetableEnemies;
             }
         }
-        foreach (var slot in enemySlots)
+        // --- 주문 시전일 경우의 타겟팅 로직 ---
+        else if (actionType == ActionType.TargetedSpell)
         {
-            FieldCardController card = slot.GetOccupiedCard();
-            if (card != null)
-            {
-                // 적군 전용 규칙이거나 모두 가능한 규칙일 때
-                bool canTarget = (rule == TargetRule.적군_전용 || rule == TargetRule.모두_가능);
-                card.SetTargetable(canTarget);
-            }
+            // 1. 주문의 TargetRule에 따라 기본 후보 목록을 정합니다.
+            List<FieldCardController> potentialTargets = new List<FieldCardController>();
+            TargetRule rule = sourceCard.targetRule;
+            if (rule == TargetRule.아군_전용) potentialTargets = GetAllCards(false);
+            else if (rule == TargetRule.적군_전용) potentialTargets = GetAllCards(true);
+            else if (rule == TargetRule.모두_가능) potentialTargets = GetAllCards(null);
+
+            // 2. 그 다음, '은신'이나 '주문 대상 지정 불가' 같은 키워드로 최종 필터링합니다.
+            finalTargets = potentialTargets
+                .Where(card => !(card.cardData.keywords.Contains(Keyword.은신) && card.enermy))
+                // .Where(card => !card.cardData.keywords.Contains(Keyword.주문대상지정불가)) // 예시
+                .ToList();
         }
+
+        return finalTargets;
     }
 
     /// <summary>
@@ -77,6 +124,31 @@ public class FieldManager : MonoBehaviour
             FieldCardController card = slot.GetOccupiedCard();
             if (card != null) card.SetTargetable(false);
         }
+    }
+
+    /// <summary>
+    /// 필드 위의 모든 카드를 가져오는 헬퍼 함수입니다.
+    /// </summary>
+    /// <param name="isEnemy">true: 적 카드만, false: 아군 카드만, null: 모든 카드</param>
+    private List<FieldCardController> GetAllCards(bool? isEnemy)
+    {
+        List<FieldCardController> allCards = new List<FieldCardController>();
+
+        if (isEnemy == false || isEnemy == null) // 아군 또는 전체
+        {
+            foreach (var slot in playerSlots)
+            {
+                if (!slot.IsAvailable()) allCards.Add(slot.GetOccupiedCard());
+            }
+        }
+        if (isEnemy == true || isEnemy == null) // 적군 또는 전체
+        {
+            foreach (var slot in enemySlots)
+            {
+                if (!slot.IsAvailable()) allCards.Add(slot.GetOccupiedCard());
+            }
+        }
+        return allCards;
     }
 
     /// <summary>

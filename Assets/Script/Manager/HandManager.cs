@@ -27,6 +27,17 @@ public class HandManager : MonoBehaviour
     public GameObject cardInHandPrefab;
     [Tooltip("카드들이 자식으로 생성될 부모 Transform입니다.")]
     public RectTransform handPanel;
+
+    [Header("위치 및 크기 설정")]
+    [Tooltip("카드가 펼쳐질 때의 기준 위치입니다. (화면 하단 중앙)")]
+    public RectTransform expandedAnchor;
+    [Tooltip("카드가 접혀있을 때의 기준 위치입니다. (화면 우측 하단)")]
+    public RectTransform tuckedAnchor;
+    [Tooltip("카드가 접혔을 때의 크기 배율입니다.")]
+    public Vector3 tuckedCardScale = new Vector3(0.7f, 0.7f, 1f);
+    [Tooltip("카드가 접혔을 때 겹치는 간격입니다.")]
+    public float tuckedCardOffset = 35f;
+
     [Header("카드 덱 설정")]
     [Tooltip("뽑을 수 있는 카드 데이터의 목록입니다.")]
     public List<CardData> drawableCards = new List<CardData>();
@@ -37,8 +48,19 @@ public class HandManager : MonoBehaviour
     public float anglePerCard = 10f;
     public float yOffset = -550f;
 
+    // --- 상태 정의 ---
+    private enum HandState { Tucked, Expanded }
+    private HandState currentState = HandState.Tucked;
+
     // ★★★ 이제 이 데이터 리스트가 핸드 관리의 기준이 됩니다. ★★★
     private List<CardInHandController> cardsInHand = new List<CardInHandController>();
+
+    private void Start()
+    {
+        ToggleHandExpansion(false);
+        ArrangeCards();
+    }
+
 
     /// <summary>
     /// UI 버튼에서 호출하여 덱에서 무작위로 카드를 한 장 뽑습니다.
@@ -105,36 +127,69 @@ public class HandManager : MonoBehaviour
     }
 
     /// <summary>
+    /// UI 카드에서 직접 호출하여, 핸드를 펼치거나 접는 상태를 전환합니다.
+    /// </summary>
+    public void ToggleHandExpansion(bool expand)
+    {
+        // 요청된 상태와 현재 상태가 다를 때만 실행
+        if (expand && currentState == HandState.Tucked)
+        {
+            currentState = HandState.Expanded;
+            handPanel.DOMove(expandedAnchor.position, 0.3f).SetEase(Ease.OutQuad);
+            ArrangeCards();
+        }
+        else if (!expand && currentState == HandState.Expanded)
+        {
+            currentState = HandState.Tucked;
+            handPanel.DOMove(tuckedAnchor.position, 0.3f).SetEase(Ease.OutQuad);
+            ArrangeCards();
+        }
+    }
+
+    /// <summary>
     /// handPanel에 있는 카드들을 부채꼴 모양으로 정렬합니다.
     /// </summary>
     public void ArrangeCards()
     {
         if (handPanel == null) return;
 
-        // ★★★ 핵심 수정: transform.childCount 대신, 데이터 리스트의 개수를 기준으로 삼습니다. ★★★
         int cardCount = cardsInHand.Count;
         if (cardCount == 0) return;
 
         float totalAngle = Mathf.Min(maxArcAngle, (cardCount - 1) * anglePerCard);
         float startAngle = -totalAngle / 2f;
+
+        // 부채꼴의 중심점을 handPanel의 로컬 좌표 기준으로 설정합니다.
         Vector2 arcCenterLocal = new Vector2(0, yOffset);
 
         for (int i = 0; i < cardCount; i++)
         {
-            // ★★★ 핵심 수정: handPanel의 자식이 아닌, 데이터 리스트에 있는 카드를 직접 가져옵니다. ★★★
             RectTransform cardRect = cardsInHand[i].GetComponent<RectTransform>();
             if (cardRect == null) continue;
 
+            // 카드의 MulliganCardSelector를 가져와서, 선택된 상태인지 확인합니다.
+            MulliganCardSelector selector = cardsInHand[i].GetComponent<MulliganCardSelector>();
+            // 만약 카드가 선택된 상태라면, 정렬하지 않고 건너뜁니다.
+            if (selector != null && selector.isSelected)
+            {
+                continue;
+            }
+            // ★★★★★★★★★★★★★★★★★★★★★
+
             float angle = (cardCount > 1) ? startAngle + i * anglePerCard : 0;
             float angleRad = angle * Mathf.Deg2Rad;
+
+            // 카드의 목표 로컬 위치(anchoredPosition)를 계산합니다.
             float x = arcCenterLocal.x + arcRadius * Mathf.Sin(angleRad);
             float y = arcCenterLocal.y + arcRadius * Mathf.Cos(angleRad);
             Vector2 targetLocalPosition = new Vector2(x, y);
 
-            cardRect.DOAnchorPos(targetLocalPosition, 0.3f);
-            cardRect.DORotate(new Vector3(0, 0, -angle), 0.3f);
+            // DOTween을 사용하여 부드럽게 이동 및 회전
+            cardRect.DOAnchorPos(targetLocalPosition, 0.3f).SetEase(Ease.OutQuad);
+            cardRect.DORotate(new Vector3(0, 0, -angle), 0.3f).SetEase(Ease.OutQuad);
         }
     }
+
 #if UNITY_EDITOR
     // 유니티 에디터에서 값을 바꿀 때마다 실시간으로 정렬을 확인하기 위한 코드입니다.
     private void OnValidate()

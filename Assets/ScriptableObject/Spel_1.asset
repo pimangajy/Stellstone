@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: Spel_1
   m_EditorClassIdentifier: 
+  cardID: GZ_BW_004
   cardType: 1
   minionTribe: 0
   spellType: 1

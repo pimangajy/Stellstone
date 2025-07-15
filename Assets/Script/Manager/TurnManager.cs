@@ -36,6 +36,11 @@ public class TurnManager : MonoBehaviour
     public UnityEvent OnEnemyTurnStart;
     public UnityEvent OnEnemyTurnEnd;
 
+    private void Start()
+    {
+        HandManager.Instance.ToggleHandExpansion(true);
+    }
+
     /// <summary>
     /// 게임이 처음 시작될 때 호출됩니다.
     /// </summary>

@@ -69,6 +69,7 @@ public enum Keyword
 public class CardData : ScriptableObject
 {
     [Header("카드 기본 정보")]
+    public string cardID;
     public CardType cardType; // ★★★ 추가된 카드 타입 변수 ★★★
     public MinionTribe minionTribe;
     public SpellType spellType;
