@@ -15,6 +15,9 @@ public class QuantitySelector : MonoBehaviour
     public TMP_InputField quantityInput;
     [Tooltip("총 가격을 표시할 TextMeshPro UI입니다.")]
     public TextMeshProUGUI totalPriceText;
+    [Tooltip("재화 이미지입니다.")]
+    public Image priceImage;
+
 
     [Header("아이템 정보")]
     [Tooltip("아이템의 개당 가격입니다.")]
@@ -73,7 +76,7 @@ public class QuantitySelector : MonoBehaviour
     /// <summary>
     /// 수량을 업데이트하고, 유효성을 검사하며, UI를 갱신하는 핵심 함수입니다.
     /// </summary>
-    private void UpdateQuantity(int newQuantity)
+    public void UpdateQuantity(int newQuantity)
     {
         // 수량이 최소/최대 범위를 벗어나지 않도록 값을 제한합니다.
         currentQuantity = Mathf.Clamp(newQuantity, minQuantity, maxQuantity);
