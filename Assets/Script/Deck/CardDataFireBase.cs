@@ -5,9 +5,8 @@ using Firebase.Firestore;
 
 // Firestore의 데이터를 C# 객체로 변환하기 위해 [FirestoreData] 속성을 사용합니다.
 [FirestoreData]
-public class CardDataFireBase
+public class CardDataFirebase
 {
-    // Firestore 문서의 필드 이름과 정확히 일치해야 합니다.
     [FirestoreProperty]
     public string CardID { get; set; }
 
@@ -15,13 +14,16 @@ public class CardDataFireBase
     public string name { get; set; }
 
     [FirestoreProperty]
-    public int cost { get; set; }
+    public int cost { get; set; } // 코스트는 항상 값이 있으므로 int 유지
 
+    // Nullable<int> 대신 object 타입을 사용합니다.
+    // object는 참조 타입이므로 null 값을 가질 수 있습니다.
     [FirestoreProperty]
-    public int attack { get; set; }
+    public object attack { get; set; }
 
+    // Nullable<int> 대신 object 타입을 사용합니다.
     [FirestoreProperty]
-    public int health { get; set; }
+    public object health { get; set; }
 
     [FirestoreProperty]
     public string description { get; set; }
@@ -36,5 +38,5 @@ public class CardDataFireBase
     public string imageUrl { get; set; }
 
     [FirestoreProperty]
-    public string effects { get; set; } // effects는 JSON 형태의 문자열이므로 string으로 받습니다.
+    public string effects { get; set; }
 }

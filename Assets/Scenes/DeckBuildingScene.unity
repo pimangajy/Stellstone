@@ -1390,7 +1390,7 @@ GameObject:
   - component: {fileID: 279037228}
   - component: {fileID: 279037227}
   m_Layer: 5
-  m_Name: Button (1)
+  m_Name: create
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1799,13 +1799,13 @@ MonoBehaviour:
     m_Right: 10
     m_Top: 10
     m_Bottom: 10
-  m_ChildAlignment: 3
+  m_ChildAlignment: 4
   m_StartCorner: 0
-  m_StartAxis: 1
+  m_StartAxis: 0
   m_CellSize: {x: 70, y: 90}
   m_Spacing: {x: 15, y: 6}
-  m_Constraint: 2
-  m_ConstraintCount: 3
+  m_Constraint: 1
+  m_ConstraintCount: 5
 --- !u!114 &372019817
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3612,6 +3612,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 942540431}
+  - component: {fileID: 942540432}
+  - component: {fileID: 942540433}
   m_Layer: 0
   m_Name: CardManager
   m_TagString: Untagged
@@ -3634,6 +3636,32 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &942540432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 942540430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8041adb3d32e324c97732789e521e7e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cardPrefab: {fileID: 4611348575547613463, guid: 5441ae49281e60740b9a24a3434dc39a, type: 3}
+  cardListParent: {fileID: 372019815}
+--- !u!114 &942540433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 942540430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76a80d1d3a695ba4cb1f8994419728c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &942548273
 GameObject:
   m_ObjectHideFlags: 0
@@ -4574,7 +4602,7 @@ GameObject:
   - component: {fileID: 1140488459}
   - component: {fileID: 1140488458}
   m_Layer: 5
-  m_Name: Button
+  m_Name: fillter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5218,8 +5246,8 @@ RectTransform:
   m_Children:
   - {fileID: 1694402127}
   - {fileID: 964823978}
-  - {fileID: 1140488457}
   - {fileID: 279037226}
+  - {fileID: 1140488457}
   m_Father: {fileID: 1054730584}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}

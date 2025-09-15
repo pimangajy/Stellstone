@@ -3,22 +3,21 @@ using System.Collections.Generic;
 
 public class DeckBuilder : MonoBehaviour
 {
-    // 모든 카드 정보를 저장할 딕셔너리
-    private Dictionary<string, CardDataFireBase> cardDatabase;
+    [Header("UI & Prefab Settings")]
+    public GameObject cardPrefab; // 유니티 에디터에서 CardPrefab을 연결
+    public Transform cardListParent; // 생성된 카드들이 위치할 부모 오브젝트 (예: Scroll View의 Content)
+
+    private Dictionary<string, CardDataFirebase> cardDatabase;
 
     async void Start()
     {
         Debug.Log("카드 데이터베이스 로딩을 시작합니다...");
-        // CardDatabaseManager의 인스턴스를 통해 모든 카드 정보를 가져옵니다.
-        // await를 사용했으므로 로딩이 끝날 때까지 기다립니다.
         cardDatabase = await CardDatabaseManager.instance.GetAllCardsAsync();
 
-        // 로딩이 완료된 후 실행할 로직
         if (cardDatabase != null && cardDatabase.Count > 0)
         {
-            Debug.Log("카드 데이터베이스 로딩 완료!");
-            // 예시: 특정 카드 정보 출력해보기
-            PrintSpecificCardInfo("cards-gangzi-004");
+            Debug.Log("카드 데이터베이스 로딩 완료! UI 생성을 시작합니다.");
+            GenerateCardListUI();
         }
         else
         {
@@ -26,20 +25,26 @@ public class DeckBuilder : MonoBehaviour
         }
     }
 
-    void PrintSpecificCardInfo(string cardID)
+    /// <summary>
+    /// cardDatabase에 있는 모든 카드에 대한 UI를 생성합니다.
+    /// </summary>
+    void GenerateCardListUI()
     {
-        // 딕셔너리에서 카드 ID로 정보 찾기
-        if (cardDatabase.TryGetValue(cardID, out CardDataFireBase card))
+        foreach (var cardPair in cardDatabase)
         {
-            Debug.Log($"--- 카드 정보: {cardID} ---");
-            Debug.Log($"이름: {card.name}");
-            Debug.Log($"코스트: {card.cost}");
-            Debug.Log($"공격력/체력: {card.attack}/{card.health}");
-            Debug.Log($"설명: {card.description}");
-        }
-        else
-        {
-            Debug.LogWarning($"ID가 '{cardID}'인 카드를 찾을 수 없습니다.");
+            CardDataFirebase data = cardPair.Value;
+
+            // 1. 프리팹을 복제하여 새 카드 게임 오브젝트를 만듭니다.
+            GameObject newCard = Instantiate(cardPrefab, cardListParent);
+
+            // 2. 새 카드의 CardDisplay 스크립트 컴포넌트를 가져옵니다.
+            DeckCardDisplay cardDisplay = newCard.GetComponent<DeckCardDisplay>();
+
+            // 3. Setup 함수를 호출하여 카드 데이터를 넘겨줍니다.
+            if (cardDisplay != null)
+            {
+                cardDisplay.Setup(data);
+            }
         }
     }
 }

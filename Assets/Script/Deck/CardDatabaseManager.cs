@@ -29,7 +29,7 @@ public class CardDatabaseManager : MonoBehaviour
     /// Firestore의 "Cards" 컬렉션에 있는 모든 카드 정보를 비동기적으로 가져옵니다.
     /// </summary>
     /// <returns>카드 ID를 key로, CardData를 value로 가지는 Dictionary</returns>
-    public async Task<Dictionary<string, CardDataFireBase>> GetAllCardsAsync()
+    public async Task<Dictionary<string, CardDataFirebase>> GetAllCardsAsync()
     {
         // "Cards" 컬렉션 참조
         CollectionReference cardsRef = db.Collection("Cards");
@@ -38,12 +38,12 @@ public class CardDatabaseManager : MonoBehaviour
         // await 키워드는 데이터 수신이 완료될 때까지 여기서 코드 실행을 잠시 멈춥니다. (게임은 멈추지 않음)
         QuerySnapshot snapshot = await cardsRef.GetSnapshotAsync();
 
-        Dictionary<string, CardDataFireBase> allCards = new Dictionary<string, CardDataFireBase>();
+        Dictionary<string, CardDataFirebase> allCards = new Dictionary<string, CardDataFirebase>();
 
         foreach (DocumentSnapshot document in snapshot.Documents)
         {
             // DocumentSnapshot을 CardData 클래스 객체로 자동 변환합니다.
-            CardDataFireBase card = document.ConvertTo<CardDataFireBase>();
+            CardDataFirebase card = document.ConvertTo<CardDataFirebase>();
             if (card != null)
             {
                 // 딕셔너리에 카드 ID를 키로 하여 카드 데이터를 추가합니다.
