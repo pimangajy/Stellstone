@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "498660315002",
+    "project_id": "membership-management-17941",
+    "storage_bucket": "membership-management-17941.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:498660315002:android:7e7a997369544f8ecb10c3",
+        "android_client_info": {
+          "package_name": "com.DefaultCompany.Stellstone"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "498660315002-ao2s1auugvlvi44g703qthh89q6qbi4i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJbMQ10PNuhLav9lsLvJzyG-ttfqy1C8c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "498660315002-ao2s1auugvlvi44g703qthh89q6qbi4i.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "498660315002-evaci7dv7hgkidciq7smd1t46ro0mgqq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.DefaultCompany.Stellstone"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
