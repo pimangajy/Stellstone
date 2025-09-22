@@ -9,6 +9,7 @@ public class DeckBuilder : MonoBehaviour
     public Transform cardListParent; // 생성된 카드들이 위치할 부모 오브젝트 (예: Scroll View의 Content)
 
     private Dictionary<string, CardDataFirebase> cardDatabase;
+    private List<CardDataFirebase> allCardsList; // 필터링을 쉽게 하기 위해 리스트 형태로도 저장
 
     async void Start()
     {
@@ -17,8 +18,11 @@ public class DeckBuilder : MonoBehaviour
 
         if (cardDatabase != null && cardDatabase.Count > 0)
         {
-            Debug.Log("카드 데이터베이스 로딩 완료! UI 생성을 시작합니다.");
-            GenerateCardListUI();
+            allCardsList = cardDatabase.Values.ToList(); // 딕셔너리의 모든 값을 리스트로 변환
+            Debug.Log("카드 데이터베이스 로딩 완료! 전체 카드 목록을 표시합니다.");
+
+            // 처음에는 모든 카드를 표시
+            DisplayCards(allCardsList);
         }
         else
         {
@@ -97,6 +101,49 @@ public class DeckBuilder : MonoBehaviour
             .ToList();
 
         Debug.Log($"{cost} 코스트 카드 {filteredCards.Count}장을 찾았습니다.");
+        DisplayCards(filteredCards);
+    }
+
+    /// <summary>
+    /// 검색창의 텍스트가 변경될 때마다 호출되는 함수
+    /// </summary>
+    /// <param name="searchText">검색창에 입력된 텍스트</param>
+    public void OnSearchTextChanged(string searchText)
+    {
+        // NullReferenceException 방지를 위해 아무것도 하지 않고 함수를 즉시 종료합니다.
+        if (allCardsList == null)
+        {
+            return;
+        }
+
+        // 1. 검색어가 비어있으면 모든 카드를 보여주고 함수 종료
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            DisplayCards(allCardsList);
+            return;
+        }
+
+        // 2. 대소문자 구분 없이 검색하기 위해 입력된 텍스트를 소문자로 변경
+        string lowerSearchText = searchText.ToLower();
+
+        // 3. LINQ를 사용해 여러 조건으로 필터링
+        List<CardDataFirebase> filteredCards = allCardsList.Where(card =>
+        {
+            // 이름(name)에 검색어가 포함되는가?
+            bool nameContains = card.name.ToLower().Contains(lowerSearchText);
+
+            // 종족(tribe)이 null이 아니고, 종족에 검색어가 포함되는가?
+            bool tribeContains = card.tribe != null && card.tribe.ToLower().Contains(lowerSearchText);
+
+            // 설명(description)이 null이 아니고, 설명에 검색어가 포함되는가?
+            bool descriptionContains = card.description != null && card.description.ToLower().Contains(lowerSearchText);
+
+            // 위 조건 중 하나라도 true이면 이 카드를 결과에 포함시킴
+            return nameContains || tribeContains || descriptionContains;
+
+        }).ToList(); // 조건을 만족하는 카드들을 모아 새로운 리스트를 생성
+
+        Debug.Log($"'{searchText}' 검색 결과: {filteredCards.Count}장");
         DisplayCards(filteredCards);
     }
 
