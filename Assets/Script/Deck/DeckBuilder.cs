@@ -1,28 +1,65 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 public class DeckBuilder : MonoBehaviour
 {
     [Header("UI & Prefab Settings")]
-    public GameObject cardPrefab; // 유니티 에디터에서 CardPrefab을 연결
-    public Transform cardListParent; // 생성된 카드들이 위치할 부모 오브젝트 (예: Scroll View의 Content)
+    public GameObject cardPrefab;
+    public Transform cardListParent;
+    [Header("Component References")]
+    [Tooltip("씬에 있는 FilterManager 오브젝트를 연결해주세요.")]
+    public FilterManager filterManager;
 
-    private Dictionary<string, CardDataFirebase> cardDatabase;
-    private List<CardDataFirebase> allCardsList; // 필터링을 쉽게 하기 위해 리스트 형태로도 저장
+    private List<CardDataFirebase> allCardsList; // 모든 카드의 원본 리스트
+
+    // --- 모든 필터의 현재 상태를 저장하는 변수들 ---
+    private string currentClassFilter = "전체";
+    private FilterManager.FilterSettings currentDetailFilters;
+    private int currentCostFilter = -1; // -1은 코스트 필터가 적용되지 않았음을 의미
+    private string currentSearchText = "";
+
+    #region Unity Lifecycle & Event Subscription
+
+    private void OnEnable()
+    {
+        FilterManager.OnFilterApplied += HandleDetailFilterApply;
+    }
+
+    private void OnDisable()
+    {
+        FilterManager.OnFilterApplied -= HandleDetailFilterApply;
+    }
+
+    #endregion
 
     async void Start()
     {
-        Debug.Log("카드 데이터베이스 로딩을 시작합니다...");
-        cardDatabase = await CardDatabaseManager.instance.GetAllCardsAsync();
+        // 1. 모든 카드 정보를 우선 로드합니다.
+        var cardDatabase = await CardDatabaseManager.instance.GetAllCardsAsync();
 
         if (cardDatabase != null && cardDatabase.Count > 0)
         {
-            allCardsList = cardDatabase.Values.ToList(); // 딕셔너리의 모든 값을 리스트로 변환
-            Debug.Log("카드 데이터베이스 로딩 완료! 전체 카드 목록을 표시합니다.");
+            allCardsList = cardDatabase.Values.ToList();
 
-            // 처음에는 모든 카드를 표시
-            DisplayCards(allCardsList);
+            // --- (수정) SceneLoader에 편집할 덱이 있는지 확인 ---
+            if (SceneLoader.instance != null && SceneLoader.instance.DeckToEdit != null)
+            {
+                // 2. 편집할 덱이 있으면, 덱 로드 함수를 바로 호출
+                Debug.Log($"SceneLoader로부터 '{SceneLoader.instance.DeckToEdit.deckName}' 덱을 불러와 편집을 시작합니다.");
+
+                // (중요) LoadDeckForEditing 함수가 DeckManager와 CardDatabase를 모두 사용하므로,
+                // 이 씬에 DeckManager.instance와 CardDatabaseManager.instance가 모두 로드된 상태여야 합니다.
+                LoadDeckForEditing(SceneLoader.instance.DeckToEdit);
+
+                // 3. (중요) 데이터를 사용했으니 비워줍니다.
+                SceneLoader.instance.ClearDeckToEdit();
+            }
+            else
+            {
+                UpdateCardDisplay();
+            }
         }
         else
         {
@@ -31,41 +68,75 @@ public class DeckBuilder : MonoBehaviour
     }
 
     /// <summary>
-    /// cardDatabase에 있는 모든 카드에 대한 UI를 생성합니다.
+    /// 모든 필터 조건을 종합하여 카드 목록 UI를 업데이트하는 중앙 함수입니다.
     /// </summary>
-    void GenerateCardListUI()
+    private void UpdateCardDisplay()
     {
-        foreach (var cardPair in cardDatabase)
+        if (allCardsList == null) return;
+
+        IEnumerable<CardDataFirebase> filteredResult = allCardsList;
+
+        // 1. 직업 필터 적용
+        if (currentClassFilter != "전체")
         {
-            CardDataFirebase data = cardPair.Value;
+            filteredResult = filteredResult.Where(card => card.member == currentClassFilter || card.member == "Gangzi");
+        }
 
-            // 1. 프리팹을 복제하여 새 카드 게임 오브젝트를 만듭니다.
-            GameObject newCard = Instantiate(cardPrefab, cardListParent);
+        // 2. 상세 필터(카드 종류, 레어도, 확장팩) 적용
+        if (currentDetailFilters.Member != "전체")
+        {
+            filteredResult = filteredResult.Where(card => card.member == currentDetailFilters.Member);
+        }
+        if (currentDetailFilters.CardType != "전체")
+        {
+            filteredResult = filteredResult.Where(card => card.type == currentDetailFilters.CardType);
+        }
+        if (currentDetailFilters.Rarity != "전체")
+        {
+            filteredResult = filteredResult.Where(card => card.rarity == currentDetailFilters.Rarity);
+        }
+        if (currentDetailFilters.Expansion != "전체")
+        {
+            filteredResult = filteredResult.Where(card => card.expansion == currentDetailFilters.Expansion);
+        }
 
-            // 2. 새 카드의 CardDisplay 스크립트 컴포넌트를 가져옵니다.
-            DeckCardDisplay cardDisplay = newCard.GetComponent<DeckCardDisplay>();
-
-            // 3. Setup 함수를 호출하여 카드 데이터를 넘겨줍니다.
-            if (cardDisplay != null)
+        // 3. 코스트 필터 적용
+        if (currentCostFilter != -1)
+        {
+            if (currentCostFilter >= 10)
             {
-                cardDisplay.Setup(data);
+                filteredResult = filteredResult.Where(card => card.cost >= currentCostFilter);
+            }
+            else
+            {
+                filteredResult = filteredResult.Where(card => card.cost == currentCostFilter);
             }
         }
+
+        // 4. 텍스트 검색 필터 적용
+        if (!string.IsNullOrWhiteSpace(currentSearchText))
+        {
+            string lowerSearchText = currentSearchText.ToLower();
+            filteredResult = filteredResult.Where(card =>
+                (card.name != null && card.name.ToLower().Contains(lowerSearchText)) ||
+                (card.tribe != null && card.tribe.ToLower().Contains(lowerSearchText)) ||
+                (card.description != null && card.description.ToLower().Contains(lowerSearchText))
+            );
+        }
+
+        DisplayCards(filteredResult.ToList());
     }
 
     /// <summary>
     /// 주어진 카드 리스트를 UI에 표시합니다.
     /// </summary>
-    /// <param name="cardsToDisplay">화면에 표시할 카드 데이터 리스트</param>
     void DisplayCards(List<CardDataFirebase> cardsToDisplay)
     {
-        // 1. 기존에 표시된 카드 UI들을 모두 삭제 (화면을 깨끗하게 비움)
         foreach (Transform child in cardListParent)
         {
             Destroy(child.gameObject);
         }
 
-        // 2. 주어진 리스트의 카드들만 새로 생성
         foreach (var data in cardsToDisplay)
         {
             GameObject newCard = Instantiate(cardPrefab, cardListParent);
@@ -74,77 +145,161 @@ public class DeckBuilder : MonoBehaviour
             {
                 cardDisplay.Setup(data);
             }
+
+            // 생성된 카드 오브젝트에 있는 CardInteraction 스크립트를 찾아서 위치 정보를 설정합니다.
+            CardInteraction cardInteraction = newCard.GetComponent<CardInteraction>();
+            if (cardInteraction != null)
+            {
+                // DeckBuilder는 중앙 카드 목록을 담당하므로, 여기서 생성되는 카드는 모두 Collection 카드입니다.
+                cardInteraction.location = CardInteraction.CardLocation.Collection;
+            }
         }
     }
 
+    #region Public Filter Methods (UI에서 호출)
 
     /// <summary>
-    /// 코스트 버튼을 클릭했을 때 호출될 함수
+    /// 모든 필터를 초기 상태로 리셋합니다. '필터 초기화' 버튼에 연결할 수 있습니다.
     /// </summary>
-    public void OnSearchButtonClick(int cost)
+    public void ResetAllFilters()
     {
-        if(cost >= 10)
+        currentClassFilter = "전체";
+        currentDetailFilters = new FilterManager.FilterSettings
         {
-            List<CardDataFirebase> filteredCards10 = cardDatabase.Values
-            .Where(card => card.cost >= cost)
-            .ToList();
+            CardType = "전체",
+            Rarity = "전체",
+            Expansion = "전체"
+        };
+        currentCostFilter = -1;
+        currentSearchText = "";
 
-            Debug.Log($"{cost} 코스트 카드 {filteredCards10.Count}장을 찾았습니다.");
-            DisplayCards(filteredCards10);
-            return;
-        }
-        // LINQ를 사용해 조건에 맞는 카드만 필터링
-        // cardDatabase.Values: 딕셔너리의 모든 CardDataFirebase 값들을 가져옴
-        // .Where(card => card.cost == cost): cost가 입력된 값과 같은 카드만 골라냄
-        List<CardDataFirebase> filteredCards = cardDatabase.Values
-            .Where(card => card.cost == cost)
-            .ToList();
+        // TODO: 필터 UI의 표시 상태(토글, 검색창 등)도 초기화하는 신호를 보내면 더 좋습니다.
+        // 예를 들어, FilterManager에 ResetUI() 함수를 만들고 여기서 호출할 수 있습니다.
 
-        Debug.Log($"{cost} 코스트 카드 {filteredCards.Count}장을 찾았습니다.");
-        DisplayCards(filteredCards);
+        UpdateCardDisplay();
     }
 
     /// <summary>
-    /// 검색창의 텍스트가 변경될 때마다 호출되는 함수
+    /// ClassSelectionButton에서 호출할 함수. 다른 필터를 초기화하고 직업 필터를 설정합니다.
     /// </summary>
-    /// <param name="searchText">검색창에 입력된 텍스트</param>
+    public async void SetClassFilter(string className)
+    {
+        // 1. DeckSaveManager를 통해 새로운 덱 데이터를 생성하고 그 정보를 받아옵니다.
+        //DeckData newDeck = DeckSaveManager.instance.CreateNewDeck(className);
+
+        // 1. DeckSaveManager_Firebase를 통해 새로운 덱 데이터를 생성하고 그 정보를 받아옵니다.
+        // DeckData newDeck = await DeckSaveManager_Firebase.instance.CreateNewDeck(className);
+
+        DeckData serverNewDeck = await DeckSaveManager_Firebase.instance.ServerCreateNewDeck(className);
+
+        // 2. DeckManager에 방금 만든 덱 정보를 넘겨주어 편집을 시작하도록 합니다.
+        DeckManager.instance.StartNewDeck(serverNewDeck);
+
+        // 1. 상세, 코스트, 검색 필터를 초기화합니다.
+        currentDetailFilters = new FilterManager.FilterSettings {Member = "전체", CardType = "전체", Rarity = "전체", Expansion = "전체" };
+        currentCostFilter = -1;
+        currentSearchText = "";
+
+        // 2. 새로운 직업 필터를 설정합니다.
+        currentClassFilter = className;
+
+        // 3. FilterManager에 UI 초기화를 요청합니다.
+        if (filterManager != null)
+        {
+            filterManager.ResetFilterUI();
+
+            // 4. 선택된 직업과 중립에 해당하는 멤버 토글만 보이도록 FilterManager에 요청합니다.
+            var availableMembers = new List<string> { className, "중립" };
+            filterManager.UpdateMemberToggles(availableMembers);
+        }
+
+        Debug.Log(currentDetailFilters);
+
+        // 5. 변경된 필터 상태로 화면을 갱신합니다.
+        UpdateCardDisplay();
+    }
+
+    /// <summary>
+    /// DeckListUI의 버튼을 클릭했을 때 호출됩니다.
+    /// 저장된 덱을 불러와 편집 모드로 전환합니다.
+    /// </summary>
+    public void LoadDeckForEditing(DeckData deckToLoad)
+    {
+        if (allCardsList == null || allCardsList.Count == 0)
+        {
+            Debug.LogWarning("아직 모든 카드 로딩이 완료되지 않아 덱을 불러올 수 없습니다. 잠시 후 다시 시도하세요.");
+            return; // 함수 즉시 종료
+        }
+
+        // 1. 불러올 덱의 카드 ID 리스트를 기반으로, 전체 카드 목록(allCardsList)에서
+        //    실제 CardDataFirebase 객체 리스트를 만듭니다.
+        List<CardDataFirebase> cardsForDeck = new List<CardDataFirebase>();
+        var allCardsDict = allCardsList.ToDictionary(card => card.CardID);
+
+        foreach (string cardId in deckToLoad.cardIds)
+        {
+            if (allCardsDict.TryGetValue(cardId, out CardDataFirebase card))
+            {
+                cardsForDeck.Add(card);
+            }
+        }
+
+        // 2. DeckManager에 덱 데이터와 카드 리스트를 전달하여 로드 요청
+        DeckManager.instance.LoadDeck(deckToLoad, cardsForDeck);
+
+        // 3. 화면 필터를 불러온 덱의 직업에 맞게 설정
+        SetClassFilterForEditing(deckToLoad.deckClass);
+    }
+
+    /// <summary>
+    /// 덱 로드 시, 필터만 설정하고 새 덱은 만들지 않는 버전의 함수입니다.
+    /// </summary>
+    private void SetClassFilterForEditing(string className)
+    {
+        currentDetailFilters = new FilterManager.FilterSettings { Member = "전체", CardType = "전체", Rarity = "전체", Expansion = "전체" };
+        currentCostFilter = -1;
+        currentSearchText = "";
+        currentClassFilter = className;
+
+        if (filterManager != null)
+        {
+            filterManager.ResetFilterUI();
+            var availableMembers = new List<string> { className, "Gangzi" };
+            filterManager.UpdateMemberToggles(availableMembers);
+        }
+
+        UpdateCardDisplay();
+    }
+
+    /// <summary>
+    /// 코스트 버튼 클릭 시 호출될 함수.
+    /// </summary>
+    public void OnCostButtonClick(int cost)
+    {
+        // 같은 코스트 버튼을 다시 누르면 필터 해제
+        currentCostFilter = (currentCostFilter == cost) ? -1 : cost;
+        UpdateCardDisplay();
+    }
+
+    /// <summary>
+    /// 검색창 텍스트 변경 시 호출될 함수.
+    /// </summary>
     public void OnSearchTextChanged(string searchText)
     {
-        // NullReferenceException 방지를 위해 아무것도 하지 않고 함수를 즉시 종료합니다.
-        if (allCardsList == null)
-        {
-            return;
-        }
-
-        // 1. 검색어가 비어있으면 모든 카드를 보여주고 함수 종료
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            DisplayCards(allCardsList);
-            return;
-        }
-
-        // 2. 대소문자 구분 없이 검색하기 위해 입력된 텍스트를 소문자로 변경
-        string lowerSearchText = searchText.ToLower();
-
-        // 3. LINQ를 사용해 여러 조건으로 필터링
-        List<CardDataFirebase> filteredCards = allCardsList.Where(card =>
-        {
-            // 이름(name)에 검색어가 포함되는가?
-            bool nameContains = card.name.ToLower().Contains(lowerSearchText);
-
-            // 종족(tribe)이 null이 아니고, 종족에 검색어가 포함되는가?
-            bool tribeContains = card.tribe != null && card.tribe.ToLower().Contains(lowerSearchText);
-
-            // 설명(description)이 null이 아니고, 설명에 검색어가 포함되는가?
-            bool descriptionContains = card.description != null && card.description.ToLower().Contains(lowerSearchText);
-
-            // 위 조건 중 하나라도 true이면 이 카드를 결과에 포함시킴
-            return nameContains || tribeContains || descriptionContains;
-
-        }).ToList(); // 조건을 만족하는 카드들을 모아 새로운 리스트를 생성
-
-        Debug.Log($"'{searchText}' 검색 결과: {filteredCards.Count}장");
-        DisplayCards(filteredCards);
+        currentSearchText = searchText;
+        UpdateCardDisplay();
     }
 
+    /// <summary>
+    /// FilterManager로부터 상세 필터 적용 신호를 받았을 때 실행될 함수.
+    /// </summary>
+    private void HandleDetailFilterApply(FilterManager.FilterSettings settings)
+    {
+        currentDetailFilters = settings;
+        UpdateCardDisplay();
+    }
+
+    #endregion
 }
+
+

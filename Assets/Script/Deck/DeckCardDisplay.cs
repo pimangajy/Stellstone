@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro; // TextMeshPro를 사용하기 위해 필요
 using System;
 
-public class DeckCardDisplay : MonoBehaviour
+public class DeckCardDisplay : MonoBehaviour, ICardDataHolder
 {
     // [카드 UI 프리팹의 요소들]
     // 인스펙터 창에서 각 변수에 프리팹 안의 UI 요소들을 드래그 앤 드롭으로 연결해줘야 합니다.
@@ -22,6 +22,11 @@ public class DeckCardDisplay : MonoBehaviour
     [Header("Stat Objects")]
     public GameObject attackObject;
     public GameObject healthObject;
+
+    [Header("Card State")]
+    public string expansion;
+    public string type;
+    public string member;
 
     private CardDataFirebase cardData; // 이 UI가 표시할 카드 데이터 원본
 
@@ -77,9 +82,22 @@ public class DeckCardDisplay : MonoBehaviour
             healthObject.SetActive(false);
         }
 
+        expansion = cardData.expansion;
+        type = cardData.type;
+        member = cardData.member;
+
         // 기타 시각적 요소 설정
         SetRarityVisuals(cardData.rarity);
         LoadArtwork();
+    }
+
+
+    /// <summary>
+    /// 이 카드 UI가 가지고 있는 원본 카드 데이터를 반환합니다.
+    /// </summary>
+    public CardDataFirebase GetCardData()
+    {
+        return cardData;
     }
 
     private void SetRarityVisuals(string rarity)
@@ -117,7 +135,7 @@ public class DeckCardDisplay : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"이미지를 찾을 수 없습니다: {imagePath}");
+            // Debug.LogWarning($"이미지를 찾을 수 없습니다: {imagePath}");
             // 필요하다면 여기에 기본 이미지를 설정하는 코드를 추가할 수 있습니다.
             // artworkImage.sprite = defaultSprite;
         }

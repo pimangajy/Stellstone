@@ -7,12 +7,15 @@ using Firebase.Firestore;
 [FirestoreData]
 public class CardDataFirebase
 {
+    // 카드 아이디
     [FirestoreProperty]
     public string CardID { get; set; }
 
+    // 이름
     [FirestoreProperty]
     public string name { get; set; }
 
+    // 코스트
     [FirestoreProperty]
     public int cost { get; set; } // 코스트는 항상 값이 있으므로 int 유지
 
@@ -25,18 +28,35 @@ public class CardDataFirebase
     [FirestoreProperty]
     public object health { get; set; }
 
+    // 효과 텍스트
     [FirestoreProperty]
     public string description { get; set; }
 
+    // 종족
     [FirestoreProperty]
     public string tribe { get; set; }
 
+    // 확장팩
+    [FirestoreProperty]
+    public string expansion { get; set; }
+
+    // 카드 종류
+    [FirestoreProperty]
+    public string type { get; set; }
+
+    // 카드 직업
+    [FirestoreProperty]
+    public string member { get; set; }
+
+    // 레어도
     [FirestoreProperty]
     public string rarity { get; set; }
 
+    // 이미지 경로
     [FirestoreProperty]
     public string imageUrl { get; set; }
 
+    // 효과 
     [FirestoreProperty]
     public string effects { get; set; }
 }

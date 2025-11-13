@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
-using System.Collections.Generic; // List<T> 사용을 위해 필요
 
 
 // JSON 응답을 역직렬화할 때 사용할 클래스들

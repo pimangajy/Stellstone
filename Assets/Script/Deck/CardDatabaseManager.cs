@@ -8,21 +8,36 @@ public class CardDatabaseManager : MonoBehaviour
     private FirebaseFirestore db;
     public static CardDatabaseManager instance; // 싱글톤 패턴으로 어디서든 접근 가능하게 설정
 
-    void Awake()
+    // 모든 카드 정보를 캐시할 딕셔너리
+    private Dictionary<string, CardDataFirebase> allCardsCache = null;
+
+    private void Awake()
     {
-        // 싱글톤 인스턴스 설정
-        if (instance == null)
+        // --- 씬 싱글톤 패턴 구현 ---
+        if (instance != null && instance != this)
         {
-            instance = this;
-            DontDestroyOnLoad(gameObject); // 씬이 바뀌어도 파괴되지 않도록 설정
+            // 이미 이 씬에 SinginManager가 있다면, 새로 생긴 것은 파괴
+            Destroy(gameObject);
         }
         else
         {
-            Destroy(gameObject);
+            // 이 씬의 유일한 인스턴스로 등록
+            instance = this;
+            DontDestroyOnLoad(gameObject);
         }
 
         // Firebase Firestore 인스턴스 초기화
         db = FirebaseFirestore.DefaultInstance;
+    }
+
+    private void OnDestroy()
+    {
+        // 씬이 변경되거나 이 오브젝트가 파괴될 때,
+        // static 참조를 스스로 정리(null로 만듦)합니다.
+        if (instance == this)
+        {
+            instance = null;
+        }
     }
 
     /// <summary>
@@ -31,6 +46,12 @@ public class CardDatabaseManager : MonoBehaviour
     /// <returns>카드 ID를 key로, CardData를 value로 가지는 Dictionary</returns>
     public async Task<Dictionary<string, CardDataFirebase>> GetAllCardsAsync()
     {
+        if (allCardsCache != null)
+        {
+            Debug.Log($"캐시에서 {allCardsCache.Count}개의 카드를 반환합니다.");
+            return allCardsCache;
+        }
+
         // "Cards" 컬렉션 참조
         CollectionReference cardsRef = db.Collection("Cards");
 
@@ -48,11 +69,11 @@ public class CardDatabaseManager : MonoBehaviour
             {
                 // 딕셔너리에 카드 ID를 키로 하여 카드 데이터를 추가합니다.
                 allCards.Add(card.CardID, card);
-                Debug.Log($"불러온 카드: {card.name} (ID: {card.CardID})");
+                // Debug.Log($"불러온 카드: {card.name} (ID: {card.CardID})");
             }
         }
 
-        Debug.Log($"총 {allCards.Count}개의 카드를 성공적으로 불러왔습니다.");
+        allCardsCache = allCards;
         return allCards;
     }
 }

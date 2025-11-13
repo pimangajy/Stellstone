@@ -18,9 +18,6 @@ public class CardHoverEffect : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private int originalSiblingIndex; // 원래 렌더링 순서를 기억할 변수
     private CardInHandController cardController;
 
-    // 현재 애니메이션이 실행 중인지 확인하여 중복 실행을 방지합니다.
-    private bool isAnimating = false;
-
     void Awake()
     {
         rectTransform = GetComponent<RectTransform>();

@@ -38,17 +38,26 @@ public class SinginManager : MonoBehaviour
     private FirebaseAuth auth;
     private bool isFirebaseReady = false;
 
+
+    // Start()는 로그인 씬이 로드될 때마다 실행
     void Start()
     {
+        // 씬이 로드될 때마다 UI 메시지 초기화
+        DisplayUIMessage(messageText, "", Color.black);
+        DisplayUIMessage(messageTextLogin, "", Color.black);
+
+        // Firebase 초기화는 앱 전체에서 한 번만 실행되도록 SDK가 처리해 줍니다.
         FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
         {
             var dependencyStatus = task.Result;
             if (dependencyStatus == DependencyStatus.Available)
             {
+                // auth 인스턴스를 가져옵니다. (SDK가 알아서 싱글톤으로 관리)
                 auth = FirebaseAuth.DefaultInstance;
                 isFirebaseReady = true;
-                Debug.Log("Firebase Auth initialized successfully.");
-                CheckCurrentUser(); // Firebase 준비 완료 후, 현재 로그인 상태 확인
+
+                // 자동 로그인 체크
+                CheckCurrentUser();
             }
             else
             {
@@ -65,12 +74,30 @@ public class SinginManager : MonoBehaviour
     {
         if (auth.CurrentUser != null)
         {
-            string userId = auth.CurrentUser.UserId;
-            Debug.Log($"자동 로그인 성공: User ID = {userId}");
-            PlayerPrefs.SetString("CurrentUserId", userId);
-            PlayerPrefs.Save();
-            // 예시: 자동 로그인 성공 시 바로 메인 게임 씬으로 전환
-            // SceneManager.LoadScene("MainGameScene"); 
+            Firebase.Auth.FirebaseUser user = auth.CurrentUser;
+
+            // 토큰을 강제로 갱신하여 사용자가 서버에 실제로 유효한지 확인합니다.
+            user.TokenAsync(true).ContinueWith(task => {
+                if (task.IsCanceled || task.IsFaulted)
+                {
+                    // 토큰 갱신 실패! (계정이 삭제되었거나 비활성화된 경우)
+                    Debug.LogWarning("자동 로그인 실패: 사용자가 서버에 존재하지 않거나 토큰이 만료되었습니다.");
+                    auth.SignOut(); // 확실하게 로컬 세션도 정리
+                    PlayerPrefs.DeleteKey("CurrentUserId");
+                    return;
+                }
+
+                // 토큰 갱신 성공! 진짜 유효한 사용자.
+                string userId = user.UserId;
+                Debug.Log($"자동 로그인 성공: User ID = {userId}");
+
+                // PlayerPrefs 저장은 메인 스레드에서 해야 안전합니다.
+                // (실제 구현 시에는 UnityMainThreadDispatcher 같은 도구 사용 권장)
+                PlayerPrefs.SetString("CurrentUserId", userId);
+
+                // 예시: 자동 로그인 성공 시 바로 메인 게임 씬으로 전환
+                // SceneManager.LoadScene("MainGameScene"); 
+            });
         }
         else
         {
