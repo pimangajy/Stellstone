@@ -25,7 +25,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     private bool isInitialized = false; // 이미 로드되었는지 확인하는 플래그
 
     // 서버 API의 기본 URL
-    private const string ApiBaseUrl = "http://localhost:5123";
+    private const string ApiBaseUrl = "http://175.125.250.226:5123";
 
     private void Awake()
     {

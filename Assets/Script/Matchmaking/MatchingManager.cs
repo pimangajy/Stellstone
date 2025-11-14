@@ -46,7 +46,7 @@ public class MatchingManager : MonoBehaviour
     [SerializeField] private GameObject lobbyPanel;
 
     //  DeckSaveManager에서 서버 주소 복사
-    private const string ApiBaseUrl = "http://localhost:5123";
+    private const string ApiBaseUrl = "http://175.125.250.226:5123";
 
     //  서버로 보낼 DTO(데이터 전송 객체)
     [System.Serializable]
