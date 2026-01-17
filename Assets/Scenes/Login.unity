@@ -708,8 +708,8 @@ MonoBehaviour:
   emailInputField_login: {fileID: 1398263107}
   passwordInputField_login: {fileID: 1466090425}
   messageTextLogin: {fileID: 1376936507}
-  signupApiUrl: http://localhost:5123/api/auth/signup
-  verifyTokenApiUrl: http://localhost:5123/api/auth/verify-token
+  signupApiUrl: http://175.125.250.226:5123/api/auth/signup
+  verifyTokenApiUrl: http://175.125.250.226:5123/api/auth/verify-token
 --- !u!1 &332053980
 GameObject:
   m_ObjectHideFlags: 0

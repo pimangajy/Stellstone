@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-gangzi-012
+  m_EditorClassIdentifier: 
+  cardID: cards-gangzi-012
+  cardName: "\uBC29\uC1A1 \uB3C4\uB451"
+  cardType: 0
+  member: 0
+  rarity: 1
+  expansion: 0
+  manaCost: 5
+  attack: 3
+  health: 4
+  minionTribe: 1
+  description: "\uB4F1\uC7A5: \uC0C1\uB300 \uD328\uC758 \uCE74\uB4DC \uD55C \uC7A5\uC744
+    \uBB34\uC791\uC704\uB85C \uBCF5\uC0AC\uD558\uC5EC \uC5BB\uC2B5\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_PLAY
+    effectName: COPY_CARD
+    value1: 1
+    value2: 0
+    target: ENEMY_HAND
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

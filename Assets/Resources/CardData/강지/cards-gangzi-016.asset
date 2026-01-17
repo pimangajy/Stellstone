@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-gangzi-016
+  m_EditorClassIdentifier: 
+  cardID: cards-gangzi-016
+  cardName: "\uC548\uC0B0 \uBD88\uBE73\uB530"
+  cardType: 1
+  member: 0
+  rarity: 1
+  expansion: 0
+  manaCost: 5
+  attack: 0
+  health: 0
+  minionTribe: 0
+  description: "\uC801 \uCE90\uB9AD\uD130 \uD558\uB098\uC5D0\uAC8C \uD53C\uD574\uB97C
+    10 \uC90D\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_PLAY
+    effectName: DAMAGE
+    value1: 10
+    value2: 0
+    target: TARGET_ENEMY_MINION
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

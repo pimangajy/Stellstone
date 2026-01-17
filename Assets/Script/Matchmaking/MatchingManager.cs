@@ -16,6 +16,13 @@ using System.Collections.Generic;
 /// </summary>
 public class MatchingManager : MonoBehaviour
 {
+    [System.Serializable]
+    private class SelectDeckResponse
+    {
+        public string status;
+        public DeckData deck; // DeckData 전체를 받음
+    }
+
     [Header("UI 연결 (로비 화면)")]
     [SerializeField] private Button openDeckSelectButton; // '덱 선택' 텍스트/버튼
     [SerializeField] private TextMeshProUGUI selectedDeckNameText; // '덱 선택' 버튼 안의 텍스트
@@ -30,6 +37,7 @@ public class MatchingManager : MonoBehaviour
     [SerializeField] private Transform deckCardListParent;
     [Tooltip("카드 목록에 사용될 프리팹 (LobbyDeckCardDisplay.cs 스크립트 포함)")]
     [SerializeField] private GameObject deckCardPrefab;
+
 
     [Header("매치메이킹")]
     [Tooltip("씬에 있는 MatchmakingService 스크립트를 연결")]
@@ -102,7 +110,7 @@ public class MatchingManager : MonoBehaviour
 
         // 시작 시 UI 상태 초기화
         searchingPanel.SetActive(false);
-        lobbyPanel.SetActive(true);
+        // lobbyPanel.SetActive(true);
     }
 
     void OnDestroy()
@@ -140,52 +148,60 @@ public class MatchingManager : MonoBehaviour
         if (auth.CurrentUser != null)
         {
             currentUserId = auth.CurrentUser.UserId;
-            //  로그인 시, 유저 DB에서 '마지막으로 선택했던 덱 ID'를 불러옵니다.
             await LoadLastSelectedDeck(currentUserId);
         }
         else
         {
             currentUserId = null;
-            // 로그아웃 시 UI 초기화
             selectedDeckNameText.text = "덱 선택";
-            // selectedLeaderImage.sprite = defaultLeaderSprite;
             currentSelectedDeck = null;
-            // 로그아웃 시 덱 목록 UI도 비웁니다.
-            await UpdateDeckCardList(null);
+            UpdateDeckCardList(null); // 로그아웃 시 목록 비우기
         }
     }
 
     /// <summary>
-    /// (신규) 유저 DB에서 마지막으로 선택한 덱을 불러와 UI에 적용합니다.
+    /// (수정) 서버 API를 통해 마지막으로 선택한 덱의 '전체 데이터'를 불러와 UI에 적용합니다.
     /// </summary>
     private async Task LoadLastSelectedDeck(string userId)
     {
+        if (string.IsNullOrEmpty(userId) || auth.CurrentUser == null) return;
+
         try
         {
-            DocumentReference userDocRef = db.Collection("Users").Document(userId);
-            DocumentSnapshot snapshot = await userDocRef.GetSnapshotAsync();
+            string idToken = await auth.CurrentUser.TokenAsync(true);
+            string apiUrl = $"{ApiBaseUrl}/api/user/select-deck";
 
-            if (snapshot.Exists)
+            using (UnityWebRequest request = UnityWebRequest.Get(apiUrl))
             {
-                // UserData 클래스는 서버의 UserData와 동일해야 합니다.
-                // 여기서는 SelectDeck 필드만 가져오기 위해 Dictionary를 사용합니다.
-                var userData = snapshot.ToDictionary();
-                if (userData.TryGetValue("SelectDeck", out object deckIdObj) && deckIdObj != null)
+                request.SetRequestHeader("Authorization", "Bearer " + idToken);
+
+                var operation = request.SendWebRequest();
+                while (!operation.isDone) await Task.Yield();
+
+                if (request.result == UnityWebRequest.Result.Success)
                 {
-                    string lastSelectedDeckId = deckIdObj.ToString();
+                    string jsonResponse = request.downloadHandler.text;
+                    // JSON 파싱
+                    SelectDeckResponse response = JsonUtility.FromJson<SelectDeckResponse>(jsonResponse);
 
-                    // DeckSaveManager의 캐시에서 해당 덱을 찾습니다.
-                    // DeckSaveManager가 이 씬보다 먼저 초기화되어야 합니다.
-                    var allDecks = DeckSaveManager_Firebase.instance.GetAllDecks();
-                    DeckData lastSelectedDeck = allDecks?.FirstOrDefault(d => d.deckId == lastSelectedDeckId);
-
-                    if (lastSelectedDeck != null)
+                    if (response != null && response.deck != null && !string.IsNullOrEmpty(response.deck.deckId))
                     {
-                        currentSelectedDeck = lastSelectedDeck;
-                        Debug.Log($"마지막으로 선택한 덱 '{lastSelectedDeck.deckName}'을(를) 불러옵니다.");
-                        // 덱 확정 함수를 재사용하여 UI를 업데이트합니다.
-                        HandleDeckConfirmed(lastSelectedDeck, false); // false: 서버에 다시 저장할 필요 없음
+                        DeckData lastSelectedDeck = response.deck;
+
+                        Debug.Log($"서버에서 불러온 마지막 덱: '{lastSelectedDeck.deckName}'");
+
+                        // (핵심) 받아온 덱 데이터를 바로 UI에 적용합니다.
+                        // 서버 저장(saveToServer)은 false로 설정합니다 (이미 서버에서 가져온 거니까요).
+                        HandleDeckConfirmed(lastSelectedDeck, false);
                     }
+                    else
+                    {
+                        Debug.Log("서버에 저장된 선택 덱이 없거나 유효하지 않습니다.");
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"마지막 덱 불러오기 실패: {request.error}");
                 }
             }
         }
@@ -213,19 +229,12 @@ public class MatchingManager : MonoBehaviour
     private async void HandleDeckConfirmed(DeckData selectedDeck, bool saveToServer = true)
     {
         Debug.Log($"매칭 매니저가 '{selectedDeck.deckName}' 덱을 받았습니다.");
-
         currentSelectedDeck = selectedDeck;
-
-        // 1. 로비 UI 업데이트
         selectedDeckNameText.text = selectedDeck.deckName;
-        // TODO: selectedDeck.deckClass (직업)에 맞는 리더 이미지로 변경
-        // (예: selectedLeaderImage.sprite = LeaderImageDatabase.GetSprite(selectedDeck.deckClass);)
 
-        // 덱 카드 목록 UI 업데이트
-        // 비동기 함수 호출 시 await 사용
-        await UpdateDeckCardList(selectedDeck);
+        // (수정) 이제 비동기(Async)가 아니어도 되지만, 구조 유지를 위해 호출만 깔끔하게 변경
+        UpdateDeckCardList(selectedDeck);
 
-        // 2. 이 선택을 '서버'에 저장 (saveToServer가 true일 때만)
         if (saveToServer)
         {
             await SaveSelectedDeckToServer(selectedDeck.deckId);
@@ -235,63 +244,60 @@ public class MatchingManager : MonoBehaviour
     /// <summary>
     /// 로비의 카드 목록 UI를 선택된 덱의 카드로 채웁니다.
     /// </summary>
-    private async Task UpdateDeckCardList(DeckData deck)
+    private void UpdateDeckCardList(DeckData deck)
     {
         // 1. 기존 UI 삭제
-        foreach (Transform child in deckCardListParent)
-        {
-            Destroy(child.gameObject);
-        }
+        if (deckCardListParent == null || deckCardPrefab == null) return;
+        foreach (Transform child in deckCardListParent) Destroy(child.gameObject);
 
-        // 2. 덱이 없거나(null) 덱에 카드가 없으면(0개) 여기서 종료
-        if (deck == null || deck.cardIds == null || deck.cardIds.Count == 0)
+        // 2. 덱 검사
+        if (deck == null || deck.cardIds == null || deck.cardIds.Count == 0) return;
+
+        // [핵심 변경] ResourceManager 사용
+        if (ResourceManager.Instance == null)
         {
+            Debug.LogError("ResourceManager가 없습니다! 로비 씬에 ResourceManager가 있는지 확인하세요.");
             return;
         }
 
-        try
+        // 3. 덱의 카드 ID들을 순회하며 실제 CardData(ScriptableObject) 찾기
+        List<CardData> cardsInDeck = new List<CardData>();
+        foreach (string cardId in deck.cardIds)
         {
-            // 3. CardDatabaseManager에서 모든 카드 정보를 가져옵니다. (캐시된 데이터)
-            var allCardsDict = await CardDatabaseManager.instance.GetAllCardsAsync();
-            if (allCardsDict == null) return;
-
-            // 4. 덱의 카드 ID 목록(string)을 실제 CardDataFirebase 객체 목록으로 변환
-            List<CardDataFirebase> cardObjectsInDeck = new List<CardDataFirebase>();
-            foreach (string cardId in deck.cardIds)
+            // ResourceManager에서 ID로 카드 데이터를 '즉시' 가져옵니다.
+            CardData card = ResourceManager.Instance.GetCardData(cardId);
+            if (card != null)
             {
-                if (allCardsDict.TryGetValue(cardId, out CardDataFirebase cardData))
-                {
-                    cardObjectsInDeck.Add(cardData);
-                }
+                cardsInDeck.Add(card);
             }
-
-            // 5. DeckManager의 로직과 동일: 코스트/이름 순 정렬 및 그룹화 (중복 카드 카운트)
-            var groupedAndSortedDeck = cardObjectsInDeck
-                .GroupBy(card => card.CardID)
-                .Select(group => new
-                {
-                    Card = group.First(), // 대표 카드
-                    Count = group.Count()   // 중복 개수
-                })
-                .OrderBy(item => item.Card.cost)
-                .ThenBy(item => item.Card.name);
-
-            // 6. 정렬된 리스트를 바탕으로 UI 프리팹 생성
-            foreach (var item in groupedAndSortedDeck)
+            else
             {
-                GameObject newDeckCardUI = Instantiate(deckCardPrefab, deckCardListParent);
-
-                // 프리팹에 붙어있는 스크립트에 카드 정보와 개수 전달
-                LobbyDeckCardDisplay itemDisplay = newDeckCardUI.GetComponent<LobbyDeckCardDisplay>();
-                if (itemDisplay != null)
-                {
-                    itemDisplay.Setup(item.Card, item.Count);
-                }
+                Debug.LogWarning($"ResourceManager에서 ID가 '{cardId}'인 카드를 찾을 수 없습니다.");
             }
         }
-        catch (Exception e)
+
+        // 4. 정렬 및 그룹화 (CardData 기준)
+        var groupedAndSortedDeck = cardsInDeck
+            .GroupBy(card => card.cardID) // ID 기준 그룹화
+            .Select(group => new
+            {
+                Card = group.First(),
+                Count = group.Count()
+            })
+            .OrderBy(item => item.Card.manaCost) // cost -> manaCost
+            .ThenBy(item => item.Card.cardName); // name -> cardName
+
+        // 5. UI 생성
+        foreach (var item in groupedAndSortedDeck)
         {
-            Debug.LogError($"덱 카드 목록 UI 업데이트 중 오류: {e.Message}");
+            GameObject newDeckCardUI = Instantiate(deckCardPrefab, deckCardListParent);
+            LobbyDeckCardDisplay itemDisplay = newDeckCardUI.GetComponent<LobbyDeckCardDisplay>();
+
+            if (itemDisplay != null)
+            {
+                // (수정) CardData 객체를 그대로 전달
+                itemDisplay.Setup(item.Card, item.Count);
+            }
         }
     }
 

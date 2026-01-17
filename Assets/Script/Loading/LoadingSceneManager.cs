@@ -30,12 +30,27 @@ public class LoadingSceneManager : MonoBehaviour
             // --- 1. 모든 카드 정보 로드 ---
             UpdateStatus("모든 카드 정보를 불러오는 중...");
 
+            // 텍스트가 바뀔 시간을 아주 잠깐 줍니다 (0.1초)
+            await Task.Delay(100);
             // CardDatabaseManager의 인스턴스를 찾아 GetAllCardsAsync를 호출합니다.
             // 이 함수는 내부에 캐시 기능이 있으므로, 서버 로드는 최초 1회만 실행됩니다.
-            await CardDatabaseManager.instance.GetAllCardsAsync();
+
+            // (신규) ResourceManager에게 로딩 지시
+            if (ResourceManager.Instance != null)
+            {
+                ResourceManager.Instance.LoadAllCards();
+            }
+            else
+            {
+                Debug.LogError("ResourceManager가 씬에 없습니다!");
+            }
+
+            // CardDatabaseManager 버전
+            //await CardDatabaseManager.instance.GetAllCardsAsync();
 
             // --- 2. 유저 덱 정보 로드 ---
             UpdateStatus("유저 덱 목록을 불러오는 중...");
+
 
             // DeckSaveManager의 인스턴스를 찾아 새로 만든 InitializeAsync를 호출합니다.
             //await DeckSaveManager_Firebase.instance.InitializeAsync(currentUser.UserId);

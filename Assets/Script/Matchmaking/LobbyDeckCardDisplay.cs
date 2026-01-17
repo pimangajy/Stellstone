@@ -1,8 +1,6 @@
 using UnityEngine;
-using UnityEngine.UI; // Image
-using TMPro; // TextMeshPro
-// using UnityEngine.AddressableAssets; // Addressables/AsyncImageLoader 사용 시
-// using UnityEngine.ResourceManagement.AsyncOperations; // Addressables 사용 시
+using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 로비(MatchingManager) 씬의 덱 목록에 표시될 개별 카드 UI 항목입니다.
@@ -19,23 +17,21 @@ public class LobbyDeckCardDisplay : MonoBehaviour
     [Tooltip("중복 카드 개수(예: x2)를 표시할 TextMeshPro")]
     [SerializeField] private TextMeshProUGUI countText;
 
-    // private AsyncOperationHandle<Sprite> imageLoadHandle; // Addressables로 이미지 로드 시
-
     /// <summary>
-    /// 카드 정보와 개수를 받아 UI를 설정합니다.
+    /// (수정) CardDataFirebase 대신 CardData(ScriptableObject)를 받습니다.
     /// </summary>
-    public void Setup(CardDataFirebase card, int count)
+    public void Setup(CardData card, int count)
     {
         if (card == null) return;
 
         // 1. 코스트와 이름 설정
         if (costText != null)
         {
-            costText.text = card.cost.ToString();
+            costText.text = card.manaCost.ToString(); // cost -> manaCost
         }
         if (cardNameText != null)
         {
-            cardNameText.text = card.name;
+            cardNameText.text = card.cardName; // name -> cardName
         }
 
         // 2. 카드 개수 표시
@@ -47,39 +43,23 @@ public class LobbyDeckCardDisplay : MonoBehaviour
             }
             else
             {
-                // 1장이면 개수 텍스트를 숨깁니다.
                 countText.text = "";
             }
         }
 
-        // 3. 카드 이미지 로드 (TODO)
-        if (cardImage != null && !string.IsNullOrEmpty(card.imageUrl))
+        // 3. 카드 이미지 설정 (ResourceManager 덕분에 아주 쉬워졌습니다!)
+        if (cardImage != null)
         {
-            // TODO: card.imageUrl (이미지 경로/주소)를 사용해 이미지를 비동기 로드해야 합니다.
-            // 예: Addressables, AsyncImageLoader, Glide(Android), Kingfisher(iOS) 등
-            //
-            // (임시) 이미지가 준비되지 않았을 경우를 대비한 코드
-            // cardImage.sprite = null; 
-            // cardImage.color = Color.gray; // 기본 색상
-
-            // (예시: Addressables 사용 시)
-            // imageLoadHandle = Addressables.LoadAssetAsync<Sprite>(card.imageUrl);
-            // imageLoadHandle.Completed += (handle) =>
-            // {
-            //     if (handle.Status == AsyncOperationStatus.Succeeded)
-            //     {
-            //         cardImage.sprite = handle.Result;
-            //     }
-            // };
+            // 썸네일(thumbnail) 프로퍼티 사용
+            if (card.thumbnail != null)
+            {
+                cardImage.sprite = card.thumbnail;
+            }
+            else
+            {
+                // 이미지가 없을 경우 기본색 처리 등
+                // cardImage.color = Color.gray; 
+            }
         }
     }
-
-    // (참고: Addressables 사용 시, 오브젝트가 파괴될 때 메모리를 해제해야 합니다)
-    // private void OnDestroy()
-    // {
-    //     if (imageLoadHandle.IsValid())
-    //     {
-    //         Addressables.Release(imageLoadHandle);
-    //     }
-    // }
 }

@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-Huya-005
+  m_EditorClassIdentifier: 
+  cardID: cards-Huya-005
+  cardName: "\uBA4B\uC9C4 \uB208\uC379\uC758 \uC18C\uC720\uC790"
+  cardType: 0
+  member: 2
+  rarity: 0
+  expansion: 0
+  manaCost: 3
+  attack: 3
+  health: 2
+  minionTribe: 3
+  description: "\uC544\uAD70 \uD558\uC218\uC778 \uD558\uB098\uC5D0\uAC8C +1 / +1
+    \uB97C \uBD80\uC5EC\uD569\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_PLAY
+    effectName: BUFF
+    value1: 1
+    value2: 1
+    target: TARGET_FRIENDLY_MINION
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

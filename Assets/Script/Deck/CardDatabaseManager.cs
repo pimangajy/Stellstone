@@ -48,7 +48,6 @@ public class CardDatabaseManager : MonoBehaviour
     {
         if (allCardsCache != null)
         {
-            Debug.Log($"캐시에서 {allCardsCache.Count}개의 카드를 반환합니다.");
             return allCardsCache;
         }
 

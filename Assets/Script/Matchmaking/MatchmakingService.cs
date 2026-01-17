@@ -113,7 +113,7 @@ public class MatchmakingService : MonoBehaviour
                 // 트랜잭션을 실행합니다.
                 await db.RunTransactionAsync(async transaction =>
                 {
-                    // [수정] 이제 DocumentReference로 GetSnapshotAsync를 호출합니다. (사용자님이 맞았습니다)
+                    // [수정] 이제 DocumentReference로 GetSnapshotAsync를 호출합니다.
                     DocumentSnapshot opponentLatestSnapshot = await transaction.GetSnapshotAsync(opponentRef);
 
                     if (!opponentLatestSnapshot.Exists)
@@ -177,6 +177,11 @@ public class MatchmakingService : MonoBehaviour
             Debug.Log("대기열 등록 완료. 상대방을 기다립니다.");
             OnMatchmakingStarted?.Invoke(); // UI에 "찾는 중..." 표시
             ListenForMatch(currentUserId); // 내 문서 구독 시작
+
+            // 싱글 테스트
+            string gameId = Guid.NewGuid().ToString();
+            myEntry.gameId = gameId;
+            OnMatchFound?.Invoke(myEntry.gameId, "bot id");
         }
         catch (Exception e)
         {
@@ -237,7 +242,7 @@ public class MatchmakingService : MonoBehaviour
 
     public void GoGame(string GameID, string i)
     {
-        SceneLoader.instance.gameID = GameID;
+        GameClient.Instance.GameId = GameID;
         SceneLoader.instance.LoadSceneByName(gameScene);
     }
 

@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-yuni-017
+  m_EditorClassIdentifier: 
+  cardID: cards-yuni-017
+  cardName: "\uC544\uB974\uB0E5 2\uC778\uC870"
+  cardType: 0
+  member: 1
+  rarity: 0
+  expansion: 0
+  manaCost: 9
+  attack: 8
+  health: 8
+  minionTribe: 2
+  description: "\uD1F4\uC7A5: 8/8 \uC544\uB974\uB0E5 \uD558\uC218\uC778\uC744 \uC18C\uD658\uD569\uB2C8\uB2E4"
+  additionalExplanation: 
+  effects:
+  - trigger: ON_DEATH
+    effectName: SUMMON_TOKEN
+    value1: 0
+    value2: 0
+    target: SELF
+    condition: CARD_ID
+    conditionValue: cards-yuni-1002
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

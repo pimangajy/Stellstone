@@ -5,98 +5,71 @@ using UnityEngine;
 [System.Serializable]
 public class EffectInstance
 {
-    public CardEffect effect; // 어떤 효과인지 (예: DamageEffect, BuffEffect)
-    public int value1;       // 첫 번째 값 (예: 피해량, 공격력 버프)
-    public int value2;       // 두 번째 값 (예: 체력 버프)
-    // 나중에 필요하면 string, float 등 다른 타입의 값도 추가할 수 있습니다.
+    // 예: ON_PLAY | DAMAGE : 3 : 0 : TARGET
+    public string trigger;        // 발동 시점 (예: ON_PLAY, ON_DEATH)
+    public string effectName;     // 효과 종류 (예: DAMAGE, HEAL, BUFF)
+    public int value1;            // 값1 (피해량, 드로우 수 등)
+    public int value2;            // 값2 (체력 버프 등)
+    public string target;         // 대상 (예: TARGET_ENEMY, SELF)
+    public string condition;      // 조건 (예: TRIBE)
+    public string conditionValue; // 조건값 (예: 멤버)
+    public int count;             // 반복 횟수
+
+    // [수정됨] '/' 연산자(Else) 처리를 위한 재귀적 필드
+    // 앞의 효과 조건이 맞지 않을 때 실행할 대체 효과
+    [SerializeReference]
+    public EffectInstance elseEffect;
 }
 
-// 이 enum은 CardData 클래스 바깥이나 안, 어디에 선언해도 좋습니다.
-public enum CardType
-{
-    하수인, // Minion
-    주문,  // Spell
-    장비,  // Equipment
-}
-// --- 하수인 전용 종족 ---
-public enum MinionTribe
-{
-    없음, // 종족이 없는 일반 하수인
-    강도단,
-    아르냥
-}
-// --- 주문 전용 타입 ---
-public enum SpellType
-{
-    없음, // 타입이 없는 일반 주문
-    단일_대상,
-    범위_광역
-}
-public enum EquipmentType
-{
-    없음, // 타입이 없는 일반 주문
-    무기,
-    방어구,
-}
+public enum ClassType { 강지, 유니, 후야 }
+public enum CardType { 하수인, 주문, 멤버, 무기 }
+public enum MinionTribe { 없음, 강도단, 아르냥, 바쿠, 멤버 }
+public enum Rarity { 일반, 희귀, 영웅, 전설 }
+public enum Expansion { 기본 }
+public enum TargetRule { None, Target_Enemy, Target_Friend, All }
 
-// 타겟팅 규칙
-public enum TargetRule
-{
-    선택_불가, // 타겟을 지정할 수 없는 효과 (예: 광역 주문)
-    아군_전용, // 아군 하수인만 타겟으로 지정 가능
-    적군_전용, // 적군 하수인만 타겟으로 지정 가능
-    모두_가능  // 아군, 적군 모두 타겟으로 지정 가능
-}
-
-// 게임에 등장할 모든 키워드를 정의하는 enum 입니다.
-public enum Keyword
-{
-    // 하수인 공용
-    도발,      // Taunt: 이 하수인을 먼저 공격해야 합니다.
-    속공,      // Rush: 필드에 나온 턴에 다른 하수인을 공격할 수 있습니다.
-    돌진,      // Charge: 필드에 나온 턴에 모든 것을 공격할 수 있습니다.
-    흡혈, // Lifesteal: 이 하수인이 피해를 줄 때 영웅의 체력을 회복합니다.
-    치명타,      // Poisonous: 이 하수인이 피해를 준 하수인은 파괴됩니다.
-    은신,      // Stealth: 주문이나 효과의 대상으로 지정되지 않으며, 공격하기 전까지 무적.
-
-    // 주문 전용
-    주문증폭,  // Spell Damage: 주문의 공격력을 증가시킵니다.
-    쌍둥이주문 // Twinspell: 이 주문을 사용하면, 비용은 같지만 이 키워드는 없는 복사본을 손으로 가져옵니다.
-}
-
-// [CreateAssetMenu] 속성은 유니티 에디터의 Assets/Create 메뉴에 새로운 항목을 추가해 줍니다.
 [CreateAssetMenu(fileName = "New Card", menuName = "Card Game/Card Data")]
 public class CardData : ScriptableObject
 {
-    [Header("카드 기본 정보")]
-    public string cardID;
-    public CardType cardType; // ★★★ 추가된 카드 타입 변수 ★★★
-    public MinionTribe minionTribe;
-    public SpellType spellType;
-    public string cardName;
-    [TextArea(3, 10)] // 인스펙터에서 여러 줄로 텍스트를 입력할 수 있게 해줍니다.
-    public string description;
-    public Sprite cardArtwork; // 카드 일러스트
+    [Header("1. 식별 정보")]
+    public string cardID;       // CSV: CardID
+    public string cardName;     // CSV: name
 
-    [Header("카드 스탯")]
-    public int manaCost;
-    public int attack;
-    public int health;
+    [Header("2. 게임 로직 (Stats)")]
+    public CardType cardType;   // CSV: type (하수인, 주문 등)
+    public ClassType member;       // CSV 파일명이나 분류 (강지, 유니 등)
+    public Rarity rarity;       // CSV: rarity
+    public Expansion expansion; // CSV: expansion
 
-    [Header("카드 효과")]
-    // ★★★ 핵심 수정: 이제 EffectInstance의 리스트를 사용합니다. ★★★
-    public List<EffectInstance> effects;
+    public int manaCost;        // CSV: cost
+    public int attack;          // CSV: attack
+    public int health;          // CSV: health
+    public MinionTribe minionTribe; // CSV: tribe
 
-    [Header("키워드 능력")]
-    [Tooltip("이 카드가 가진 모든 키워드 능력의 목록입니다.")]
-    public List<Keyword> keywords;
+    [TextArea(3, 10)]
+    public string description;  // CSV: description
 
-    [Header("타겟팅 규칙")]
-    [Tooltip("단일 대상 주문/효과의 타겟팅 규칙입니다.")]
+    [TextArea(3, 10)]
+    public string additionalExplanation; // CSV: additional
+
+    [Header("3. 효과 데이터")]
+    // [수정됨] 파싱된 효과 리스트
+    public List<EffectInstance> effects = new List<EffectInstance>();
+
+    // 필요 시 사용하는 추가 필드들
     public TargetRule targetRule;
 
+    [Header("4. 리소스 (Art & Sound)")]
 
-    // 나중에 여기에 카드 타입, 진영, 키워드 능력 등 더 많은 정보를 추가할 수 있습니다.
-    // public enum CardType { Minion, Spell, Weapon }
-    // public CardType cardType;
+    // 움직이는 이미지를 위해 배열로 변경
+    [Tooltip("애니메이션 프레임들을 순서대로 넣으세요. 정지 화상은 1개만 넣으세요.")]
+    public Sprite[] animationFrames;
+    public SpawnEffectData spawnEffectData;
+    public Sprite memberIcon;       // 직업 아이콘
+
+    // 썸네일 (배열의 첫 번째 장을 대표 이미지로 사용)
+    public Sprite thumbnail => (animationFrames != null && animationFrames.Length > 0) ? animationFrames[0] : null;
+
+    public GameObject spawnEffect;  // 소환 이펙트 프리팹
+    public AudioClip attackSound;   // 공격 사운드
 }

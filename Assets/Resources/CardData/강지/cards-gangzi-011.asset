@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-gangzi-011
+  m_EditorClassIdentifier: 
+  cardID: cards-gangzi-011
+  cardName: "\uAC15\uB3C4\uB2E8 \uC9D1\uD569"
+  cardType: 1
+  member: 0
+  rarity: 1
+  expansion: 0
+  manaCost: 5
+  attack: 0
+  health: 0
+  minionTribe: 0
+  description: "\uB371\uC5D0\uC11C \uBE44\uC6A9\uC774 2 \uC774\uD558\uC778 '\uAC15\uB3C4\uB2E8'\uC744
+    3\uBA85 \uC18C\uD658\uD569\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_PLAY
+    effectName: SUMMON_FROM_DECK
+    value1: 0
+    value2: 0
+    target: SELF
+    condition: TRIBE
+    conditionValue: "\uAC15\uB3C4\uB2E8"
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

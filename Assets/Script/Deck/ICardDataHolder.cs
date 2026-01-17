@@ -13,5 +13,5 @@ public interface ICardDataHolder
     /// 이 컴포넌트가 가지고 있는 카드 데이터를 반환합니다.
     /// </summary>
     /// <returns>카드 원본 데이터</returns>
-    CardDataFirebase GetCardData();
+    CardData GetCardData();
 }

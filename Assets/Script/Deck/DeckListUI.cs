@@ -45,7 +45,10 @@ public class DeckListUI : MonoBehaviour
         // 1. 기존 버튼들을 모두 삭제
         foreach (Transform child in deckListParent)
         {
-            Destroy(child.gameObject);
+            if (child.gameObject.name != "DeckPlus")
+            {
+                Destroy(child.gameObject);
+            }
         }
 
         // 2. DeckSaveManager로부터 모든 덱 데이터를 가져옴

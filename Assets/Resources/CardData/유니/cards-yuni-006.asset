@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-yuni-006
+  m_EditorClassIdentifier: 
+  cardID: cards-yuni-006
+  cardName: "\uBB58\uBF40\uB178?"
+  cardType: 1
+  member: 1
+  rarity: 0
+  expansion: 0
+  manaCost: 3
+  attack: 0
+  health: 0
+  minionTribe: 0
+  description: "\uBAA8\uB4E0 \uC801 \uD558\uC218\uC778\uC5D0\uAC8C 2\uC758 \uD53C\uD574\uB97C
+    \uC90D\uB2C8\uB2E4. \uB0B4 \uC601\uC6C5\uC5D0\uAC8C 3\uC758 \uD53C\uD574\uB97C
+    \uC90D\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_PLAY
+    effectName: DAMAGE
+    value1: 2
+    value2: 0
+    target: ALL_ENEMY_MINIONS
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  - trigger: ON_PLAY
+    effectName: DAMAGE
+    value1: 3
+    value2: 0
+    target: FRIENDLY_HERO
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

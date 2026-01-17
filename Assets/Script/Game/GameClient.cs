@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Newtonsoft.Json; // 2단계에서 설치한 라이브러리
 using Firebase.Auth;
+using System.Collections.Generic;
+using System.Collections;
 
 // (중요) GameActionModels.cs 파일의 클래스 정의가 필요합니다.
 // 서버의 GameActionModels.cs 파일을 유니티 프로젝트에 그대로 복사해오세요.
@@ -17,6 +19,16 @@ using Firebase.Auth;
 /// </summary>
 public class GameClient : MonoBehaviour
 {
+    public static GameClient Instance { get; private set; }
+
+    // --- 이벤트 정의 (Action 사용) ---
+    public event Action<S_GameReady> OnGameReadyEvent;
+    public event Action<S_PhaseStart> OnPhaseStartEvent;
+    public event Action<S_UpdateMana> OnUpdateManaEvent;
+    public event Action<List<EntityData>> OnEntitiesUpdatedEvent; // 데이터만 넘겨줌
+    public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;
+    public event Action<string> OnErrorEvent;
+
     // C# 기본 WebSocket 클라이언트
     private ClientWebSocket _webSocket;
     private CancellationTokenSource _cts;
@@ -32,10 +44,27 @@ public class GameClient : MonoBehaviour
     private ConcurrentQueue<string> _receivedMessages = new ConcurrentQueue<string>();
 
     [Header("Test Connection")]
-    public string serverAddress = "ws://localhost:5123/ws/game";
+    public string serverAddress = "ws://175.125.250.226:5123/ws/game";
 
     // (테스트용) 실제로는 매치메이킹 후 받아와야 합니다.
     public string GameId;
+
+
+    void Awake()
+    {
+        // (핵심) 싱글톤 패턴 구현
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject); // 씬이 바뀌어도 파괴되지 않음
+        }
+        else
+        {
+            // 이미 다른 GameClient가 존재한다면(예: 로비로 돌아왔을 때), 나는 중복이므로 파괴됨
+            Destroy(gameObject);
+            return;
+        }
+    }
 
     // --- 1. 유니티 생명주기 (메인 스레드) ---
 
@@ -44,12 +73,10 @@ public class GameClient : MonoBehaviour
         // (신규) Firebase Auth 인스턴스를 가져옵니다.
         _auth = FirebaseAuth.DefaultInstance;
 
-        GameId = SceneLoader.instance.gameID;
-
         // (테스트용) 
         // 이 스크립트가 시작되면 바로 서버에 연결을 시도합니다.
         // 실제 게임에서는 "게임 시작" 버튼을 눌렀을 때 호출해야 합니다.
-        ConnectToServerAsync();
+        // ConnectToServerAsync();
     }
 
     void Update()
@@ -58,7 +85,7 @@ public class GameClient : MonoBehaviour
         // 큐에 처리할 메시지가 있는지 확인합니다.
         while (_receivedMessages.TryDequeue(out string message))
         {
-            Debug.Log($"[GameClient]  S -> C 수신 (처리): {message}");
+            //Debug.Log($"[GameClient]  S -> C 수신 (처리): {message}");
             HandleServerMessage(message);
         }
     }
@@ -178,6 +205,35 @@ public class GameClient : MonoBehaviour
     // --- 3. 메시지 전송 및 처리 (C -> S / S -> C) ---
 
     /// <summary>
+    /// 카드 사용 요청을 서버로 보냅니다.
+    /// </summary>
+    public void SendPlayCardRequest(string cardInstanceId, int slotIndex, int targetEntityId = 0)
+    {
+        C_PlayCard action = new C_PlayCard
+        {
+            action = "PLAY_CARD",
+            handCardInstanceId = cardInstanceId,
+            position = slotIndex,
+            targetEntityId = targetEntityId
+        };
+
+        SendMessageAsync(action);
+        Debug.Log($"[GameClient] 카드 사용 요청 전송: action : {action.action}, handCardInstanceId : {action.handCardInstanceId}, " +
+            $"position : {action.position}, targetEntityId : {action.targetEntityId} -> Slot {slotIndex}");
+    }
+
+    public void SendAttackRequest(int attackerId, int defenderId)
+    {
+        C_Attack action = new C_Attack
+        {
+            action = "ATTACK",
+            attackerEntityId = attackerId,
+            defenderEntityId = defenderId
+        };
+        SendMessageAsync(action);
+    }
+
+    /// <summary>
     /// (메인 스레드 -> 백그라운드) 서버로 JSON 메시지를 전송합니다.
     /// (주의: BaseGameAction을 상속받는 C_MulliganDecision 등)
     /// </summary>
@@ -195,7 +251,7 @@ public class GameClient : MonoBehaviour
             byte[] buffer = Encoding.UTF8.GetBytes(jsonMessage);
 
             await _webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
-            Debug.Log($"[GameClient] C -> S 전송: {jsonMessage}");
+            //Debug.Log($"[GameClient] C -> S 전송: {jsonMessage}");
         }
         catch (Exception e)
         {
@@ -221,26 +277,32 @@ public class GameClient : MonoBehaviour
 
             case "GAME_READY":
                 var gameReadyInfo = JsonConvert.DeserializeObject<S_GameReady>(jsonMessage);
+                OnGameReadyEvent?.Invoke(gameReadyInfo);
                 OnGameReady(gameReadyInfo);
                 break;
 
             case "PHASE_START":
                 var phaseStartInfo = JsonConvert.DeserializeObject<S_PhaseStart>(jsonMessage);
+                OnPhaseStartEvent?.Invoke(phaseStartInfo);
                 OnPhaseStart(phaseStartInfo);
                 break;
 
             case "UPDATE_MANA":
                 var updateManaInfo = JsonConvert.DeserializeObject<S_UpdateMana>(jsonMessage);
+                OnUpdateManaEvent?.Invoke(updateManaInfo);
                 OnUpdateMana(updateManaInfo);
                 break;
 
             case "UPDATE_ENTITIES":
                 var updateEntitiesInfo = JsonConvert.DeserializeObject<S_UpdateEntities>(jsonMessage);
+                OnEntitiesUpdatedEvent?.Invoke(updateEntitiesInfo.updatedEntities);
                 OnUpdateEntities(updateEntitiesInfo);
                 break;
 
             case "OPPONENT_PLAY_CARD":
+                Debug.Log("[GameClient] 상대가 카드를 냈습니다.");
                 var opponentPlayCardInfo = JsonConvert.DeserializeObject<S_OpponentPlayCard>(jsonMessage);
+                OnOpponentPlayCardEvent?.Invoke(opponentPlayCardInfo);
                 OnOpponentPlayCard(opponentPlayCardInfo);
                 break;
 
@@ -274,8 +336,19 @@ public class GameClient : MonoBehaviour
         // info.cardsToMulligan 리스트를 사용해 5장의 카드를 화면에 그립니다.
         Debug.Log($"[GameClient] 멀리건 시작! 교체할 카드 {info.cardsToMulligan.Count}장 받음.");
 
-        // (테스트용) 1초 후, 아무것도 교체하지 않음
-        Invoke("SendMulliganDecision", 1.0f);
+        if(GameMulliganManager.instance != null )
+        {
+            GameMulliganManager.instance.mulliganImg.SetActive(true);
+        }
+
+        if (CardDrawManager.Instance != null)
+        {
+            CardDrawManager.Instance.PerformBatchDraw(info.cardsToMulligan);
+        }
+        else
+        {
+            Debug.LogError("[GameClient] CardDrawManager 인스턴스를 찾을 수 없습니다!");
+        }
     }
 
     // (테스트용)
@@ -291,9 +364,59 @@ public class GameClient : MonoBehaviour
 
     private void OnGameReady(S_GameReady info)
     {
-        // TODO: 멀리건 UI를 닫고, 게임 보드를 활성화합니다.
-        // info.finalHand 리스트를 사용해 내 손패를 그립니다.
         Debug.Log($"[GameClient] 게임 준비 완료! 선공: {info.firstPlayerUid}. 내 최종 손패: {info.finalHand.Count}장");
+
+        // (신규) 멀리건 UI가 있다면 닫아줍니다 (예시 코드)
+        // if (GameMulliganManager.Instance != null) GameMulliganManager.Instance.CloseMulliganUI();
+
+        // (신규) 서버의 최종 손패와 내 손패를 비교하여 드로우하는 코루틴 실행
+        StartCoroutine(SyncHandWithServer(info.finalHand));
+    }
+    // (신규) 서버의 최종 손패 리스트를 받아, 내 손에 없는 카드만 드로우합니다.
+    private IEnumerator SyncHandWithServer(List<CardInfo> finalHand)
+    {
+        // 내 손패 관리자 가져오기 (싱글톤 가정)
+        var handManager = HandInteractionManager.instance;
+        if (handManager == null)
+        {
+            Debug.LogError("[GameClient] HandInteractionManager를 찾을 수 없습니다!");
+            yield break;
+        }
+
+        foreach (var serverCard in finalHand)
+        {
+            Debug.Log($"최종 카드 {serverCard.cardId}");
+
+            bool isAlreadyInHand = false;
+            // (중요) 내 손에 있는 카드들 중 instanceId가 같은 게 있는지 확인
+            // HandInteractionManager의 카드 리스트 변수명이 'myHandCards'라고 가정합니다.
+            // 만약 변수명이 다르다면 수정해주세요! (예: cards, handCards 등)
+            foreach (var existingCardObj in handManager.handCards)
+            {
+                // 카드 오브젝트에서 데이터 스크립트(CardDisplay) 가져오기
+                var display = existingCardObj.GetComponent<GameCardDisplay>();
+                if (display != null && display.InstanceId == serverCard.instanceId)
+                {
+                    isAlreadyInHand = true;
+                    // (선택) 서버의 최신 스탯으로 갱신해줄 수도 있습니다.
+                    // display.UpdateData(serverCard);
+                    break;
+                }
+            }
+
+            // 내 손에 없다면 -> 새로 드로우해야 하는 카드!
+            if (!isAlreadyInHand)
+            {
+                if (CardDrawManager.Instance != null)
+                {
+                    CardDrawManager.Instance.PerformDrawAnimation(serverCard);
+                }
+                // 드로우 연출 딜레이
+                yield return new WaitForSeconds(0.3f);
+            }
+        }
+
+        Debug.Log("[GameClient] 최종 손패 동기화 완료.");
     }
 
     private void OnPhaseStart(S_PhaseStart info)
@@ -319,13 +442,33 @@ public class GameClient : MonoBehaviour
 
     private void OnUpdateEntities(S_UpdateEntities info)
     {
-        // (가장 중요)
-        // TODO: 필드 위의 개체(하수인, 리더, 멤버) 상태를 갱신합니다.
-        // info.updatedEntities 리스트를 순회하며
-        // - ID가 없으면 -> 새로 소환
-        // - ID가 있는데 health <= 0 이면 -> 죽음 처리
-        // - ID가 있으면 -> 체력/공격력/상태(CanAttack) 갱신
         Debug.Log($"[GameClient] {info.updatedEntities.Count}개의 개체 상태 갱신됨.");
+
+        // GameEntityManager가 준비되었는지 확인
+        if (GameEntityManager.Instance == null) return;
+
+        foreach (var entityData in info.updatedEntities)
+        {
+            // GameEntityManager에게 위임!
+            // "이 ID의 개체가 이미 있나요? 있으면 업데이트, 없으면 생성해주세요."
+
+            // (주의) GameEntityManager.UpdateEntity 내부에서 존재 여부를 체크하므로
+            // 여기서는 일단 Update를 호출해보고, 없으면 Spawn을 호출하는 방식도 가능하지만
+            // 더 명확하게 하기 위해 GameEntityManager에 존재 확인 함수(HasEntity)를 추가하거나,
+            // UpdateEntity가 false를 반환하면 Spawn을 하는 식으로 짜는 게 좋습니다.
+
+            // 하지만 현재 구조상 간단하게 '관리자에게 다 맡기는' 형태로 가겠습니다.
+            // GameEntityManager 쪽에서 Dictionary를 조회해서 판단하도록 합니다.
+
+            // 여기서는 '새로 소환해야 하는 상황'인지 판단하기 위해
+            // GameClient가 _auth 정보를 가지고 있으므로 'isMine' 여부만 판단해서 넘겨줍니다.
+
+            bool isMine = (entityData.ownerUid == _auth.CurrentUser.UserId);
+
+            // 매니저에게 "이 데이터로 처리해줘" 라고 던짐
+            // (매니저 내부에서 이미 있으면 Update, 없으면 Spawn 분기 처리하도록 로직을 합치는 것 추천)
+            GameEntityManager.Instance.HandleEntityUpdate(entityData, isMine);
+        }
     }
 
     private void OnOpponentPlayCard(S_OpponentPlayCard info)

@@ -267,6 +267,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a704d70cd2c57e246a450c22040db70c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameScene: SampleScene
 --- !u!1 &61559272
 GameObject:
   m_ObjectHideFlags: 0
@@ -3984,37 +3985,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1523101498}
   m_CullTransparentMesh: 1
---- !u!1 &1526320139
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1526320140}
-  m_Layer: 0
-  m_Name: MatchingToDeck
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1526320140
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1526320139}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1225.329, y: 542.7838, z: -422.99564}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1541570281
 GameObject:
   m_ObjectHideFlags: 0
@@ -4793,7 +4763,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1781634899
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5936,5 +5906,4 @@ SceneRoots:
   - {fileID: 752655174}
   - {fileID: 512176669}
   - {fileID: 1240444368}
-  - {fileID: 1526320140}
   - {fileID: 61105713}

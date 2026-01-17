@@ -40,6 +40,7 @@ public class ClassSelectionButton : MonoBehaviour
         if (deckBuilder != null)
         {
             deckBuilder.SetClassFilter(className);
+            UIManager.Instance.ClearPopupList();
 
             // (선택) 직업 선택 창을 닫는 코드를 여기에 추가할 수 있습니다.
             // 예를 들어, transform.parent.parent.gameObject.SetActive(false);

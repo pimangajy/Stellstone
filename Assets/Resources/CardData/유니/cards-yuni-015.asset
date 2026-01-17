@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-yuni-015
+  m_EditorClassIdentifier: 
+  cardID: cards-yuni-015
+  cardName: "\uBBF8\uCE5C\uAC1C \uC870\uB828\uC0AC"
+  cardType: 0
+  member: 1
+  rarity: 0
+  expansion: 0
+  manaCost: 8
+  attack: 2
+  health: 2
+  minionTribe: 2
+  description: "\uBB34\uC791\uC704 \uC801\uC744 \uACF5\uACA9\uD558\uB294 8/8 \uD558\uC218\uC778\uC744
+    \uC18C\uD658\uD569\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_PLAY
+    effectName: SUMMON_TOKEN
+    value1: 0
+    value2: 0
+    target: SELF
+    condition: CARD_ID
+    conditionValue: cards-yuni-1001
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

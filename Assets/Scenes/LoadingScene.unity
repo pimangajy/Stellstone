@@ -133,6 +133,7 @@ GameObject:
   - component: {fileID: 43838321}
   - component: {fileID: 43838320}
   - component: {fileID: 43838319}
+  - component: {fileID: 43838322}
   m_Layer: 0
   m_Name: UIManager
   m_TagString: Untagged
@@ -152,6 +153,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e18577971cb9d774fa99e9e950fe5c4b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameID: 
 --- !u!114 &43838320
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -179,6 +181,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &43838322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 43838318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51c68c8faace01b4ea0b68eb44d74369, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &281802847
 GameObject:
   m_ObjectHideFlags: 0
@@ -189,8 +203,8 @@ GameObject:
   m_Component:
   - component: {fileID: 281802850}
   - component: {fileID: 281802849}
-  - component: {fileID: 281802848}
   - component: {fileID: 281802851}
+  - component: {fileID: 281802852}
   m_Layer: 0
   m_Name: _Managers
   m_TagString: Untagged
@@ -198,18 +212,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &281802848
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 281802847}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 76a80d1d3a695ba4cb1f8994419728c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &281802849
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -251,6 +253,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   nextSceneName: Login
   loadingStatusText: {fileID: 0}
+--- !u!114 &281802852
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 281802847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae142de4e8fe7a34986c5b8b28c7f5f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serverAddress: ws://175.125.250.226:5123/ws/game
+  GameId: 
 --- !u!1 &407297494
 GameObject:
   m_ObjectHideFlags: 0

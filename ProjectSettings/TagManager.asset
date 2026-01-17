@@ -15,12 +15,12 @@ TagManager:
   - 
   - Water
   - UI
-  - DraggedCard
+  - Field
   - GameBoard
   - Cursor
   - CardState
   - MuseTextureLayer
-  - 
+  - Card
   - 
   - 
   - 

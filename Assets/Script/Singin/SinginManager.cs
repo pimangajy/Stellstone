@@ -31,8 +31,8 @@ public class SinginManager : MonoBehaviour
     public TextMeshProUGUI messageTextLogin;
 
     [Header("API URLs")]
-    public string signupApiUrl = "http://localhost:5123/api/auth/signup";
-    public string verifyTokenApiUrl = "http://localhost:5123/api/auth/verify-token";
+    public string signupApiUrl = "http://175.125.250.226:5123/api/auth/signup";
+    public string verifyTokenApiUrl = "http://175.125.250.226:5123/api/auth/verify-token";
 
     // --- Firebase 관련 변수 ---
     private FirebaseAuth auth;

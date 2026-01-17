@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-yuni-007
+  m_EditorClassIdentifier: 
+  cardID: cards-yuni-007
+  cardName: "\uC0C1\uCC98\uC785\uC740 \uC544\uB974\uB0E5"
+  cardType: 0
+  member: 1
+  rarity: 0
+  expansion: 0
+  manaCost: 4
+  attack: 4
+  health: 4
+  minionTribe: 2
+  description: "\uD53C\uD574\uB97C \uBC1B\uC73C\uBA74 \uBB34\uC791\uC704 \uC801\uC5D0\uAC8C
+    2\uC758 \uD53C\uD574\uB97C \uC785\uD799\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_DAMAGE
+    effectName: DAMAGE
+    value1: 2
+    value2: 0
+    target: RANDOM_ENEMY
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

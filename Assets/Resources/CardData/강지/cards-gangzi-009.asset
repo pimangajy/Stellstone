@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-gangzi-009
+  m_EditorClassIdentifier: 
+  cardID: cards-gangzi-009
+  cardName: "\uAC15\uB3C4\uB2E8\uC758 \uC120\uBB3C"
+  cardType: 1
+  member: 0
+  rarity: 0
+  expansion: 0
+  manaCost: 2
+  attack: 0
+  health: 0
+  minionTribe: 0
+  description: "\uC544\uAD70 \uD558\uC218\uC778\uC5D0\uAC8C +2/+2\uC744 \uBD80\uC5EC\uD569\uB2C8\uB2E4."
+  additionalExplanation: 
+  effects:
+  - trigger: ON_PLAY
+    effectName: BUFF
+    value1: 2
+    value2: 2
+    target: TARGET_FRIENDLY_MINION
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 0
+  animationFrames: []
+  spawnEffectData: {fileID: 0}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
