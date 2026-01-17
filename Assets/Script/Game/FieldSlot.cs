@@ -1,12 +1,16 @@
 using UnityEngine;
 
 /// <summary>
-/// 필드 슬롯 오브젝트에 부착되어 슬롯의 정보를 담습니다.
+/// 하수인이 놓일 수 있는 '자리(Slot)' 하나를 나타냅니다.
 /// </summary>
 public class FieldSlot : MonoBehaviour
 {
-    [Tooltip("슬롯의 고유 인덱스 (0부터 시작)")]
+    [Tooltip("몇 번째 자리인가요? (0~6)")]
     public int slotIndex;
-    public bool IsOccupied = false; 
+
+    [Tooltip("누군가 이 자리에 있나요?")]
+    public bool IsOccupied = false;
+
+    // (선택) 현재 이 자리에 있는 카드 정보
     public CardData cardData;
 }

@@ -1,44 +1,41 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq; // FirstOrDefault 등을 사용하기 위해 필요
-using System;     // Guid를 사용하기 위해 필요
+using System.Linq;
+using System;
 
 /// <summary>
-/// 사용자의 모든 덱 데이터를 PlayerPrefs에 저장하고 불러오는 싱글톤 관리자입니다.
+/// [참고] 이 스크립트는 PlayerPrefs(내 컴퓨터 저장소)를 사용하는 방식입니다.
+/// 현재 프로젝트는 Firebase(서버)를 사용하는 'DeckSaveManager_Firebase'를 주로 쓰고 있는 것 같습니다.
+/// 이 파일은 서버 없이 로컬에서만 테스트할 때 유용합니다.
 /// </summary>
 public class DeckSaveManager : MonoBehaviour
 {
     public static DeckSaveManager instance;
 
     private List<DeckData> allDecks;
-    private const string SaveKey = "UserDecks"; // PlayerPrefs에 저장될 때 사용될 키
+    private const string SaveKey = "UserDecks"; // 저장할 때 쓸 열쇠 이름
 
-    // 덱 목록에 변경이 생겼을 때 다른 UI에게 알려주기 위한 이벤트
+    // 덱 변경 알림 이벤트
     public static event Action OnDecksChanged;
 
     private void Awake()
     {
-        // --- 씬 싱글톤 패턴 구현 ---
+        // 싱글톤 패턴
         if (instance != null && instance != this)
         {
-            // 이미 이 씬에 SinginManager가 있다면, 새로 생긴 것은 파괴
             Destroy(gameObject);
         }
         else
         {
-            // 이 씬의 유일한 인스턴스로 등록
             instance = this;
         }
-        // --- DontDestroyOnLoad(gameObject)는 사용하지 않음 ---
 
-        LoadDecks();
+        LoadDecks(); // 시작하자마자 불러오기
     }
 
     private void OnDestroy()
     {
-        // 씬이 변경되거나 이 오브젝트가 파괴될 때,
-        // static 참조를 스스로 정리(null로 만듦)합니다.
         if (instance == this)
         {
             instance = null;
@@ -46,14 +43,14 @@ public class DeckSaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// PlayerPrefs에서 모든 덱 정보를 불러옵니다.
+    /// 저장소(PlayerPrefs)에서 덱 정보를 불러옵니다.
     /// </summary>
     private void LoadDecks()
     {
         if (PlayerPrefs.HasKey(SaveKey))
         {
             string json = PlayerPrefs.GetString(SaveKey);
-            // JsonUtility는 리스트를 직접 변환하지 못하므로, Wrapper 클래스를 사용합니다.
+            // JSON을 다시 객체로 변환
             DeckListWrapper wrapper = JsonUtility.FromJson<DeckListWrapper>(json);
             allDecks = wrapper.decks;
         }
@@ -65,28 +62,30 @@ public class DeckSaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 현재 덱 목록 전체를 PlayerPrefs에 저장합니다.
+    /// 현재 덱 리스트를 저장소에 저장합니다.
     /// </summary>
     public void SaveDecks()
     {
+        // 리스트를 포장지에 싸서 JSON(문자열)으로 변환
         DeckListWrapper wrapper = new DeckListWrapper { decks = allDecks };
         string json = JsonUtility.ToJson(wrapper);
+
+        // 저장 및 디스크 쓰기
         PlayerPrefs.SetString(SaveKey, json);
-        PlayerPrefs.Save(); // 변경사항을 즉시 디스크에 씁니다.
+        PlayerPrefs.Save();
         Debug.Log("모든 덱이 저장되었습니다.");
 
-        // 덱 목록에 변화가 생겼음을 모두에게 알립니다.
-        OnDecksChanged?.Invoke();
+        OnDecksChanged?.Invoke(); // 알림
     }
 
     /// <summary>
-    /// 새로운 덱을 생성하고 목록에 추가합니다. "새로운 덱 n" 형식의 이름을 지능적으로 부여합니다.
+    /// 새 덱 생성 (이름 자동 부여: 새로운 덱 1, 새로운 덱 2...)
     /// </summary>
     public DeckData CreateNewDeck(string className)
     {
         const string defaultDeckNamePrefix = "새로운 덱 ";
 
-        // "새로운 덱 "으로 시작하는 이름을 가진 덱들 중에서 가장 큰 숫자를 찾습니다.
+        // LINQ를 사용해 기존 "새로운 덱 N" 중 가장 높은 숫자를 찾습니다.
         int maxDeckNumber = allDecks
             .Where(deck => deck.deckName.StartsWith(defaultDeckNamePrefix))
             .Select(deck => {
@@ -94,31 +93,32 @@ public class DeckSaveManager : MonoBehaviour
                 int.TryParse(numberPart, out int number);
                 return number;
             })
-            .DefaultIfEmpty(0) // 해당하는 덱이 하나도 없으면 0을 기본값으로 사용
+            .DefaultIfEmpty(0)
             .Max();
 
-        int newDeckNumber = maxDeckNumber + 1; // 찾은 가장 큰 숫자에 1을 더합니다.
+        int newDeckNumber = maxDeckNumber + 1;
 
+        // 새 덱 객체 생성
         DeckData newDeck = new DeckData(
-            Guid.NewGuid().ToString(), // 고유한 ID 생성
-            $"{defaultDeckNamePrefix}{newDeckNumber}", // 최종 이름 조합
-            className
+            Guid.NewGuid().ToString(), // 랜덤한 고유 ID 생성
+            $"{defaultDeckNamePrefix}{newDeckNumber}", // 이름
+            className // 직업
         );
 
         allDecks.Add(newDeck);
-        SaveDecks();
+        SaveDecks(); // 변경사항 저장
         return newDeck;
     }
 
     /// <summary>
-    /// 기존 덱의 정보를 업데이트합니다.
+    /// 기존 덱 업데이트
     /// </summary>
     public void UpdateDeck(DeckData updatedDeck)
     {
+        // ID가 같은 덱을 찾아서 내용물 교체
         DeckData deckToUpdate = allDecks.FirstOrDefault(d => d.deckId == updatedDeck.deckId);
         if (deckToUpdate != null)
         {
-            // 리스트 내의 기존 객체 내용을 업데이트
             deckToUpdate.deckName = updatedDeck.deckName;
             deckToUpdate.deckClass = updatedDeck.deckClass;
             deckToUpdate.cardIds = updatedDeck.cardIds;
@@ -131,11 +131,10 @@ public class DeckSaveManager : MonoBehaviour
         return allDecks;
     }
 
-    // JsonUtility가 List<T>를 직접 처리하지 못해서 사용하는 Helper 클래스
+    // JsonUtility가 List를 바로 저장 못해서 만든 포장지 클래스
     [System.Serializable]
     private class DeckListWrapper
     {
         public List<DeckData> decks;
     }
 }
-

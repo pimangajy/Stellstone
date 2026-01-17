@@ -1,26 +1,25 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Collections; // Coroutine 사용
+using System.Collections;
 
 /// <summary>
-/// 필드 위에 존재하는 모든 하수인과 영웅(Entity)의 생성, 관리, 연출을 담당합니다.
-/// GameClient는 데이터 통신만 하고, 시각적인 처리는 이 클래스에게 위임합니다.
+/// 필드 위에 나와있는 하수인이나 영웅(Entity)들을 관리하는 '현장 감독'입니다.
+/// 서버에서 "누가 소환됐다", "누가 다쳤다"고 하면 실제로 화면에 보여주는 역할을 합니다.
 /// </summary>
 public class GameEntityManager : MonoBehaviour
 {
     public static GameEntityManager Instance { get; private set; }
 
-    [Header("연결")]
-    [Tooltip("내 필드 (하수인이 소환될 부모 Transform)")]
+    [Header("필드 위치")]
+    [Tooltip("내 하수인들이 놓일 자리")]
     public Transform myFieldTransform;
-    [Tooltip("상대 필드")]
+    [Tooltip("상대 하수인들이 놓일 자리")]
     public Transform opponentFieldTransform;
 
     [Header("프리팹")]
-    public GameObject minionPrefab;
-    // public GameObject heroPrefab; // 나중에 영웅 프리팹도 분리하면 사용
+    public GameObject minionPrefab; // 하수인 모형 (붕어빵 틀)
 
-    // 필드에 소환된 모든 개체 관리 (Key: EntityId)
+    // 소환된 녀석들을 관리하는 명부 (ID로 찾음)
     private Dictionary<int, GameCardDisplay> _spawnedEntities = new Dictionary<int, GameCardDisplay>();
 
     void Awake()
@@ -29,24 +28,19 @@ public class GameEntityManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    private void Start()
-    {
-        
-    }
-
     // ==================================================================
-    // 1. 개체 생성 및 관리
+    // 1. 소환 및 관리
     // ==================================================================
 
     /// <summary>
-    /// 새로운 개체를 필드에 소환합니다. (GameClient에서 호출)
+    /// [소환] 새로운 하수인을 필드에 만듭니다.
     /// </summary>
     public void SpawnEntity(EntityData entityData, bool isMine)
     {
-        // 1. 중복 소환 방지
+        // 이미 있는 녀석이면 무시
         if (_spawnedEntities.ContainsKey(entityData.entityId)) return;
 
-        // 2. 카드 데이터 로드
+        // 카드 정보를 가져옵니다 (이미지 등을 알기 위해)
         CardData cardData = ResourceManager.Instance.GetCardData(entityData.cardId);
         if (cardData == null)
         {
@@ -54,24 +48,23 @@ public class GameEntityManager : MonoBehaviour
             return;
         }
 
-        // 3. 위치 결정
+        // 내 편이면 내 자리, 적이면 적 자리에 소환
         Transform spawnZone = isMine ? myFieldTransform : opponentFieldTransform;
 
-        // 4. 생성 및 초기화
+        // 오브젝트 생성
         GameObject newObj = Instantiate(minionPrefab, spawnZone);
         GameCardDisplay display = newObj.GetComponent<GameCardDisplay>();
 
         if (display != null)
         {
+            // 정보 입력 및 명부에 등록
             display.SetupEntity(entityData, cardData);
             _spawnedEntities.Add(entityData.entityId, display);
-
-            // TODO: 소환 이펙트 재생 (display.PlaySpawnEffect())
         }
     }
 
     /// <summary>
-    /// 기존 개체의 상태를 갱신합니다. (체력, 공격력 등)
+    /// [갱신] 이미 나와있는 하수인의 체력/공격력을 바꿉니다.
     /// </summary>
     public void UpdateEntity(EntityData entityData)
     {
@@ -85,27 +78,21 @@ public class GameEntityManager : MonoBehaviour
                 RemoveEntity(entityData.entityId);
             }
         }
-        else
-        {
-            // 없는 개체에 대한 업데이트 요청이 오면 (혹시 모르니) 생성 시도
-            // (서버 순서 문제로 업데이트가 먼저 올 수도 있음)
-            // SpawnEntity(entityData, ...); // isMine 정보가 없어서 지금은 패스
-        }
     }
 
     /// <summary>
-    /// 서버에서 온 데이터를 바탕으로 생성할지, 갱신할지 스스로 판단하여 처리합니다.
+    /// [통합 관리] 서버 데이터를 보고 소환할지, 갱신할지 알아서 결정합니다.
     /// </summary>
     public void HandleEntityUpdate(EntityData entityData, bool isMine)
     {
         if (_spawnedEntities.ContainsKey(entityData.entityId))
         {
-            // 이미 있으면 상태 갱신 (또는 사망 처리)
+            // 이미 있으면 정보 갱신
             UpdateEntity(entityData);
         }
         else
         {
-            // 없는데 체력이 0보다 크면 -> 새로 소환!
+            // 없는데 살아있는 녀석이면 -> 새로 소환!
             if (entityData.health > 0)
             {
                 SpawnEntity(entityData, isMine);
@@ -114,56 +101,49 @@ public class GameEntityManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 개체를 파괴합니다. (사망 연출 포함)
+    /// [사망] 하수인을 필드에서 제거합니다.
     /// </summary>
     public void RemoveEntity(int entityId)
     {
         if (_spawnedEntities.TryGetValue(entityId, out GameCardDisplay display))
         {
-            _spawnedEntities.Remove(entityId);
+            _spawnedEntities.Remove(entityId); // 명부에서 삭제
 
-            // 바로 삭제하지 않고 사망 애니메이션 후 삭제하도록 코루틴 사용 가능
+            // 바로 지우지 않고 사망 연출을 위해 코루틴 사용
             StartCoroutine(DestroyRoutine(display));
         }
     }
 
     private IEnumerator DestroyRoutine(GameCardDisplay display)
     {
-        // TODO: display.PlayDeathAnimation();
-        yield return new WaitForSeconds(0.5f); // 연출 시간 대기
-        Destroy(display.gameObject);
+        // TODO: 사망 애니메이션 재생 (display.PlayDeathAnimation())
+        yield return new WaitForSeconds(0.5f); // 0.5초 동안 비명 지르는 시간 등
+        Destroy(display.gameObject); // 진짜 삭제
     }
 
     // ==================================================================
-    // 2. 전투 및 연출 (GameClient가 S_UpdateEntities 외의 별도 액션 수신 시 호출)
+    // 2. 전투 연출
     // ==================================================================
 
     /// <summary>
-    /// 공격 애니메이션을 실행합니다.
+    /// [공격] A가 B를 때리는 연출을 시킵니다.
     /// </summary>
     public void PerformAttack(int attackerId, int targetId)
     {
         if (_spawnedEntities.TryGetValue(attackerId, out var attacker) &&
             _spawnedEntities.TryGetValue(targetId, out var target))
         {
-            // 중앙 관리자가 "누가 누구를 때려라"라고 명령만 내림
-            // 실제 움직임은 하수인 오브젝트(GameCardDisplay)가 스스로 수행
             StartCoroutine(AttackRoutine(attacker, target));
         }
     }
 
     private IEnumerator AttackRoutine(GameCardDisplay attacker, GameCardDisplay target)
     {
-        // 1. 공격 준비 (살짝 뒤로 뺐다가)
-        // 2. 돌진 (대상에게 빠르게 이동)
-        // 3. 타격 이펙트 (대상 위치에서)
-        // 4. 복귀 (원래 자리로)
-
-        // (간단 예시 - DOTween 사용 추천)
+        // 간단한 쿵! 박치기 연출
         Vector3 originalPos = attacker.transform.position;
         Vector3 targetPos = target.transform.position;
 
-        // 돌진
+        // 1. 돌진
         float moveTime = 0.2f;
         float elapsedTime = 0f;
         while (elapsedTime < moveTime)
@@ -173,10 +153,10 @@ public class GameEntityManager : MonoBehaviour
             yield return null;
         }
 
-        // 타격! (여기서 소리나 이펙트)
+        // 2. 타격
         Debug.Log($" 쾅! {attacker.EntityId} -> {target.EntityId}");
 
-        // 복귀
+        // 3. 복귀
         elapsedTime = 0f;
         while (elapsedTime < moveTime)
         {

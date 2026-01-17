@@ -2,49 +2,52 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 직업 선택 버튼에 부착하는 스크립트입니다.
-/// 버튼 클릭 시 DeckBuilder에 어떤 직업이 선택되었는지 알려주는 역할을 합니다.
+/// 직업 선택 버튼(예: 마법사, 사냥꾼 아이콘)에 붙여서 사용하는 스크립트입니다.
+/// 버튼을 누르면 "나 이 직업으로 덱 짤래!"라고 DeckBuilder에게 알려줍니다.
 /// </summary>
+// [RequireComponent]: 이 스크립트는 반드시 Button 컴포넌트가 같이 있어야 한다고 강제합니다.
 [RequireComponent(typeof(Button))]
 public class ClassSelectionButton : MonoBehaviour
 {
-    [Tooltip("이 버튼이 나타내는 직업 이름입니다. CardDataFirebase의 직업 속성과 일치해야 합니다. (예: '마법사', '전사')")]
+    // 유니티 에디터에서 직접 입력해줄 직업 이름입니다. (예: "Mage", "Warrior")
+    [Tooltip("이 버튼이 나타내는 직업 이름입니다. CardDataFirebase의 직업 속성과 일치해야 합니다.")]
     public string className;
 
-    // DeckBuilder 스크립트의 참조를 저장할 변수
+    // DeckBuilder 스크립트에게 연락하기 위해 주소를 저장할 변수
     private DeckBuilder deckBuilder;
 
     void Start()
     {
-        // 씬에서 DeckBuilder 스크립트를 찾아서 참조를 저장합니다.
-        // (더 좋은 방법은 싱글톤이나 직접 참조를 연결하는 것이지만, 지금은 간단한 구현을 위해 이 방식을 사용합니다.)
+        // 화면(Scene) 전체를 뒤져서 DeckBuilder 스크립트를 찾아냅니다.
         deckBuilder = FindObjectOfType<DeckBuilder>();
+
+        // 못 찾았으면 에러 메시지를 띄웁니다.
         if (deckBuilder == null)
         {
             Debug.LogError("씬에서 DeckBuilder 스크립트를 찾을 수 없습니다!");
             return;
         }
 
-        // 이 스크립트가 붙어있는 게임 오브젝트의 Button 컴포넌트를 가져옵니다.
+        // 내 몸에 붙어있는 버튼 컴포넌트를 가져옵니다.
         Button button = GetComponent<Button>();
-        // 버튼의 OnClick 이벤트에 OnButtonClick 함수를 동적으로 연결합니다.
+
+        // 버튼이 클릭되면(onClick) -> OnButtonClick 함수를 실행하라고 연결(AddListener)합니다.
         button.onClick.AddListener(OnButtonClick);
     }
 
     /// <summary>
-    /// 버튼이 클릭되었을 때 호출될 함수입니다.
+    /// 실제 버튼이 클릭되었을 때 실행되는 함수입니다.
     /// </summary>
     void OnButtonClick()
     {
-        // DeckBuilder의 직업 필터 함수를 호출하고, 이 버튼의 직업 이름을 전달합니다.
+        // 덱 빌더가 존재한다면
         if (deckBuilder != null)
         {
+            // 1. 덱 빌더에게 "이 직업(className)으로 필터링해줘"라고 요청합니다.
             deckBuilder.SetClassFilter(className);
-            UIManager.Instance.ClearPopupList();
 
-            // (선택) 직업 선택 창을 닫는 코드를 여기에 추가할 수 있습니다.
-            // 예를 들어, transform.parent.parent.gameObject.SetActive(false);
+            // 2. UI 매니저에게 팝업창(직업 선택창)을 닫아달라고 요청합니다.
+            UIManager.Instance.ClearPopupList();
         }
     }
 }
-

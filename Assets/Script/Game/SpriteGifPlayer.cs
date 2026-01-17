@@ -2,43 +2,42 @@ using UnityEngine;
 using System.Collections;
 using System.Linq;
 
+/// <summary>
+/// 여러 장의 스프라이트(이미지)를 연속으로 보여줘서
+/// 마치 GIF처럼 움직이는 그림을 만들어주는 스크립트입니다.
+/// </summary>
 public class SpriteGifPlayer : MonoBehaviour
 {
+    // 이미지를 어떻게 채울지 결정하는 옵션
     public enum ScaleType
     {
-        Stretch,    // 1. 강제로 늘려서 꽉 채움 (비율 깨짐)
-
-        FitInside,  // 2. 비율 유지하며 안에 쏙 들어감 (여백 생김) 
-                    // -> [필드 카드용]: 이미지가 잘리면 안 되고 전체가 다 보여야 할 때 사용
-
-        Cover       // 3. 비율 유지하며 꽉 채움 (넘치는 부분 발생) 
-                    // -> [손패 카드용]: 프레임을 꽉 채우고 넘치는 부분은 마스크로 자를 때 사용
+        Stretch,    // 찌그러져도 꽉 채움
+        FitInside,  // 비율 유지하며 안에 쏙 (여백 생김 - 필드 카드용)
+        Cover       // 비율 유지하며 꽉 채움 (잘림 - 손패 카드용)
     }
 
     [Header("설정")]
-    public Sprite[] gifFrames;
-    public float framesPerSecond = 10.0f;
+    public Sprite[] gifFrames; // 프레임 이미지들
+    public float framesPerSecond = 10.0f; // 1초에 몇 장 보여줄지
 
     [Header("크기 자동 조절")]
     public bool autoFitSize = true;
-    public ScaleType scaleType = ScaleType.Cover; // 기본값을 손패용(Cover)으로 변경
-
-    [Tooltip("맞추고 싶은 영역의 크기 (Quad의 크기)")]
-    public Vector2 targetSize = new Vector2(1.0f, 1.5f);
+    public ScaleType scaleType = ScaleType.Cover;
+    public Vector2 targetSize = new Vector2(1.0f, 1.5f); // 목표 크기
 
     public SpriteRenderer spriteRenderer;
     private Coroutine playCoroutine;
 
     void Awake()
     {
-        // spriteRenderer = GetComponent<SpriteRenderer>();
+        // spriteRenderer = GetComponent<SpriteRenderer>(); // 필요하면 주석 해제
     }
-
 
     void OnEnable()
     {
         if (gifFrames != null && gifFrames.Length > 0)
         {
+            // 프레임 수만큼 속도 자동 조절 (선택사항)
             framesPerSecond = gifFrames.Count();
             if (autoFitSize) FitSpriteToSize();
             PlayAnimation();
@@ -50,51 +49,38 @@ public class SpriteGifPlayer : MonoBehaviour
         StopAnimation();
     }
 
-    // 핵심: 스케일 계산 로직
+    // 이미지를 목표 크기에 맞게 스케일 조절
     void FitSpriteToSize()
     {
         if (spriteRenderer == null || gifFrames.Length == 0) return;
 
         spriteRenderer.sprite = gifFrames[0];
-        // 로컬 스케일을 초기화해야 정확한 사이즈 계산이 가능
         transform.localScale = Vector3.one;
 
         Vector3 spriteSize = spriteRenderer.bounds.size;
-
-        // 현재 이미지와 목표 크기의 비율 계산
         float ratioX = targetSize.x / spriteSize.x;
         float ratioY = targetSize.y / spriteSize.y;
-
-        float finalScaleX = 1f;
-        float finalScaleY = 1f;
+        float finalScaleX = 1f, finalScaleY = 1f;
 
         switch (scaleType)
         {
             case ScaleType.Stretch:
-                // 무조건 목표 크기에 맞춤 (비율 깨짐)
                 finalScaleX = ratioX;
                 finalScaleY = ratioY;
                 break;
-
             case ScaleType.FitInside:
-                // [필드용] 둘 중 더 작은 비율 선택 (이미지가 잘리지 않고 전체가 보임)
                 float minRatio = Mathf.Min(ratioX, ratioY);
-                finalScaleX = minRatio;
-                finalScaleY = minRatio;
+                finalScaleX = finalScaleY = minRatio;
                 break;
-
             case ScaleType.Cover:
-                // [손패용] 둘 중 더 큰 비율 선택 (빈 공간 없이 꽉 채우고, 튀어나간 부분은 마스크로 자름)
                 float maxRatio = Mathf.Max(ratioX, ratioY);
-                finalScaleX = maxRatio;
-                finalScaleY = maxRatio;
+                finalScaleX = finalScaleY = maxRatio;
                 break;
         }
 
         transform.localScale = new Vector3(finalScaleX, finalScaleY, 1f);
     }
 
-    // ... (애니메이션 재생 로직은 동일)
     void PlayAnimation()
     {
         StopAnimation();
@@ -107,6 +93,7 @@ public class SpriteGifPlayer : MonoBehaviour
         playCoroutine = null;
     }
 
+    // 이미지를 계속 교체하며 재생하는 루프
     IEnumerator PlayGifRoutine()
     {
         int index = 0;
@@ -123,6 +110,7 @@ public class SpriteGifPlayer : MonoBehaviour
         }
     }
 
+    // 외부에서 새로운 GIF를 설정할 때 사용
     public void SetGif(Sprite[] newFrames, float speed = 10.0f)
     {
         this.gifFrames = newFrames;

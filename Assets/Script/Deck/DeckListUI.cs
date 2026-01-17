@@ -4,65 +4,66 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 왼쪽 덱 목록 UI의 생성과 업데이트를 관리합니다.
-/// DeckSaveManager와 DeckBuilder 사이에서 UI 관련 처리를 중개합니다.
+/// 화면 왼쪽의 '저장된 덱 목록'을 관리하는 매니저입니다.
+/// 덱이 추가되거나 삭제되면 목록을 새로고침해서 보여줍니다.
 /// </summary>
 public class DeckListUI : MonoBehaviour
 {
     [Header("UI 연결")]
-    [SerializeField] private GameObject deckButtonPrefab; // 덱 버튼 프리팹
-    [SerializeField] private Transform deckListParent;    // 덱 버튼들이 생성될 부모 Transform
+    [SerializeField] private GameObject deckButtonPrefab; // 덱 버튼 프리팹 (복제할 원본)
+    [SerializeField] private Transform deckListParent;    // 버튼들이 들어갈 부모 위치
 
-    // [참조 연결]
-    // 인스펙터에서 DeckBuilder가 있는 게임오브젝트를 연결해주세요.
+    // DeckBuilder 스크립트와 연결 (덱 버튼을 누르면 DeckBuilder에게 알려줘야 하니까요)
     [SerializeField] private DeckBuilder deckBuilder;
 
     private void Awake()
     {
-        // DeckSaveManager의 이벤트에 구독 신청
+        // "덱 정보가 변경됐다"는 이벤트(OnDecksChanged)에 내 함수(UpdateDeckList)를 등록합니다.
+        // 이제 덱을 저장하거나 삭제하면 자동으로 목록이 갱신됩니다.
         DeckSaveManager.OnDecksChanged += UpdateDeckList;
         DeckSaveManager_Firebase.OnDecksChanged += UpdateDeckList;
     }
 
     private void OnDisable()
     {
-        // DeckSaveManager의 이벤트 구독 해지 (메모리 누수 방지)
+        // 이벤트 등록을 해제합니다. (매우 중요: 안 하면 에러 발생 가능)
         DeckSaveManager.OnDecksChanged -= UpdateDeckList;
         DeckSaveManager_Firebase.OnDecksChanged -= UpdateDeckList;
     }
 
     private void Start()
     {
-        // 처음 시작할 때 한 번 덱 목록을 그려줍니다.
+        // 게임 시작하자마자 덱 목록을 한번 그려줍니다.
         UpdateDeckList();
     }
 
     /// <summary>
-    /// 저장된 모든 덱을 가져와 UI 목록을 새로 고칩니다.
+    /// 저장된 덱 리스트를 가져와서 UI 버튼들을 다시 만듭니다.
     /// </summary>
     private void UpdateDeckList()
     {
-        // 1. 기존 버튼들을 모두 삭제
+        // 1. 청소: 기존에 있던 버튼들을 싹 지웁니다.
         foreach (Transform child in deckListParent)
         {
+            // "DeckPlus"라는 이름의 버튼(새 덱 만들기 버튼)은 지우지 않고 남겨둡니다.
             if (child.gameObject.name != "DeckPlus")
             {
                 Destroy(child.gameObject);
             }
         }
 
-        // 2. DeckSaveManager로부터 모든 덱 데이터를 가져옴
+        // 2. 데이터 가져오기: 저장 매니저에게 "모든 덱 내놔"라고 합니다.
         List<DeckData> allDecks = DeckSaveManager_Firebase.instance.GetAllDecks();
 
-        // 3. 각 덱 데이터에 대해 버튼을 생성
+        // 3. 생성: 덱 개수만큼 버튼을 만듭니다.
         foreach (DeckData deck in allDecks)
         {
+            // 버튼 프리팹 복제
             GameObject buttonGO = Instantiate(deckButtonPrefab, deckListParent);
             DeckButton deckButton = buttonGO.GetComponent<DeckButton>();
 
-            // 버튼에 덱 정보를 설정하고, 클릭했을 때 DeckBuilder의 LoadDeckForEditing 함수를 호출하도록 연결
+            // 버튼 설정: 이 버튼은 어떤 덱이고, 누르면 무슨 함수(LoadDeckForEditing)를 실행할지 알려줍니다.
             deckButton.Setup(deck, deckBuilder.LoadDeckForEditing);
         }
     }
 }
-
