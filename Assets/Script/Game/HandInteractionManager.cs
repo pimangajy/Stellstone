@@ -177,6 +177,7 @@ public class HandInteractionManager : MonoBehaviour
         UpdateHandLayout(newCardObject, newCardTravelDuration); // 재정렬
     }
 
+
     // 리스트에서만 빼기 (파괴 X, 멀리건 등으로 이동할 때 사용)
     public void RemoveCardFromHandListOnly(GameObject card)
     {
@@ -191,7 +192,8 @@ public class HandInteractionManager : MonoBehaviour
         UpdateHandLayout(null, shuffleDuration);
     }
 
-    private void RemoveCardFromHand(GameObject cardToRemove)
+    // 특정 카드 손패에서 삭제
+    public void RemoveCardFromHand(GameObject cardToRemove)
     {
         if (cardToRemove == null || !handCards.Contains(cardToRemove)) return;
         handCards.Remove(cardToRemove);

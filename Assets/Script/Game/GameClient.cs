@@ -31,6 +31,7 @@ public class GameClient : MonoBehaviour
     public event Action<List<EntityData>> OnEntitiesUpdatedEvent;
     public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;
     public event Action<string> OnErrorEvent;
+    public event Action<string> OnPlayCardFailedEvent;
 
     // WebSocket: 서버와 연결된 전화기 같은 것입니다.
     private ClientWebSocket _webSocket;
@@ -251,51 +252,61 @@ public class GameClient : MonoBehaviour
         switch (baseAction.action)
         {
             case "MULLIGAN_INFO": // 멀리건(첫 패 교환) 시작
+                Debug.Log("MULLIGAN_INFO 발생");
                 var mulliganInfo = JsonConvert.DeserializeObject<S_MulliganInfo>(jsonMessage);
                 OnMulliganInfoReceived(mulliganInfo);
                 break;
 
             case "GAME_READY": // 게임 준비 완료 (멀리건 끝)
+                Debug.Log("GAME_READY 발생");
                 var gameReadyInfo = JsonConvert.DeserializeObject<S_GameReady>(jsonMessage);
                 OnGameReadyEvent?.Invoke(gameReadyInfo); // 이벤트 방송
                 OnGameReady(gameReadyInfo);
                 break;
 
             case "PHASE_START": // 턴/페이즈 시작
+                Debug.Log("PHASE_START 발생");
                 var phaseStartInfo = JsonConvert.DeserializeObject<S_PhaseStart>(jsonMessage);
                 OnPhaseStartEvent?.Invoke(phaseStartInfo);
                 OnPhaseStart(phaseStartInfo);
                 break;
 
             case "UPDATE_MANA": // 마나 정보 갱신
+                Debug.Log("UPDATE_MANA 발생");
                 var updateManaInfo = JsonConvert.DeserializeObject<S_UpdateMana>(jsonMessage);
                 OnUpdateManaEvent?.Invoke(updateManaInfo);
                 OnUpdateMana(updateManaInfo);
                 break;
 
             case "UPDATE_ENTITIES": // 필드 하수인/영웅 상태 변경
+                Debug.Log("UPDATE_ENTITIES 발생");
                 var updateEntitiesInfo = JsonConvert.DeserializeObject<S_UpdateEntities>(jsonMessage);
                 OnEntitiesUpdatedEvent?.Invoke(updateEntitiesInfo.updatedEntities);
                 OnUpdateEntities(updateEntitiesInfo);
                 break;
 
             case "OPPONENT_PLAY_CARD": // 상대가 카드 냄
+                Debug.Log("OPPONENT_PLAY_CARD 발생");
                 var opponentPlayCardInfo = JsonConvert.DeserializeObject<S_OpponentPlayCard>(jsonMessage);
                 OnOpponentPlayCardEvent?.Invoke(opponentPlayCardInfo);
                 OnOpponentPlayCard(opponentPlayCardInfo);
                 break;
 
             case "PLAY_CARD_FAIL": // 내가 낸 카드 실패 (마나 부족 등)
+                Debug.Log("PLAY_CARD_FAIL 발생");
                 var playCardFailInfo = JsonConvert.DeserializeObject<S_PlayCardFail>(jsonMessage);
+                OnPlayCardFailedEvent?.Invoke(playCardFailInfo.reason);
                 OnPlayCardFail(playCardFailInfo);
                 break;
 
             case "GAME_OVER": // 게임 끝
+                Debug.Log("GAME_OVER 발생");
                 var gameOverInfo = JsonConvert.DeserializeObject<S_GameOver>(jsonMessage);
                 OnGameOver(gameOverInfo);
                 break;
 
             case "ERROR": // 서버 에러
+                Debug.Log("ERROR 발생");
                 var errorInfo = JsonConvert.DeserializeObject<S_Error>(jsonMessage);
                 Debug.LogError($"[GameClient] 서버 오류: {errorInfo.message}");
                 break;

@@ -37,6 +37,7 @@ public class CardDragManager : MonoBehaviour
 
     // 내부 변수들
     private GameObject _currentCard; // 지금 잡고 있는 카드
+    private GameObject _waitingCard; // 서버 응답을 기다리는 카드 (공중에 멈춰있는 카드)
     private bool _isDragging = false; // 드래그 중인가?
     private Plane _handMathPlane; // 카드 이동 계산용 가상 평면
     private Plane _playfieldMathPlane;
@@ -55,6 +56,14 @@ public class CardDragManager : MonoBehaviour
         _playfieldMathPlane = new Plane(Vector3.up, Vector3.zero); // 바닥 평면 정의
         if (targetingSourceTransform == null && handManager != null)
             targetingSourceTransform = handManager.handAnchor;
+
+        // GameClient 이벤트 구독 (성공/실패 감지용)
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.OnPlayCardFailedEvent += OnServerFailResponse;
+            // 성공 시 마나나 엔티티가 업데이트되므로 이를 성공 신호로 사용
+            GameClient.Instance.OnUpdateManaEvent += OnServerSuccessResponse;
+        }
     }
 
     private void Update()
@@ -72,6 +81,45 @@ public class CardDragManager : MonoBehaviour
             UpdateCardPositionAndTilt();
         }
     }
+
+    // --- 서버 응답 처리 핸들러 ---
+
+    // 성공: 마나 업데이트가 왔다는 건 카드가 정상적으로 처리되었다는 뜻
+    private void OnServerSuccessResponse(S_UpdateMana msg)
+    {
+        if (_waitingCard != null)
+        {
+            // 성공했으므로 대기 중인 카드를 처리 (파괴 또는 비활성화)
+            // (실제 데이터는 HandManager가 서버와 동기화하면서 리스트에서 제거될 것임)
+            Debug.Log("카드 사용 성공! 대기 카드 제거.");
+
+            // HandManager에게 "이제 이 카드 놔줘도 돼"라고 알림
+            handManager.SetDraggedCard(null);
+            handManager.RemoveCardFromHand(_waitingCard);
+
+            _waitingCard = null;
+        }
+    }
+
+    // 실패: 서버에서 명시적으로 실패 메시지를 보냄
+    private void OnServerFailResponse(string reason)
+    {
+        if (_waitingCard != null)
+        {
+            Debug.LogWarning($"카드 사용 실패 ({reason}). 손패로 복귀.");
+
+            // 카드를 다시 보이게 하고 (혹시 꺼졌다면)
+            _waitingCard.SetActive(true);
+
+            // HandManager에게 "드래그 끝났어"라고 알림 -> 자동으로 원래 자리로 정렬됨
+            handManager.SetDraggedCard(null);
+            handManager.AlignHand();
+
+            _waitingCard = null;
+        }
+    }
+
+    // ----------------------------
 
     /// <summary>
     /// 마우스 클릭/드래그/놓기 입력을 처리합니다.
@@ -204,39 +252,41 @@ public class CardDragManager : MonoBehaviour
     }
 
     // 드래그 종료 (마우스 뗌)
-    private void EndDrag()
+    void EndDrag()
     {
-        bool inHandZone = IsMouseInHandZone();
+        if (_currentCard == null) return;
+
         bool requestSent = false;
 
-        if (!inHandZone)
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
         {
-            // 필드에 놓았을 때 -> 슬롯이 있는지 확인
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit, 200f, fieldSlotLayer))
+            FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
+            if (slot != null)
             {
-                FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
-                if (slot != null)
-                {
-                    // [서버로 요청] "이 카드, 이 자리에 낼게요!"
-                    SendPlayRequestToClient(_currentCard, slot.slotIndex);
-                    requestSent = true;
-                }
+                Debug.Log($"슬롯 감지됨: {slot.slotIndex}");
+
+                // 서버 전송
+                SendPlayRequestToClient(_currentCard, slot.slotIndex);
+                requestSent = true;
             }
         }
 
         if (requestSent)
         {
-            // 요청을 보냈으면, 서버 응답이 올 때까지 카드를 일단 숨겨둡니다.
-            handManager.SetDraggedCard(null);
-            _currentCard.SetActive(false);
+            // 요청을 보냈으면, HandManager에게 정렬을 '복구하지 말라'고 유지해야 함
+            // 즉, SetDraggedCard(null)을 호출하지 않고 _waitingCard에 저장해둠
+            _waitingCard = _currentCard;
+
+            // 현재 카드는 이제 드래그 상태가 아니지만, 대기 상태가 됨
+            // 위치는 현재 드랍한 위치에 그대로 고정됨 (UpdateDrag가 안도니까)
         }
         else
         {
-            // 취소 (허공에 놓음, 다시 손으로)
+            // 허공에 놓았음 -> 즉시 취소
             if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-            handManager.SetDraggedCard(null);
-            handManager.AlignHand(); // 손패 재정렬
+            handManager.SetDraggedCard(null); // 드래그 해제 알림
+            handManager.AlignHand();          // 즉시 정렬
         }
 
         _currentCard = null;
