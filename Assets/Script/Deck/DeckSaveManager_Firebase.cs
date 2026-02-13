@@ -126,13 +126,6 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         OnDecksChanged?.Invoke(); // UI에게 "목록 비었어"라고 알림
     }
 
-    // (참고: 아래 LoadDecks 함수는 Firestore SDK를 직접 쓰는 구형 방식이고, 
-    // ServerLoadDecks는 REST API를 쓰는 신형 방식인 것 같습니다. 혼용되어 있습니다.)
-    public async Task LoadDecks()
-    {
-        // ... (Firestore SDK 직접 사용 코드 생략) ...
-        // 동작 방식: Users -> 내ID -> Decks 폴더를 뒤져서 가져옴
-    }
 
     public List<DeckData> GetAllDecks()
     {

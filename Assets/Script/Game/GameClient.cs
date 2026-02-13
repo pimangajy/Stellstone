@@ -27,6 +27,7 @@ public class GameClient : MonoBehaviour
     // 예: "게임 시작한대!", "네 턴이야!", "상대가 카드 냈어!"
     public event Action<S_GameReady> OnGameReadyEvent;
     public event Action<S_PhaseStart> OnPhaseStartEvent;
+    public event Action<string> OnPlayCardSuccessEvent;
     public event Action<S_UpdateMana> OnUpdateManaEvent;
     public event Action<List<EntityData>> OnEntitiesUpdatedEvent;
     public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;
@@ -38,7 +39,8 @@ public class GameClient : MonoBehaviour
     private CancellationTokenSource _cts; // 연결을 취소하거나 끊을 때 사용하는 신호
 
     // Firebase 인증 정보 (로그인한 유저 정보)
-    private FirebaseAuth _auth;
+    public FirebaseAuth _auth;
+    public string UserUid;
 
     // (핵심) 메시지 보관함 (큐)
     // 서버에서 오는 메시지는 '별도의 스레드(일꾼)'가 받습니다.
@@ -73,6 +75,9 @@ public class GameClient : MonoBehaviour
     {
         // Firebase 로그인 도구를 준비합니다.
         _auth = FirebaseAuth.DefaultInstance;
+
+        FirebaseUser user = _auth.CurrentUser;
+        UserUid = user.UserId;
     }
 
     void Update()
@@ -282,7 +287,6 @@ public class GameClient : MonoBehaviour
                 Debug.Log("UPDATE_ENTITIES 발생");
                 var updateEntitiesInfo = JsonConvert.DeserializeObject<S_UpdateEntities>(jsonMessage);
                 OnEntitiesUpdatedEvent?.Invoke(updateEntitiesInfo.updatedEntities);
-                OnUpdateEntities(updateEntitiesInfo);
                 break;
 
             case "OPPONENT_PLAY_CARD": // 상대가 카드 냄
@@ -290,6 +294,11 @@ public class GameClient : MonoBehaviour
                 var opponentPlayCardInfo = JsonConvert.DeserializeObject<S_OpponentPlayCard>(jsonMessage);
                 OnOpponentPlayCardEvent?.Invoke(opponentPlayCardInfo);
                 OnOpponentPlayCard(opponentPlayCardInfo);
+                break;
+
+            case "PLAY_CARD_SUCCESS":
+                var successInfo = JsonConvert.DeserializeObject<S_PlayCardSuccess>(jsonMessage);
+                OnPlayCardSuccessEvent?.Invoke(successInfo.serverInstanceId);
                 break;
 
             case "PLAY_CARD_FAIL": // 내가 낸 카드 실패 (마나 부족 등)
@@ -308,6 +317,7 @@ public class GameClient : MonoBehaviour
             case "ERROR": // 서버 에러
                 Debug.Log("ERROR 발생");
                 var errorInfo = JsonConvert.DeserializeObject<S_Error>(jsonMessage);
+                OnErrorEvent?.Invoke(errorInfo.message);
                 Debug.LogError($"[GameClient] 서버 오류: {errorInfo.message}");
                 break;
         }
@@ -389,20 +399,6 @@ public class GameClient : MonoBehaviour
         // TODO: 마나 수정(Crystal) UI 갱신 코드 추가 필요
     }
 
-    private void OnUpdateEntities(S_UpdateEntities info)
-    {
-        // 필드 상황(하수인 등장/사망/체력변경)을 매니저에게 전달
-        if (GameEntityManager.Instance == null) return;
-
-        foreach (var entityData in info.updatedEntities)
-        {
-            // 이 개체가 '내 것'인지 확인 (내 UID와 비교)
-            bool isMine = (entityData.ownerUid == _auth.CurrentUser.UserId);
-
-            // 엔티티 매니저에게 처리를 위임
-            GameEntityManager.Instance.HandleEntityUpdate(entityData, isMine);
-        }
-    }
 
     private void OnOpponentPlayCard(S_OpponentPlayCard info)
     {

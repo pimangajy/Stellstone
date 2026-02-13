@@ -50,6 +50,8 @@ public class EntityData
     public bool canAttack; // '돌진'이 있거나, 턴 시작 시 true
     public bool hasAttacked; // 이번 턴에 이미 공격했는지
     public List<string> keywords; // (신규) '도발', '은신' 등
+    public int position;
+    public bool isMember;
 }
 
 // ==================================================================
@@ -158,6 +160,7 @@ public class S_PhaseStart : BaseGameAction
 public class S_UpdateMana : BaseGameAction
 {
     // action = "UPDATE_MANA"
+    public string ownerUid;
     public int currentMana;
     public int maxMana;
 }
@@ -181,6 +184,15 @@ public class S_OpponentPlayCard : BaseGameAction
     public CardInfo cardPlayed; // 상대가 낸 카드
     public int targetEntityId; // 상대가 지정한 대상
     // TODO: 애니메이션 처리를 위한 추가 정보
+}
+
+/// <summary>
+/// (S->C) 내가 요청한 카드 내기가 서버에서 정상적으로 처리되었음을 알립니다.
+/// </summary>
+public class S_PlayCardSuccess : BaseGameAction
+{
+    // action = "PLAY_CARD_SUCCESS"
+    public string serverInstanceId; // 서버에서 확인한 카드의 고유 ID
 }
 
 /// <summary>

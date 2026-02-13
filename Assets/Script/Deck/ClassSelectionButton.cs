@@ -19,7 +19,7 @@ public class ClassSelectionButton : MonoBehaviour
     void Start()
     {
         // 화면(Scene) 전체를 뒤져서 DeckBuilder 스크립트를 찾아냅니다.
-        deckBuilder = FindObjectOfType<DeckBuilder>();
+        // deckBuilder = FindObjectOfType<DeckBuilder>();
 
         // 못 찾았으면 에러 메시지를 띄웁니다.
         if (deckBuilder == null)

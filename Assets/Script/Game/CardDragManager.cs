@@ -62,7 +62,7 @@ public class CardDragManager : MonoBehaviour
         {
             GameClient.Instance.OnPlayCardFailedEvent += OnServerFailResponse;
             // 성공 시 마나나 엔티티가 업데이트되므로 이를 성공 신호로 사용
-            GameClient.Instance.OnUpdateManaEvent += OnServerSuccessResponse;
+            GameClient.Instance.OnPlayCardSuccessEvent += OnServerSuccessResponse;
         }
     }
 
@@ -85,19 +85,19 @@ public class CardDragManager : MonoBehaviour
     // --- 서버 응답 처리 핸들러 ---
 
     // 성공: 마나 업데이트가 왔다는 건 카드가 정상적으로 처리되었다는 뜻
-    private void OnServerSuccessResponse(S_UpdateMana msg)
+    private void OnServerSuccessResponse(string instanceId)
     {
         if (_waitingCard != null)
         {
-            // 성공했으므로 대기 중인 카드를 처리 (파괴 또는 비활성화)
-            // (실제 데이터는 HandManager가 서버와 동기화하면서 리스트에서 제거될 것임)
-            Debug.Log("카드 사용 성공! 대기 카드 제거.");
-
-            // HandManager에게 "이제 이 카드 놔줘도 돼"라고 알림
-            handManager.SetDraggedCard(null);
-            handManager.RemoveCardFromHand(_waitingCard);
-
-            _waitingCard = null;
+            var display = _waitingCard.GetComponent<GameCardDisplay>();
+            // 내가 기다리던 그 카드가 맞는지 아이디로 한 번 더 확인하면 아주 안전합니다.
+            if (display != null && display.InstanceId == instanceId)
+            {
+                Debug.Log($"카드 [{instanceId}] 사용 승인됨. 손패에서 제거.");
+                handManager.SetDraggedCard(null);
+                handManager.RemoveCardFromHand(_waitingCard);
+                _waitingCard = null;
+            }
         }
     }
 

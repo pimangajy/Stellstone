@@ -192,7 +192,9 @@ public class HandInteractionManager : MonoBehaviour
         UpdateHandLayout(null, shuffleDuration);
     }
 
-    // 특정 카드 손패에서 삭제
+    /// <summary>
+    /// 특정 카드 손패에서 삭제
+    /// </summary>
     public void RemoveCardFromHand(GameObject cardToRemove)
     {
         if (cardToRemove == null || !handCards.Contains(cardToRemove)) return;
