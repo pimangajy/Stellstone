@@ -72,4 +72,14 @@ public class CardData : ScriptableObject
 
     public GameObject spawnEffect;  // 소환 이펙트 프리팹
     public AudioClip attackSound;   // 공격 사운드
+
+    [Header("전투 연출 (원거리 공격용)")]
+    [Tooltip("비워두면 몸통 박치기를 합니다. (근접 공격)")]
+    public GameObject projectilePrefab; // 날아갈 투사체 프리팹 (파이어볼, 화살 등)
+
+    [Tooltip("투사체가 날아가는 속도")]
+    public float projectileSpeed = 15f;
+
+    [Tooltip("투사체의 포물선 높이 (0이면 직선으로 날아감)")]
+    public float projectileArcHeight = 1.5f;
 }

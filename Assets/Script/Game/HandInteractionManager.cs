@@ -65,27 +65,89 @@ public class HandInteractionManager : MonoBehaviour
     {
         _handMathPlane = new Plane(handAnchor.up, handAnchor.position);
 
-        // 멀리건 중이면 멀리건 전용 입력 처리
-        if (isMulliganPhase)
-        {
-            HandleMulliganInput();
-            return;
-        }
-
-        // 드래그 중이 아닐 때만 호버 효과 및 정렬 계산
-        if (_currentlyDraggedCard == null)
-        {
-            // (테스트용) R키 누르면 카드 버리기
-            if (Input.GetKeyDown(KeyCode.R) && handCards.Count > 0) RemoveLastCardFromHand();
-
-            if (_isHandStable)
-            {
-                HandleCardHover_Math(); // 마우스 위치 계산해서 호버 처리
-            }
-        }
+        // (테스트용) R키 누르면 카드 버리기
+        if (Input.GetKeyDown(KeyCode.R) && handCards.Count > 0) RemoveLastCardFromHand();
     }
 
     // --- 외부 연동 함수들 ---
+
+
+    /// <summary>
+    /// [GameInputManager가 호출] 멀리건 단계에서 특정 카드가 클릭되었을 때 실행됩니다.
+    /// </summary>
+    public void OnMulliganCardClicked(GameObject clickedCard)
+    {
+        // 1. 멀리건 페이즈가 아니면 무시
+        if (!isMulliganPhase) return;
+
+        // 2. 내 손패에 있거나, '이미 멀리건 대상으로 선택된' 카드라면 멀리건 매니저에게 알림
+        bool isHandCard = handCards.Contains(clickedCard);
+        bool isSelectedCard = mulliganManager._selectedCards.Contains(clickedCard);
+
+        if (isHandCard || isSelectedCard)
+        {
+            mulliganManager.OnCardClicked(clickedCard);
+        }
+    }
+
+    /// <summary>
+    /// [GameInputManager가 호출] 매 프레임 마우스 위치를 받아 호버링(확대) 효과를 계산합니다.
+    /// 기존의 수학적 거리 계산(부채꼴 모양 대응)을 그대로 유지합니다.
+    /// </summary>
+    public void ProcessHover(Vector2 mousePosition)
+    {
+        if (_mainCamera == null) return;
+
+        // 멀리건 중이거나, 카드를 드래그 중이거나, 카드가 날아오는 중이면 호버 취소
+        if (isMulliganPhase || _currentlyDraggedCard != null || !_isHandStable)
+        {
+            ClearHover();
+            return;
+        }
+
+        // 마우스가 너무 높이(필드 쪽) 있으면 호버 해제
+        float handZoneLimit = 0.4f;
+        if (mousePosition.y / Screen.height > handZoneLimit)
+        {
+            ClearHover();
+            return;
+        }
+
+        Ray ray = _mainCamera.ScreenPointToRay(mousePosition);
+        float enter = 0.0f;
+        GameObject hitCard = null;
+
+        if (_handMathPlane.Raycast(ray, out enter))
+        {
+            Vector3 hitPoint = ray.GetPoint(enter);
+            hitCard = FindClosestCardToPoint(hitPoint);
+        }
+
+        // 다른 카드로 호버가 바뀌었을 때
+        if (hitCard != null && hitCard != _currentlyHoveredCard)
+        {
+            ClearHover(); // 이전 카드 원상복구
+            AnimateCardHoverEnter(hitCard); // 새 카드 확대
+            _currentlyHoveredCard = hitCard;
+        }
+        // 허공으로 마우스가 갔을 때
+        else if (hitCard == null && _currentlyHoveredCard != null)
+        {
+            ClearHover();
+        }
+    }
+
+    /// <summary>
+    /// 호버링 효과를 즉시 해제하고 카드를 원래 위치로 되돌립니다.
+    /// </summary>
+    public void ClearHover()
+    {
+        if (_currentlyHoveredCard != null)
+        {
+            AnimateCardHoverExit(_currentlyHoveredCard);
+            _currentlyHoveredCard = null;
+        }
+    }
 
     /// <summary>
     /// 현재 마우스 아래 있는 카드를 반환합니다. (DragManager가 씀)
@@ -167,6 +229,7 @@ public class HandInteractionManager : MonoBehaviour
     // 새 카드를 손패에 추가하고 애니메이션 실행
     public void AddCardToHand(GameObject newCardObject)
     {
+        Debug.Log("멀리건 돌아옴");
         if (!_isCardScaleSet) // 첫 카드의 크기를 기준 크기로 저장
         {
             _originalCardScale = newCardObject.transform.localScale;
@@ -175,6 +238,26 @@ public class HandInteractionManager : MonoBehaviour
         newCardObject.transform.SetParent(handAnchor, true);
         handCards.Add(newCardObject);
         UpdateHandLayout(newCardObject, newCardTravelDuration); // 재정렬
+    }
+
+    /// <summary>
+    /// 카드를 손패의 특정 위치에 삽입합니다.
+    /// </summary>
+    public void InsertCardToHand(GameObject cardObject, int index)
+    {
+        if (!_isCardScaleSet)
+        {
+            _originalCardScale = cardObject.transform.localScale;
+            _isCardScaleSet = true;
+        }
+
+        cardObject.transform.SetParent(handAnchor, true);
+
+        // 인덱스 범위 안전성 체크
+        int targetIndex = Mathf.Clamp(index, 0, handCards.Count);
+        handCards.Insert(targetIndex, cardObject); // List.Insert 사용
+
+        UpdateHandLayout(cardObject, newCardTravelDuration);
     }
 
 
@@ -278,6 +361,9 @@ public class HandInteractionManager : MonoBehaviour
         for (int i = 0; i < cardCount; i++)
         {
             GameObject card = handCards[i];
+
+            // [추가] 만약 멀리건 선택 리스트에 포함된 카드라면, 손패 정렬 계산에서 제외합니다.
+            if (mulliganManager._selectedCards.Contains(card)) continue;
 
             // 드래그 중인 카드는 정렬에서 제외 (마우스 따라가야 하니까)
             if (card == _currentlyDraggedCard) continue;

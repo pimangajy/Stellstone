@@ -73,11 +73,10 @@ public class CardDragManager : MonoBehaviour
         // 손패 기준 평면 정의 (카드가 이 위에서 움직임)
         _handMathPlane = new Plane(handManager.handAnchor.up, handManager.handAnchor.position);
 
-        HandleInput(); // 마우스 입력 처리
-
-        // 드래그 중이면 카드 위치를 업데이트
+        // [수정됨] 드래그 중이면 카드 위치를 업데이트하고 타겟팅 상태를 갱신합니다.
         if (_isDragging && _currentCard != null)
         {
+            CheckZoneAndToggleTargeting(); // 기존 HandleInput에 있던 드래그 중 영역 체크를 여기로 이동
             UpdateCardPositionAndTilt();
         }
     }
@@ -119,41 +118,8 @@ public class CardDragManager : MonoBehaviour
         }
     }
 
-    // ----------------------------
-
-    /// <summary>
-    /// 마우스 클릭/드래그/놓기 입력을 처리합니다.
-    /// </summary>
-    private void HandleInput()
-    {
-        if (_isSpawning) return; // 소환 중이면 조작 불가
-
-        // 1. 마우스 누름 (드래그 시작)
-        if (Input.GetMouseButtonDown(0))
-        {
-            GameObject hoveredCard = handManager.GetHoveredCard();
-            // 손패가 안정된 상태이고, 마우스 아래 카드가 있다면 -> 집기
-            if (handManager.IsHandStable && hoveredCard != null)
-            {
-                StartDrag(hoveredCard);
-            }
-        }
-
-        // 2. 마우스 누르고 있음 (드래그 중)
-        if (Input.GetMouseButton(0) && _isDragging)
-        {
-            CheckZoneAndToggleTargeting(); // 손패 영역을 벗어났는지 확인
-        }
-
-        // 3. 마우스 뗌 (드래그 종료)
-        if (Input.GetMouseButtonUp(0) && _isDragging)
-        {
-            EndDrag();
-        }
-    }
-
     // 드래그 시작
-    private void StartDrag(GameObject card)
+    public void StartDrag(GameObject card)
     {
         _currentCard = card;
         _isDragging = true;
@@ -252,7 +218,7 @@ public class CardDragManager : MonoBehaviour
     }
 
     // 드래그 종료 (마우스 뗌)
-    void EndDrag()
+    public void EndDrag()
     {
         if (_currentCard == null) return;
 

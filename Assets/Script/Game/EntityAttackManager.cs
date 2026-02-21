@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// 내 하수인을 드래그하여 적을 공격합니다.
-/// - 드래그 시작 시: 내 하수인이 붕 떠오름 (SetFloatingState)
-/// - 적 조준 시: 적 하수인이 빛남 (SetGlowState)
+/// [수정됨] GameInputManager에 의해 수동(Passive)으로 제어되도록 변경되었습니다.
+/// 스스로 입력을 감지하는 Update()와 HandleInput()이 삭제되었습니다.
 /// </summary>
 public class EntityAttackManager : MonoBehaviour
 {
@@ -11,14 +11,11 @@ public class EntityAttackManager : MonoBehaviour
 
     [Header("설정")]
     public LayerMask entityLayer;
-    public float dragThreshold = 10f;
 
     // --- 상태 변수 ---
     private GameCardDisplay _currentAttacker;   // 공격하는 내 하수인
     private GameCardDisplay _currentTargetInfo; // 조준 당하고 있는 적 하수인
 
-    private bool _isDragging = false;
-    private Vector2 _mouseDownPos;
     private Camera _mainCamera;
 
     private string MyUid => GameClient.Instance != null ? GameClient.Instance.UserUid : "";
@@ -31,72 +28,10 @@ public class EntityAttackManager : MonoBehaviour
         _mainCamera = Camera.main;
     }
 
-    void Update()
+    // --- 로직: 드래그 시작 (GameInputManager에서 호출) ---
+    public void StartAttackDrag(GameCardDisplay attacker)
     {
-        if (GameStateManager.Instance != null && !GameStateManager.Instance.IsMyTurn) return;
-
-        HandleInput();
-    }
-
-    private void HandleInput()
-    {
-        // 1. 마우스 누름
-        if (Input.GetMouseButtonDown(0))
-        {
-            _mouseDownPos = Input.mousePosition;
-            TrySelectAttacker();
-        }
-
-        // 2. 마우스 누르고 있음 (드래그)
-        if (Input.GetMouseButton(0) && _currentAttacker != null)
-        {
-            if (!_isDragging)
-            {
-                // 드래그 시작 감지
-                float distance = Vector2.Distance(_mouseDownPos, Input.mousePosition);
-                if (distance > dragThreshold)
-                {
-                    StartAttackDrag();
-                }
-            }
-            else
-            {
-                // 이미 드래그 중 -> 적 하이라이트 갱신
-                UpdateTargetHighlight();
-            }
-        }
-
-        // 3. 마우스 뗌 (공격 또는 취소)
-        if (Input.GetMouseButtonUp(0))
-        {
-            if (_isDragging)
-            {
-                TryCompleteAttack();
-            }
-            ResetState();
-        }
-    }
-
-    // --- 로직: 공격자 선택 ---
-    private void TrySelectAttacker()
-    {
-        Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
-        {
-            GameCardDisplay cardDisplay = hit.collider.GetComponent<GameCardDisplay>();
-            if (IsValidAttacker(cardDisplay))
-            {
-                _currentAttacker = cardDisplay;
-                // (선택 사항) 클릭하자마자 살짝 반응을 주고 싶다면 여기서 Floating을 켜도 됩니다.
-                // 하지만 보통 드래그가 확실해질 때 띄우는 게 자연스럽습니다.
-            }
-        }
-    }
-
-    // --- 로직: 드래그 시작 (내 카드 띄우기) ---
-    private void StartAttackDrag()
-    {
-        _isDragging = true;
+        _currentAttacker = attacker;
 
         // 1. 화살표 켜기
         if (TargetingReticle.Instance != null)
@@ -110,9 +45,11 @@ public class EntityAttackManager : MonoBehaviour
         Debug.Log($"[Attack] {_currentAttacker.name} 공격 태세 돌입");
     }
 
-    // --- 로직: 드래그 중 (적 카드 빛나게 하기) ---
-    private void UpdateTargetHighlight()
+    // --- 로직: 드래그 중 타겟 갱신 (GameInputManager에서 매 프레임 호출) ---
+    public void UpdateTargetHighlight()
     {
+        if (_currentAttacker == null) return;
+
         Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
         GameCardDisplay hitCard = null;
 
@@ -145,8 +82,8 @@ public class EntityAttackManager : MonoBehaviour
         }
     }
 
-    // --- 로직: 공격 확정 ---
-    private void TryCompleteAttack()
+    // --- 로직: 공격 확정 (GameInputManager에서 호출) ---
+    public void TryCompleteAttack()
     {
         // 마지막으로 타겟 확인
         if (_currentTargetInfo != null && IsValidTarget(_currentTargetInfo))
@@ -161,10 +98,12 @@ public class EntityAttackManager : MonoBehaviour
                 GameClient.Instance.SendAttackRequest(attackerId, targetId);
             }
         }
+
+        ResetState();
     }
 
     // --- 로직: 상태 초기화 (원상복구) ---
-    private void ResetState()
+    public void ResetState()
     {
         // 1. 타겟 빛 끄기
         if (_currentTargetInfo != null)
@@ -180,14 +119,12 @@ public class EntityAttackManager : MonoBehaviour
             _currentAttacker = null;
         }
 
-        _isDragging = false;
-
         // 3. 화살표 끄기
         if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
     }
 
-    // --- 검증 로직 ---
-    private bool IsValidAttacker(GameCardDisplay display)
+    // --- 검증 로직 (GameInputManager에서도 사용하므로 public으로 변경) ---
+    public bool IsValidAttacker(GameCardDisplay display)
     {
         if (display == null) return false;
         var data = display.CurrentEntityData;

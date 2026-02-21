@@ -389,6 +389,7 @@ public class GameClient : MonoBehaviour
         if (info.phase == "Draw" && info.drawnCard != null)
         {
             Debug.Log($"[GameClient] 카드 드로우: {info.drawnCard.cardId}");
+            CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
             // 실제 드로우 연출은 여기서 추가해야 함
         }
     }

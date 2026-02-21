@@ -27,6 +27,8 @@ public class GameMulliganManager : MonoBehaviour
 
     // 현재 교체하려고 선택한 카드 목록
     public List<GameObject> _selectedCards = new List<GameObject>();
+    // 카드의 원래 인덱스를 저장할 사전 추가
+    private Dictionary<GameObject, int> _originalIndices = new Dictionary<GameObject, int>();
 
     private void Awake()
     {
@@ -56,22 +58,26 @@ public class GameMulliganManager : MonoBehaviour
     // 카드 선택 (손패 -> 중앙)
     private void SelectCard(GameObject card)
     {
-        handManager.RemoveCardFromHandListOnly(card); // 손패 목록에서만 뺌 (파괴 X)
-        _selectedCards.Add(card); // 선택 목록 추가
+        // 리스트에서 제거하지 않습니다!
+        _selectedCards.Add(card);
 
-        card.transform.SetParent(centerAnchor); // 부모 변경
+        card.transform.SetParent(centerAnchor);
 
-        UpdateCenterLayout(); // 중앙 정렬
-        handManager.AlignHand(); // 손패 빈자리 채우기
+        UpdateCenterLayout();
+        // 리스트는 그대로이므로 AlignHand()를 호출해도 빈자리가 생기지 않도록 처리가 필요합니다.
+        handManager.AlignHand();
     }
 
     // 카드 선택 취소 (중앙 -> 손패)
     private void DeselectCard(GameObject card)
     {
-        _selectedCards.Remove(card); // 선택 목록 제거
-        handManager.AddCardToHand(card); // 손패로 복귀
+        _selectedCards.Remove(card);
 
-        UpdateCenterLayout(); // 중앙 정렬 갱신
+        // 다시 손패 앵커로 부모 설정
+        card.transform.SetParent(handManager.handAnchor);
+
+        UpdateCenterLayout();
+        handManager.AlignHand(); // 원래 위치로 자연스럽게 돌아갑니다.
     }
 
     // 중앙에 모인 카드들 예쁘게 정렬하기
@@ -125,6 +131,9 @@ public class GameMulliganManager : MonoBehaviour
             GameObject card = cardsToReturn[i];
             float startTime = i * 0.1f;
             float flightDuration = 0.5f;
+
+            // 이제 여기서 실제 손패 리스트에서 제거합니다.
+            handManager.RemoveCardFromHandListOnly(card);
 
             // 덱으로 이동 + 회전
             returnSequence.Insert(startTime, card.transform.DOMove(deckTransform.position, flightDuration).SetEase(Ease.InCubic));
