@@ -38,9 +38,127 @@ public class GameEntityManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // 1. 서버 통신 이벤트 구독 (생략된 기존 코드 구조 유지용)
-        // if (GameClient.Instance != null)
-        // ...
+        // 1. 서버 통신 이벤트 구독 시작
+        if (GameClient.Instance != null)
+        {
+            myUid = GameClient.Instance.UserUid;
+            GameClient.Instance.OnEntitiesUpdatedEvent += HandleEntitiesUpdated;
+        }
+    }
+
+    private void OnDisable()
+    {
+        // 2. 이벤트 구독 해제 (메모리 누수 방지)
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.OnEntitiesUpdatedEvent -= HandleEntitiesUpdated;
+        }
+    }
+
+    // ==================================================================
+    // 1. 이벤트 처리 및 판단
+    // ==================================================================
+
+    /// <summary>
+    /// [핵심] 서버에서 개체 리스트를 보내주면 루프를 돌며 하나씩 처리합니다.
+    /// </summary>
+    private void HandleEntitiesUpdated(List<EntityData> updatedList)
+    {
+        Debug.Log("필드 상태가 변화되어 소환이나 갱신을 실행");
+        if (updatedList == null) return;
+
+        foreach (var entityData in updatedList)
+        {
+            // 스스로 내 것인지 판단합니다.
+            bool isMine = (entityData.ownerUid == myUid);
+
+            // 이미 있는 녀석인가?
+            if (_spawnedEntities.ContainsKey(entityData.entityId))
+            {
+                UpdateEntity(entityData);
+            }
+            else
+            {
+                // 없는데 살아있다면 새로 소환!
+                if (entityData.health > 0)
+                {
+                    SpawnEntity(entityData, isMine);
+                }
+            }
+        }
+    }
+
+    // ==================================================================
+    // 2. 소환 및 갱신 로직
+    // ==================================================================
+
+    private void SpawnEntity(EntityData entityData, bool isMine)
+    {
+        if (_spawnedEntities.ContainsKey(entityData.entityId))
+        {
+            Debug.Log("필드에 이미 하수인이 있음");
+            return;
+        }
+
+        CardData cardData = ResourceManager.Instance.GetCardData(entityData.cardId);
+        if (cardData == null) return;
+
+        // 1. 하수인이 놓일 '부모' 구역 결정 (필드 vs 멤버존)
+        Transform zoneGroup;
+        if (entityData.isMember)
+            zoneGroup = isMine ? myMemberTransform : opponentMemberTransform;
+        else
+            zoneGroup = isMine ? myFieldTransform : opponentFieldTransform;
+
+        // 2. [핵심] 부모 구역의 자식(슬롯)들 중에서 서버가 지정한 position 번호의 슬롯을 찾음
+        Transform targetSlot = null;
+        if (zoneGroup != null && zoneGroup.childCount > entityData.position)
+        {
+            targetSlot = zoneGroup.GetChild(entityData.position);
+        }
+
+        // 만약 슬롯을 못 찾았다면 부모 위치를 기본값으로 사용
+        Transform finalParent = targetSlot != null ? targetSlot : zoneGroup;
+
+        // 3. 생성 및 배치 (슬롯의 위치와 회전값에 맞춤)
+        GameObject newObj = Instantiate(minionPrefab, finalParent.position, finalParent.rotation, finalParent);
+        GameCardDisplay display = newObj.GetComponent<GameCardDisplay>();
+
+        if (display != null)
+        {
+            Debug.Log("필드 카드에 값 주입");
+            display.SetupEntity(entityData, cardData);
+            _spawnedEntities.Add(entityData.entityId, display);
+        }
+    }
+
+    private void UpdateEntity(EntityData entityData)
+    {
+        if (_spawnedEntities.TryGetValue(entityData.entityId, out GameCardDisplay display))
+        {
+            display.UpdateEntityStats(entityData);
+
+            if (entityData.health <= 0)
+            {
+                RemoveEntity(entityData.entityId);
+            }
+        }
+    }
+
+    private void RemoveEntity(int entityId)
+    {
+        if (_spawnedEntities.TryGetValue(entityId, out GameCardDisplay display))
+        {
+            _spawnedEntities.Remove(entityId);
+            StartCoroutine(DestroyRoutine(display));
+        }
+    }
+
+    private IEnumerator DestroyRoutine(GameCardDisplay display)
+    {
+        // 사망 연출 대기
+        yield return new WaitForSeconds(0.5f);
+        Destroy(display.gameObject);
     }
 
     // ==================================================================

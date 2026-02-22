@@ -26,8 +26,13 @@ public class HandInteractionManager : MonoBehaviour
     public float shuffleDuration = 0.3f; // 카드 정렬 애니메이션 시간
     public float newCardTravelDuration = 0.4f; // 드로우된 카드가 날아오는 시간
 
+    [Header("손패 상태 위치 설정")]
+    public Transform foldAnchor;   // 왼쪽 하단 (접혔을 때의 위치/회전 기준점)
+    public Transform spreadAnchor; // 화면 중앙 하단 (기존 handAnchor의 기본 위치)
+    public float foldDuration = 0.5f;
+    public bool isFolded = false;  // 현재 접혀있는지 여부
+
     [Header("카드 호버(Hover) 효과")]
-    public LayerMask handHoverPlaneLayer;
     public Vector3 hoverOffset = new Vector3(0, 0.8f, -0.3f); // 호버 시 얼마나 위/앞으로 튀어나올지
     public float hoverScaleMultiplier = 1.2f; // 호버 시 얼마나 커질지
     public float hoverAnimDuration = 0.2f;
@@ -64,13 +69,60 @@ public class HandInteractionManager : MonoBehaviour
     void Update()
     {
         _handMathPlane = new Plane(handAnchor.up, handAnchor.position);
+        // 테스트 모드일 때만 작동하도록 조건문을 걸어두면 좋습니다.
+        if (isFolded && Application.isEditor)
+        {
+            // 매 프레임 anchor의 위치를 동기화 (DOTween이 아닌 직접 대입)
+            handAnchor.position = foldAnchor.position;
+            handAnchor.rotation = foldAnchor.rotation;
+        }
 
         // (테스트용) R키 누르면 카드 버리기
         if (Input.GetKeyDown(KeyCode.R) && handCards.Count > 0) RemoveLastCardFromHand();
+        if(Input.GetKeyDown(KeyCode.F))
+        {
+            ToggleHandFold(); 
+        }
+
     }
 
     // --- 외부 연동 함수들 ---
 
+    public void ToggleHandFold()
+    {
+        // [수정] 접기 시작할 때는 즉시 true로 바꿔서 호버를 막음
+        if (!isFolded)
+        {
+            isFolded = true;
+            FoldHand();
+        }
+        else
+        {
+            // 펼칠 때는 다 펼쳐진 후(OnComplete)에 false로 바꿈
+            SpreadHand();
+        }
+    }
+
+    private void FoldHand()
+    {
+        handAnchor.DOMove(foldAnchor.position, foldDuration).SetEase(Ease.OutQuart);
+        handAnchor.DORotateQuaternion(foldAnchor.rotation, foldDuration).SetEase(Ease.OutQuart);
+        handAnchor.DOScale(0.8f, foldDuration);
+    }
+
+    private void SpreadHand()
+    {
+        Sequence spreadSeq = DOTween.Sequence();
+
+        spreadSeq.Append(handAnchor.DOMove(spreadAnchor.position, foldDuration).SetEase(Ease.OutQuart));
+        spreadSeq.Join(handAnchor.DORotateQuaternion(spreadAnchor.rotation, foldDuration).SetEase(Ease.OutQuart));
+        spreadSeq.Join(handAnchor.DOScale(1.0f, foldDuration));
+
+        // [수정] 애니메이션이 완전히 끝난 뒤에 호버가 가능하도록 설정
+        spreadSeq.OnComplete(() => {
+            isFolded = false;
+        });
+    }
 
     /// <summary>
     /// [GameInputManager가 호출] 멀리건 단계에서 특정 카드가 클릭되었을 때 실행됩니다.
@@ -229,7 +281,6 @@ public class HandInteractionManager : MonoBehaviour
     // 새 카드를 손패에 추가하고 애니메이션 실행
     public void AddCardToHand(GameObject newCardObject)
     {
-        Debug.Log("멀리건 돌아옴");
         if (!_isCardScaleSet) // 첫 카드의 크기를 기준 크기로 저장
         {
             _originalCardScale = newCardObject.transform.localScale;
@@ -361,9 +412,6 @@ public class HandInteractionManager : MonoBehaviour
         for (int i = 0; i < cardCount; i++)
         {
             GameObject card = handCards[i];
-
-            // [추가] 만약 멀리건 선택 리스트에 포함된 카드라면, 손패 정렬 계산에서 제외합니다.
-            if (mulliganManager._selectedCards.Contains(card)) continue;
 
             // 드래그 중인 카드는 정렬에서 제외 (마우스 따라가야 하니까)
             if (card == _currentlyDraggedCard) continue;

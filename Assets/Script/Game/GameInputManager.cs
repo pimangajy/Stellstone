@@ -52,6 +52,7 @@ public class GameInputManager : MonoBehaviour
     {
         // 1. 현재 내 턴인지 확인합니다.
         bool isMyTurn = GameStateManager.Instance == null || GameStateManager.Instance.IsMyTurn;
+        bool isFold = HandInteractionManager.instance.isFolded;
 
         // 상대 턴인데 마우스를 쥐고 있거나 드래그 상태라면 강제로 취소시킵니다 (Idle 상태로 복귀).
         if (!isMyTurn && currentState != InputState.Idle)
@@ -64,7 +65,7 @@ public class GameInputManager : MonoBehaviour
         {
             case InputState.Idle:
                 // Idle 상태에서는 호버링을 해야 하므로 내 턴 여부를 전달합니다. (상대 턴에도 작동)
-                HandleIdleAndHover(isMyTurn);
+                HandleIdleAndHover(isMyTurn, isFold);
                 break;
             case InputState.ReadyToDrag:
                 if (isMyTurn) HandleReadyToDrag(); // 드래그 준비는 내 턴에만
@@ -81,7 +82,7 @@ public class GameInputManager : MonoBehaviour
     // =========================================================
     // 1. 평상시 (Idle) : 호버링(Hover) 감지 및 클릭(Down) 대기
     // =========================================================
-    private void HandleIdleAndHover(bool isMyTurn)
+    private void HandleIdleAndHover(bool isMyTurn, bool isFold)
     {
         // [클릭 감지] - "내 턴일 때만" 카드를 클릭해서 잡을 수 있도록 isMyTurn 조건 추가!
         if (isMyTurn && Input.GetMouseButtonDown(0))
@@ -93,6 +94,13 @@ public class GameInputManager : MonoBehaviour
 
             if (Physics.Raycast(ray, out RaycastHit handHit, 100f, handCardLayer))
             {
+                // 손패가 접힌 상태라면 어떤 카드를 클릭해도 손패를 펼칩니다.
+                if (HandInteractionManager.instance.isFolded)
+                {
+                    HandInteractionManager.instance.ToggleHandFold();
+                    return;
+                }
+
                 GameObject clickedObject = handHit.collider.gameObject;
 
                 // [연동 완료] 멀리건 단계인지 확인하고 맞으면 멀리건 클릭으로 넘김
@@ -128,7 +136,7 @@ public class GameInputManager : MonoBehaviour
         else
         {
             // [연동 완료] HandInteractionManager에게 현재 마우스 위치를 던져줌
-            if (HandInteractionManager.instance != null)
+            if (HandInteractionManager.instance != null && !isFold)
             {
                 HandInteractionManager.instance.ProcessHover(Input.mousePosition);
             }
