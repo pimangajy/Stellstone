@@ -160,7 +160,6 @@ public class GameMulliganManager : MonoBehaviour
         if (HandInteractionManager.instance != null)
         {
             HandInteractionManager.instance.isMulliganPhase = false; // 멀리건 모드 종료
-            HandInteractionManager.instance.ToggleHandFold();
         }
     }
 }

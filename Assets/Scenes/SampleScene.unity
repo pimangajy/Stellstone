@@ -3652,6 +3652,7 @@ MonoBehaviour:
   cardVerticalOffset: 0.1
   shuffleDuration: 0.3
   newCardTravelDuration: 0.4
+  temporaryBaseCardSpacingAngle: 0
   foldAnchor: {fileID: 1416409526}
   spreadAnchor: {fileID: 261775204}
   foldDuration: 0.5
@@ -3771,9 +3772,12 @@ MonoBehaviour:
   handCardLayer:
     serializedVersion: 2
     m_Bits: 2048
-  fieldEntityLayer:
+  minionEntityLayer:
     serializedVersion: 2
     m_Bits: 12288
+  fieldEntityLayer:
+    serializedVersion: 2
+    m_Bits: 128
   dragThreshold: 30
   currentState: 0
 --- !u!1 &1272785805
@@ -4333,7 +4337,7 @@ Transform:
   m_GameObject: {fileID: 1416409525}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 8.4, y: 17, z: -44}
+  m_LocalPosition: {x: 8.4, y: 17, z: -49}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

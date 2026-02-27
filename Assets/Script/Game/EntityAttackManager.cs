@@ -130,7 +130,11 @@ public class EntityAttackManager : MonoBehaviour
         var data = display.CurrentEntityData;
 
         // 내 하수인인지 확인
-        if (data == null || data.ownerUid != MyUid) return false;
+        if (data == null || data.ownerUid != MyUid)
+        {
+            Debug.Log("플레이어 하수인이 아님");
+            return false;
+        }
 
         // (추후) 공격 가능 상태인지 확인: if (!data.canAttack) return false;
 

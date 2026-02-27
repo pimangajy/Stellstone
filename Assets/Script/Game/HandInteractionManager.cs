@@ -25,9 +25,10 @@ public class HandInteractionManager : MonoBehaviour
     public float cardVerticalOffset = 0.05f; // 카드끼리 겹칠 때 높이 차이
     public float shuffleDuration = 0.3f; // 카드 정렬 애니메이션 시간
     public float newCardTravelDuration = 0.4f; // 드로우된 카드가 날아오는 시간
+    public float temporaryBaseCardSpacingAngle;
 
     [Header("손패 상태 위치 설정")]
-    public Transform foldAnchor;   // 왼쪽 하단 (접혔을 때의 위치/회전 기준점)
+    public Transform foldAnchor;   // 우측 하단 (접혔을 때의 위치/회전 기준점)
     public Transform spreadAnchor; // 화면 중앙 하단 (기존 handAnchor의 기본 위치)
     public float foldDuration = 0.5f;
     public bool isFolded = false;  // 현재 접혀있는지 여부
@@ -64,6 +65,7 @@ public class HandInteractionManager : MonoBehaviour
     void Start()
     {
         _mainCamera = Camera.main;
+        temporaryBaseCardSpacingAngle = baseCardSpacingAngle;
     }
 
     void Update()
@@ -101,25 +103,37 @@ public class HandInteractionManager : MonoBehaviour
             // 펼칠 때는 다 펼쳐진 후(OnComplete)에 false로 바꿈
             SpreadHand();
         }
+
+        AlignHand();
     }
 
-    private void FoldHand()
+    public void FoldHand()
     {
-        handAnchor.DOMove(foldAnchor.position, foldDuration).SetEase(Ease.OutQuart);
-        handAnchor.DORotateQuaternion(foldAnchor.rotation, foldDuration).SetEase(Ease.OutQuart);
-        handAnchor.DOScale(0.8f, foldDuration);
+        baseCardSpacingAngle = baseCardSpacingAngle / 2;
+
+        Sequence spreadSeq = DOTween.Sequence();
+
+        spreadSeq.Append(handAnchor.DOMove(foldAnchor.position, foldDuration).SetEase(Ease.OutQuart));
+        spreadSeq.Join(handAnchor.DORotateQuaternion(foldAnchor.rotation, foldDuration).SetEase(Ease.OutQuart));
+        ClearHover();
+
+        spreadSeq.OnComplete(() => {
+            AlignHand();
+        });
     }
 
     private void SpreadHand()
     {
+        baseCardSpacingAngle = temporaryBaseCardSpacingAngle;
+
         Sequence spreadSeq = DOTween.Sequence();
 
         spreadSeq.Append(handAnchor.DOMove(spreadAnchor.position, foldDuration).SetEase(Ease.OutQuart));
         spreadSeq.Join(handAnchor.DORotateQuaternion(spreadAnchor.rotation, foldDuration).SetEase(Ease.OutQuart));
-        spreadSeq.Join(handAnchor.DOScale(1.0f, foldDuration));
 
         // [수정] 애니메이션이 완전히 끝난 뒤에 호버가 가능하도록 설정
         spreadSeq.OnComplete(() => {
+            AlignHand();
             isFolded = false;
         });
     }
@@ -423,10 +437,13 @@ public class HandInteractionManager : MonoBehaviour
 
             // 겹칠 때 살짝 높이 차이 두기
             float verticalPos = (cardCount - 1 - i) * cardVerticalOffset;
-            Vector3 targetPosition = handAnchor.TransformPoint(localArcPos + new Vector3(0, verticalPos, 0));
 
-            // 목표 위치 저장
-            _cardLayoutTargets[card] = (targetPosition, targetRotation);
+            // [수정] 부모가 움직여도 카드가 정상적으로 따라가도록 로컬 좌표 사용
+            Vector3 targetLocalPosition = localArcPos + new Vector3(0, verticalPos, 0);
+            Vector3 targetWorldPosition = handAnchor.TransformPoint(targetLocalPosition);
+
+            // 목표 위치 저장 (기존 호버/Raycast 로직 유지를 위해 월드 좌표로 저장)
+            _cardLayoutTargets[card] = (targetWorldPosition, targetRotation);
 
             float duration = (card == newCard) ? newCardDuration : shuffleDuration;
             Ease easeType = (card == newCard) ? Ease.InOutSine : Ease.OutQuad;
@@ -436,14 +453,18 @@ public class HandInteractionManager : MonoBehaviour
             {
                 Vector3 currentLocalArcPos = (Quaternion.Euler(0, angle, 0) * Vector3.forward) * handArcRadius;
                 Vector3 localHoverPos = new Vector3(currentLocalArcPos.x, hoverOffset.y, hoverOffset.z);
-                card.transform.DOMove(handAnchor.TransformPoint(localHoverPos), duration).SetEase(easeType);
-                card.transform.DORotateQuaternion(handAnchor.rotation, duration).SetEase(easeType);
+
+                // [수정] DOMove -> DOLocalMove 사용
+                card.transform.DOLocalMove(localHoverPos, duration).SetEase(easeType);
+                card.transform.DOLocalRotateQuaternion(Quaternion.identity, duration).SetEase(easeType);
                 continue;
             }
 
-            // 일반 카드 이동
-            card.transform.DOMove(targetPosition, duration).SetEase(easeType);
-            card.transform.DORotateQuaternion(targetRotation, duration).SetEase(easeType);
+            // 일반 카드 이동 
+            // [수정] DOMove -> DOLocalMove, DORotateQuaternion -> DOLocalRotateQuaternion 사용
+            Quaternion targetLocalRotation = Quaternion.Euler(0, angle, 0);
+            card.transform.DOLocalMove(targetLocalPosition, duration).SetEase(easeType);
+            card.transform.DOLocalRotateQuaternion(targetLocalRotation, duration).SetEase(easeType);
             card.transform.DOScale(_originalCardScale, duration).SetEase(easeType);
         }
     }

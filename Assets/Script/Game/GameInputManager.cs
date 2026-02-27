@@ -15,6 +15,8 @@ public class GameInputManager : MonoBehaviour
     [Tooltip("손패 카드 레이어 (가장 먼저 클릭 판정)")]
     public LayerMask handCardLayer;
     [Tooltip("필드 하수인/영웅 레이어 (손패 다음으로 클릭 판정)")]
+    public LayerMask minionEntityLayer;
+    [Tooltip("필드 레이어 (하수인 다음으로 클릭 판정)")]
     public LayerMask fieldEntityLayer;
 
     [Header("드래그 설정")]
@@ -118,10 +120,11 @@ public class GameInputManager : MonoBehaviour
                     return; // 손패를 눌렀으면 필드는 검사할 필요 없음
                 }
             }
-            else if (Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer))
+            else if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
             {
+                Debug.Log("하수인 클릭");
                 // 필드 하수인을 클릭함
-                _selectedFieldEntity = fieldHit.collider.GetComponent<GameCardDisplay>();
+                _selectedFieldEntity = minionHit.collider.GetComponent<GameCardDisplay>();
                 if (_selectedFieldEntity != null)
                 {
                     // [연동 완료] 내 하수인이 맞는지, 공격 가능한 상태인지 검사
@@ -129,6 +132,14 @@ public class GameInputManager : MonoBehaviour
                     {
                         currentState = InputState.ReadyToDrag;
                     }
+                }
+            }
+            else if(Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer))
+            {
+                Debug.Log("게임보드 클릭");
+                if(!HandInteractionManager.instance.isFolded)
+                {
+                    HandInteractionManager.instance.ToggleHandFold();
                 }
             }
         }
