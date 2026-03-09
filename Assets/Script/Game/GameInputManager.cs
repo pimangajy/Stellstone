@@ -11,6 +11,9 @@ public class GameInputManager : MonoBehaviour
 {
     public static GameInputManager Instance;
 
+    [Header("테스트")]
+    //public DummyEntitySetup dummy;
+
     [Header("레이어 설정 (우선순위)")]
     [Tooltip("손패 카드 레이어 (가장 먼저 클릭 판정)")]
     public LayerMask handCardLayer;
@@ -123,10 +126,27 @@ public class GameInputManager : MonoBehaviour
             else if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
             {
                 Debug.Log("하수인 클릭");
-                // 필드 하수인을 클릭함
-                _selectedFieldEntity = minionHit.collider.GetComponent<GameCardDisplay>();
+                EntityDetailViewer.Instance.HideDetail();
+
+                // 필드 하수인을 클릭함 
+                // 테스트
+                //if(GameEntityManager.Instance.test)
+                //{
+                //    dummy = minionHit.collider.GetComponent<DummyEntitySetup>();
+                //  }
+                //else
+                {
+                    _selectedFieldEntity = minionHit.collider.GetComponent<GameCardDisplay>();
+                }
+
                 if (_selectedFieldEntity != null)
                 {
+                    // 테스트
+                    if(GameEntityManager.Instance.test)
+                    {
+                        currentState = InputState.ReadyToDrag;
+                        return;
+                    }
                     // [연동 완료] 내 하수인이 맞는지, 공격 가능한 상태인지 검사
                     if (EntityAttackManager.Instance != null && EntityAttackManager.Instance.IsValidAttacker(_selectedFieldEntity))
                     {
@@ -136,11 +156,15 @@ public class GameInputManager : MonoBehaviour
             }
             else if(Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer))
             {
-                Debug.Log("게임보드 클릭");
-                if(!HandInteractionManager.instance.isFolded)
+                Debug.Log("필드 클릭");
+                EntityDetailViewer.Instance.HideDetail();
+
+                if (!HandInteractionManager.instance.isFolded)
                 {
                     HandInteractionManager.instance.ToggleHandFold();
                 }
+
+                ResetInput();
             }
         }
         // [호버링 감지] - 클릭하지 않고 마우스만 움직일 때 (상대 턴에도 항상 동작)
@@ -150,6 +174,22 @@ public class GameInputManager : MonoBehaviour
             if (HandInteractionManager.instance != null && !isFold)
             {
                 HandInteractionManager.instance.ProcessHover(Input.mousePosition);
+            }
+        }
+
+        // 우클릭시 상세정보 창 띄우기
+        if (Input.GetMouseButtonDown(1))
+        {
+            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+
+            // 필드 하수인을 우클릭했는지 검사
+            if (Physics.Raycast(ray, out RaycastHit fieldHit, 100f, minionEntityLayer))
+            {
+                GameCardDisplay targetCard = fieldHit.collider.GetComponent<GameCardDisplay>();
+                if (targetCard != null && EntityDetailViewer.Instance != null)
+                {
+                    EntityDetailViewer.Instance.ShowDetail(targetCard);
+                }
             }
         }
     }
@@ -217,6 +257,12 @@ public class GameInputManager : MonoBehaviour
         if (EntityAttackManager.Instance != null)
         {
             EntityAttackManager.Instance.UpdateTargetHighlight();
+        }
+
+        // 테스트
+        if(GameEntityManager.Instance.test)
+        {
+
         }
 
         if (Input.GetMouseButtonUp(0))

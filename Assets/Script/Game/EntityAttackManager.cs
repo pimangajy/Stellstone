@@ -93,6 +93,9 @@ public class EntityAttackManager : MonoBehaviour
 
             Debug.Log($"[Attack] 공격 전송: {attackerId} -> {targetId}");
 
+            // 테스트
+            GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
+
             if (GameClient.Instance != null)
             {
                 GameClient.Instance.SendAttackRequest(attackerId, targetId);

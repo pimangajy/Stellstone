@@ -17,6 +17,9 @@ public class ProjectileController : MonoBehaviour
     [Tooltip("목표에 맞았을 때 터질 이펙트 (비워둬도 됨)")]
     public GameObject hitEffectPrefab;
 
+    [Tooltip("이펙트가 생성될 위치의 오프셋 (기본값: 위로 0.5, 카메라 쪽으로 -0.5)")]
+    public Vector3 hitEffectOffset = new Vector3(0f, 0.5f, 0f);
+
     public void Fire(Vector3 startPos, Vector3 targetPos, float speed, float arcHeight, Action onHitCallback)
     {
         transform.position = startPos;
@@ -94,7 +97,9 @@ public class ProjectileController : MonoBehaviour
         // 적중 이펙트 소환
         if (hitEffectPrefab != null)
         {
-            Instantiate(hitEffectPrefab, target, Quaternion.identity);
+            // 타겟(적 하수인의 발밑) 위치에 오프셋을 더해서 생성합니다.
+            Vector3 spawnPos = target + hitEffectOffset;
+            Instantiate(hitEffectPrefab, spawnPos, Quaternion.identity);
         }
 
         // 도달했음을 알림 (데미지 숫자 띄우기, 체력 깎기 등의 타이밍용)

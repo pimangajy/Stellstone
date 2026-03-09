@@ -31,6 +31,9 @@ MonoBehaviour:
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 3300439051078825739, guid: 7128603d714ada24090d8c6a938a8ebd, type: 3}
+  projectileSpeed: 30
+  projectileArcHeight: 3
   references:
     version: 2
     RefIds: []

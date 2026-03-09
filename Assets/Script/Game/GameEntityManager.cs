@@ -12,6 +12,9 @@ public class GameEntityManager : MonoBehaviour
 {
     public static GameEntityManager Instance { get; private set; }
 
+    [Header("테스트 설정")]
+    public bool test;
+
     [Header("필드 위치")]
     [Tooltip("내 하수인들이 놓일 자리")]
     public Transform myFieldTransform;
@@ -165,11 +168,18 @@ public class GameEntityManager : MonoBehaviour
     // 3. 전투 연출 (투사체 기반 턴제 교전)
     // ==================================================================
 
+    public void TestAttack(GameCardDisplay attacker, GameCardDisplay target)
+    {
+        Debug.Log("테스트 공격 시작");
+        StartCoroutine(AttackRoutine(attacker, target));
+    }
+
     public void PerformAttack(int attackerId, int targetId)
     {
         if (_spawnedEntities.TryGetValue(attackerId, out var attacker) &&
             _spawnedEntities.TryGetValue(targetId, out var target))
         {
+            Debug.Log("필드에 하수인이 없음");
             StartCoroutine(AttackRoutine(attacker, target));
         }
     }
@@ -238,7 +248,7 @@ public class GameEntityManager : MonoBehaviour
         }
 
         // 만약 카드의 투사체 프리팹이 빠져있거나 에러가 났을 경우 (게임 멈춤 방지용 안전장치)
-        Debug.LogWarning($"[경고] {shooter.name}의 CardData에 투사체 프리팹이 없습니다! 즉시 적중 처리합니다.");
+        Debug.LogWarning($"[경고] {shooter.name}의 CardData에 투사체 프리팹이나 투사체에 ProjectileController스크립트가 없습니다! 즉시 적중 처리합니다.");
         onHitCallback?.Invoke();
     }
 }
