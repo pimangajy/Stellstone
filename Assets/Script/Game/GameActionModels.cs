@@ -4,6 +4,42 @@ using System.Collections.Generic;
 // 제거했습니다. 이렇게 하면 GameClient.cs가 바로 찾을 수 있습니다.
 
 // ==================================================================
+// 0. 상수 정의 (매직 스트링 제거)
+// ==================================================================
+public static class ActionTypes
+{
+    // C -> S (클라이언트 요청)
+    public const string MulliganDecision = "MULLIGAN_DECISION";
+    public const string EndTurn = "END_TURN";
+    public const string PlayCard = "PLAY_CARD";
+    public const string Attack = "ATTACK";
+    public const string UseMemberAbility = "USE_MEMBER_ABILITY";
+    public const string Concede = "CONCEDE";
+
+    // S -> C (서버 응답)
+    public const string MulliganInfo = "MULLIGAN_INFO";
+    public const string GameReady = "GAME_READY";
+    public const string PhaseStart = "PHASE_START";
+    public const string UpdateMana = "UPDATE_MANA";
+    public const string UpdateEntities = "UPDATE_ENTITIES";
+    public const string OpponentPlayCard = "OPPONENT_PLAY_CARD";
+    public const string PlayCardSuccess = "PLAY_CARD_SUCCESS";
+    public const string PlayCardFail = "PLAY_CARD_FAIL";
+    public const string UpdateHandCards = "UPDATE_HAND_CARDS";
+    public const string GameOver = "GAME_OVER";
+    public const string Error = "ERROR";
+}
+
+public static class PhaseTypes
+{
+    public const string Standby = "Standby";
+    public const string Draw = "Draw";
+    public const string Main = "Main";
+    public const string End = "End";
+    public const string Mulligan = "Mulligan";
+}
+
+// ==================================================================
 // 1. 기본 액션 클래스 (JSON 파싱용)
 // ==================================================================
 

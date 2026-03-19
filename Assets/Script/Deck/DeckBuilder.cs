@@ -9,6 +9,8 @@ using System;
 /// </summary>
 public class DeckBuilder : MonoBehaviour
 {
+    public static DeckBuilder Instance { get; private set; }
+
     [Header("UI & Prefab Settings")]
     // 카드를 화면에 찍어낼 때 사용할 원본 틀 (붕어빵 틀 같은 프리팹)
     public GameObject cardPrefab;
@@ -40,6 +42,20 @@ public class DeckBuilder : MonoBehaviour
     private string currentSearchText = "";
 
     #region Unity Lifecycle (유니티 생명주기)
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+    }
 
     // 이 오브젝트가 켜질 때(활성화) 실행됩니다.
     private void OnEnable()

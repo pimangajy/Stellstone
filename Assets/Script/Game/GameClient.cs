@@ -23,8 +23,6 @@ public class GameClient : MonoBehaviour
     public static GameClient Instance { get; private set; }
 
     // --- 이벤트 정의 (방송국) ---
-    // 서버에서 무슨 일이 생기면 이 이벤트들을 통해 다른 스크립트들에게 알립니다.
-    // 예: "게임 시작한대!", "네 턴이야!", "상대가 카드 냈어!"
     public event Action<S_GameReady> OnGameReadyEvent;
     public event Action<S_PhaseStart> OnPhaseStartEvent;
     public event Action<string> OnPlayCardSuccessEvent;
@@ -34,79 +32,68 @@ public class GameClient : MonoBehaviour
     public event Action<string> OnErrorEvent;
     public event Action<string> OnPlayCardFailedEvent;
 
-    // WebSocket: 서버와 연결된 전화기 같은 것입니다.
     private ClientWebSocket _webSocket;
-    private CancellationTokenSource _cts; // 연결을 취소하거나 끊을 때 사용하는 신호
+    private CancellationTokenSource _cts;
 
-    // Firebase 인증 정보 (로그인한 유저 정보)
+    // Firebase 인증 정보
     public FirebaseAuth _auth;
     public string UserUid;
 
-    // (핵심) 메시지 보관함 (큐)
-    // 서버에서 오는 메시지는 '별도의 스레드(일꾼)'가 받습니다.
-    // 하지만 유니티 화면(UI 등)은 '메인 스레드'만 건드릴 수 있습니다.
-    // 그래서 받은 메시지를 이 상자에 잠시 넣어두고, 메인 스레드가 나중에 꺼내서 처리합니다.
-    private ConcurrentQueue<string> _receivedMessages = new ConcurrentQueue<string>();
+    // ★ [최적화 완료] 문자열(string) 대신, 파싱이 끝난 '객체(BaseGameAction)'를 담습니다.
+    private ConcurrentQueue<BaseGameAction> _receivedActions = new ConcurrentQueue<BaseGameAction>();
 
     [Header("서버 주소")]
     public string serverAddress = "ws://175.125.250.226:5123/ws/game";
+    public string notebookAddress = "ws://192.168.0.36:5123/ws/game";
+    public bool notebook;
 
-    // 매칭된 게임 방 번호
     public string GameId;
 
     void Awake()
     {
-        // 싱글톤 초기화: 나 말고 다른 GameClient가 있으면 그 녀석을 없앱니다.
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject); // 씬이 바뀌어도 파괴되지 않게 설정
+            DontDestroyOnLoad(gameObject);
         }
         else
         {
             Destroy(gameObject);
             return;
         }
-    }
 
-    // --- 1. 유니티 생명주기 (메인 스레드) ---
+        if (notebook) serverAddress = notebookAddress;
+    }
 
     void Start()
     {
-        // Firebase 로그인 도구를 준비합니다.
         _auth = FirebaseAuth.DefaultInstance;
-
         FirebaseUser user = _auth.CurrentUser;
-        UserUid = user.UserId;
+        if (user != null) UserUid = user.UserId;
+
+        ConnectToServerAsync();
     }
 
     void Update()
     {
-        // (핵심) 매 프레임마다 "서버에서 온 메시지 있나?" 확인합니다.
-        // 큐(보관함)에서 메시지를 하나씩 꺼내서 처리(HandleServerMessage)합니다.
-        while (_receivedMessages.TryDequeue(out string message))
+        // ★ [최적화 완료] 메인 스레드는 JSON 파싱을 하지 않고, 이미 완성된 객체만 꺼내서 사용합니다! (프레임 드랍 방지)
+        while (_receivedActions.TryDequeue(out BaseGameAction action))
         {
-            HandleServerMessage(message);
+            HandleServerAction(action);
         }
     }
 
-    // 게임이 꺼지거나 이 오브젝트가 사라질 때 연결을 끊습니다.
     async void OnDestroy()
     {
         if (_webSocket != null && _webSocket.State == WebSocketState.Open)
         {
             Debug.Log("[GameClient] 연결 종료 중...");
-            _cts.Cancel(); // 수신 중단 신호
+            _cts.Cancel();
             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client shutting down", CancellationToken.None);
-            _webSocket.Dispose(); // 정리
+            _webSocket.Dispose();
         }
     }
 
-    // --- 2. 서버 연결 및 수신 (백그라운드 작업) ---
-
-    /// <summary>
-    /// 서버에 접속을 시도합니다.
-    /// </summary>
     public async void ConnectToServerAsync()
     {
         if (_webSocket != null && _webSocket.State == WebSocketState.Open)
@@ -115,7 +102,6 @@ public class GameClient : MonoBehaviour
             return;
         }
 
-        // 로그인한 유저인지 확인
         FirebaseUser user = _auth.CurrentUser;
         if (user == null)
         {
@@ -126,7 +112,6 @@ public class GameClient : MonoBehaviour
         string idToken;
         try
         {
-            // 서버 입장권(토큰)을 발급받습니다.
             idToken = await user.TokenAsync(true);
             Debug.Log("[GameClient] Firebase 토큰 확보 성공!");
         }
@@ -136,7 +121,6 @@ public class GameClient : MonoBehaviour
             return;
         }
 
-        // 주소 뒤에 토큰과 방 번호를 붙여서 접속 요청을 보냅니다.
         string fullUrl = $"{serverAddress}?token={idToken}&gameId={GameId}";
 
         _webSocket = new ClientWebSocket();
@@ -148,7 +132,6 @@ public class GameClient : MonoBehaviour
             await _webSocket.ConnectAsync(new Uri(fullUrl), _cts.Token);
             Debug.Log("[GameClient] 서버 연결 성공!");
 
-            // 연결되자마자 메시지 수신 대기 상태로 들어갑니다.
             StartReceiveLoop();
         }
         catch (Exception e)
@@ -158,29 +141,50 @@ public class GameClient : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 서버에서 오는 메시지를 계속해서 듣는 귀(Loop)입니다.
-    /// </summary>
     private async void StartReceiveLoop()
     {
-        var buffer = new byte[1024 * 4]; // 메시지를 담을 그릇 (4KB)
+        var buffer = new byte[1024 * 4];
 
         try
         {
-            // 연결이 끊기지 않는 한 계속 반복합니다.
             while (_webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
             {
-                // 메시지가 올 때까지 여기서 대기합니다 (await)
                 var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
-                // 서버가 "끊자"고 하면 루프 종료
                 if (result.MessageType == WebSocketMessageType.Close) break;
 
-                // 받은 바이트(byte) 데이터를 문자열(string)로 변환
                 string receivedJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                // (중요) 바로 처리하지 않고 큐(보관함)에 넣습니다. (Update 함수가 처리하도록)
-                _receivedMessages.Enqueue(receivedJson);
+                // ★ [최적화 완료] 무거운 JSON 파싱 작업을 메인 화면(Update)이 아닌 백그라운드 스레드에서 처리합니다.
+                try
+                {
+                    var baseAction = JsonConvert.DeserializeObject<BaseGameAction>(receivedJson);
+                    BaseGameAction parsedAction = null;
+
+                    switch (baseAction.action)
+                    {
+                        case ActionTypes.MulliganInfo: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
+                        case ActionTypes.GameReady: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
+                        case ActionTypes.PhaseStart: parsedAction = JsonConvert.DeserializeObject<S_PhaseStart>(receivedJson); break;
+                        case ActionTypes.UpdateMana: parsedAction = JsonConvert.DeserializeObject<S_UpdateMana>(receivedJson); break;
+                        case ActionTypes.UpdateEntities: parsedAction = JsonConvert.DeserializeObject<S_UpdateEntities>(receivedJson); break;
+                        case ActionTypes.OpponentPlayCard: parsedAction = JsonConvert.DeserializeObject<S_OpponentPlayCard>(receivedJson); break;
+                        case ActionTypes.PlayCardSuccess: parsedAction = JsonConvert.DeserializeObject<S_PlayCardSuccess>(receivedJson); break;
+                        case ActionTypes.PlayCardFail: parsedAction = JsonConvert.DeserializeObject<S_PlayCardFail>(receivedJson); break;
+                        case ActionTypes.GameOver: parsedAction = JsonConvert.DeserializeObject<S_GameOver>(receivedJson); break;
+                        case ActionTypes.Error: parsedAction = JsonConvert.DeserializeObject<S_Error>(receivedJson); break;
+                    }
+
+                    if (parsedAction != null)
+                    {
+                        // 파싱이 끝난 깨끗한 객체를 큐에 넣습니다.
+                        _receivedActions.Enqueue(parsedAction);
+                    }
+                }
+                catch (Exception parseEx)
+                {
+                    Debug.LogError($"[GameClient] 파싱 에러: {parseEx.Message}");
+                }
             }
         }
         catch (Exception e)
@@ -193,41 +197,38 @@ public class GameClient : MonoBehaviour
         }
     }
 
-    // --- 3. 메시지 보내기 및 처리 ---
-
-    /// <summary>
-    /// [보내기] "나 이 카드 낼래!" 라고 서버에 요청합니다.
-    /// </summary>
     public void SendPlayCardRequest(string cardInstanceId, int slotIndex, int targetEntityId = 0)
     {
         C_PlayCard action = new C_PlayCard
         {
-            action = "PLAY_CARD",
+            action = ActionTypes.PlayCard,
             handCardInstanceId = cardInstanceId,
             position = slotIndex,
             targetEntityId = targetEntityId
         };
-
         SendMessageAsync(action);
     }
 
-    /// <summary>
-    /// [보내기] "공격해!" 라고 서버에 요청합니다.
-    /// </summary>
     public void SendAttackRequest(int attackerId, int defenderId)
     {
         C_Attack action = new C_Attack
         {
-            action = "ATTACK",
+            action = ActionTypes.Attack,
             attackerEntityId = attackerId,
             defenderEntityId = defenderId
         };
         SendMessageAsync(action);
     }
 
-    /// <summary>
-    /// 실제 메시지 전송 함수 (JSON으로 변환해서 보냄)
-    /// </summary>
+    public void RequestEndTurn()
+    {
+        C_EndTurn action = new C_EndTurn
+        {
+            action = ActionTypes.EndTurn,
+        };
+        SendMessageAsync(action);
+    }
+
     public async void SendMessageAsync(BaseGameAction actionMessage)
     {
         if (_webSocket == null || _webSocket.State != WebSocketState.Open) return;
@@ -246,110 +247,93 @@ public class GameClient : MonoBehaviour
     }
 
     /// <summary>
-    /// [처리하기] 큐에서 꺼낸 메시지를 분석해서 게임에 반영합니다.
+    /// [처리하기] 큐에서 꺼낸 완성된 객체를 게임에 반영합니다. (타입 캐스팅만 수행)
     /// </summary>
-    private void HandleServerMessage(string jsonMessage)
+    private void HandleServerAction(BaseGameAction action)
     {
-        // 1. 일단 '어떤 종류의 행동(action)'인지 확인하기 위해 기본 형태로 풉니다.
-        var baseAction = JsonConvert.DeserializeObject<BaseGameAction>(jsonMessage);
-
-        // 2. 종류에 따라 제대로 된 클래스로 다시 풀어서 처리합니다.
-        switch (baseAction.action)
+        switch (action.action)
         {
-            case "MULLIGAN_INFO": // 멀리건(첫 패 교환) 시작
+            case ActionTypes.MulliganInfo:
                 Debug.Log("MULLIGAN_INFO 발생");
-                var mulliganInfo = JsonConvert.DeserializeObject<S_MulliganInfo>(jsonMessage);
-                OnMulliganInfoReceived(mulliganInfo);
+                OnMulliganInfoReceived((S_MulliganInfo)action);
                 break;
 
-            case "GAME_READY": // 게임 준비 완료 (멀리건 끝)
+            case ActionTypes.GameReady:
                 Debug.Log("GAME_READY 발생");
-                var gameReadyInfo = JsonConvert.DeserializeObject<S_GameReady>(jsonMessage);
-                OnGameReadyEvent?.Invoke(gameReadyInfo); // 이벤트 방송
+                var gameReadyInfo = (S_GameReady)action;
+                OnGameReadyEvent?.Invoke(gameReadyInfo);
                 OnGameReady(gameReadyInfo);
                 break;
 
-            case "PHASE_START": // 턴/페이즈 시작
+            case ActionTypes.PhaseStart:
                 Debug.Log("PHASE_START 발생");
-                var phaseStartInfo = JsonConvert.DeserializeObject<S_PhaseStart>(jsonMessage);
+                var phaseStartInfo = (S_PhaseStart)action;
                 OnPhaseStartEvent?.Invoke(phaseStartInfo);
                 OnPhaseStart(phaseStartInfo);
                 break;
 
-            case "UPDATE_MANA": // 마나 정보 갱신
+            case ActionTypes.UpdateMana:
                 Debug.Log("UPDATE_MANA 발생");
-                var updateManaInfo = JsonConvert.DeserializeObject<S_UpdateMana>(jsonMessage);
+                var updateManaInfo = (S_UpdateMana)action;
                 OnUpdateManaEvent?.Invoke(updateManaInfo);
                 OnUpdateMana(updateManaInfo);
                 break;
 
-            case "UPDATE_ENTITIES": // 필드 하수인/영웅 상태 변경
+            case ActionTypes.UpdateEntities:
                 Debug.Log("UPDATE_ENTITIES 발생");
-                var updateEntitiesInfo = JsonConvert.DeserializeObject<S_UpdateEntities>(jsonMessage);
+                var updateEntitiesInfo = (S_UpdateEntities)action;
                 OnEntitiesUpdatedEvent?.Invoke(updateEntitiesInfo.updatedEntities);
                 break;
 
-            case "OPPONENT_PLAY_CARD": // 상대가 카드 냄
+            case ActionTypes.OpponentPlayCard:
                 Debug.Log("OPPONENT_PLAY_CARD 발생");
-                var opponentPlayCardInfo = JsonConvert.DeserializeObject<S_OpponentPlayCard>(jsonMessage);
+                var opponentPlayCardInfo = (S_OpponentPlayCard)action;
                 OnOpponentPlayCardEvent?.Invoke(opponentPlayCardInfo);
                 OnOpponentPlayCard(opponentPlayCardInfo);
                 break;
 
-            case "PLAY_CARD_SUCCESS":
-                var successInfo = JsonConvert.DeserializeObject<S_PlayCardSuccess>(jsonMessage);
+            case ActionTypes.PlayCardSuccess:
+                var successInfo = (S_PlayCardSuccess)action;
                 OnPlayCardSuccessEvent?.Invoke(successInfo.serverInstanceId);
                 break;
 
-            case "PLAY_CARD_FAIL": // 내가 낸 카드 실패 (마나 부족 등)
+            case ActionTypes.PlayCardFail:
                 Debug.Log("PLAY_CARD_FAIL 발생");
-                var playCardFailInfo = JsonConvert.DeserializeObject<S_PlayCardFail>(jsonMessage);
+                var playCardFailInfo = (S_PlayCardFail)action;
                 OnPlayCardFailedEvent?.Invoke(playCardFailInfo.reason);
                 OnPlayCardFail(playCardFailInfo);
                 break;
 
-            case "GAME_OVER": // 게임 끝
+            case ActionTypes.GameOver:
                 Debug.Log("GAME_OVER 발생");
-                var gameOverInfo = JsonConvert.DeserializeObject<S_GameOver>(jsonMessage);
-                OnGameOver(gameOverInfo);
+                OnGameOver((S_GameOver)action);
                 break;
 
-            case "ERROR": // 서버 에러
+            case ActionTypes.Error:
                 Debug.Log("ERROR 발생");
-                var errorInfo = JsonConvert.DeserializeObject<S_Error>(jsonMessage);
+                var errorInfo = (S_Error)action;
                 OnErrorEvent?.Invoke(errorInfo.message);
                 Debug.LogError($"[GameClient] 서버 오류: {errorInfo.message}");
                 break;
         }
     }
 
-    // --- 4. 게임 로직 반영 (실제 UI/연출 호출) ---
-
     private void OnMulliganInfoReceived(S_MulliganInfo info)
     {
         Debug.Log($"[GameClient] 멀리건 시작! 교체할 카드 {info.cardsToMulligan.Count}장 받음.");
-
-        // 멀리건 UI를 켜줍니다.
         if (GameMulliganManager.instance != null)
-        {
             GameMulliganManager.instance.mulliganImg.SetActive(true);
-        }
 
-        // 카드를 화면에 그려줍니다.
         if (CardDrawManager.Instance != null)
-        {
             CardDrawManager.Instance.PerformBatchDraw(info.cardsToMulligan);
-        }
     }
 
     private void OnGameReady(S_GameReady info)
     {
         Debug.Log($"[GameClient] 게임 시작! 내 손패: {info.finalHand.Count}장");
-        // 서버의 확정된 손패와 내 화면의 손패를 맞추는 작업(동기화)을 합니다.
         StartCoroutine(SyncHandWithServer(info.finalHand));
     }
 
-    // 서버 손패 정보와 내 화면을 맞추는 함수
     private IEnumerator SyncHandWithServer(List<CardInfo> finalHand)
     {
         var handManager = HandInteractionManager.instance;
@@ -358,8 +342,6 @@ public class GameClient : MonoBehaviour
         foreach (var serverCard in finalHand)
         {
             bool isAlreadyInHand = false;
-
-            // 이미 내 손에 있는 카드인지 확인
             foreach (var existingCardObj in handManager.handCards)
             {
                 var display = existingCardObj.GetComponent<GameCardDisplay>();
@@ -370,14 +352,11 @@ public class GameClient : MonoBehaviour
                 }
             }
 
-            // 내 손에 없으면 새로 뽑는 연출 실행
             if (!isAlreadyInHand)
             {
                 if (CardDrawManager.Instance != null)
-                {
                     CardDrawManager.Instance.PerformDrawAnimation(serverCard);
-                }
-                yield return new WaitForSeconds(0.3f); // 드로우 간격
+                yield return new WaitForSeconds(0.3f);
             }
         }
     }
@@ -385,39 +364,31 @@ public class GameClient : MonoBehaviour
     private void OnPhaseStart(S_PhaseStart info)
     {
         Debug.Log($"[GameClient] 페이즈 시작: {info.phase}");
-        // 드로우 페이즈면 카드 뽑기
-        if (info.phase == "Draw" && info.drawnCard != null)
+        if (info.phase == PhaseTypes.Draw && info.drawnCard != null)
         {
             Debug.Log($"[GameClient] 카드 드로우: {info.drawnCard.cardId}");
             CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
-            // 실제 드로우 연출은 여기서 추가해야 함
         }
     }
 
     private void OnUpdateMana(S_UpdateMana info)
     {
         Debug.Log($"[GameClient] 마나 갱신: {info.currentMana}/{info.maxMana}");
-        // TODO: 마나 수정(Crystal) UI 갱신 코드 추가 필요
     }
-
 
     private void OnOpponentPlayCard(S_OpponentPlayCard info)
     {
         Debug.Log($"[GameClient] 상대방이 카드 사용: {info.cardPlayed.cardId}");
-        // TODO: 상대방 손에서 카드가 날아와서 필드에 놓이는 연출 추가 필요
     }
 
     private void OnPlayCardFail(S_PlayCardFail info)
     {
         Debug.LogWarning($"[GameClient] 카드 내기 실패: {info.reason}");
-        // TODO: 실패 알림 메시지나 효과음 재생
     }
 
     private void OnGameOver(S_GameOver info)
     {
         Debug.Log($"[GameClient] 게임 종료! 승자: {info.winnerUid}");
-        // 연결 종료
         _cts.Cancel();
-        // TODO: 승리/패배 팝업 띄우기
     }
 }

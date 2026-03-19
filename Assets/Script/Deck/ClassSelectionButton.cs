@@ -14,7 +14,7 @@ public class ClassSelectionButton : MonoBehaviour
     public string className;
 
     // DeckBuilder 스크립트에게 연락하기 위해 주소를 저장할 변수
-    private DeckBuilder deckBuilder;
+    public DeckBuilder deckBuilder;
 
     void Start()
     {
@@ -22,7 +22,7 @@ public class ClassSelectionButton : MonoBehaviour
         // deckBuilder = FindObjectOfType<DeckBuilder>();
 
         // 못 찾았으면 에러 메시지를 띄웁니다.
-        if (deckBuilder == null)
+        if (DeckBuilder.Instance == null)
         {
             Debug.LogError("씬에서 DeckBuilder 스크립트를 찾을 수 없습니다!");
             return;
@@ -41,10 +41,10 @@ public class ClassSelectionButton : MonoBehaviour
     void OnButtonClick()
     {
         // 덱 빌더가 존재한다면
-        if (deckBuilder != null)
+        if (DeckBuilder.Instance != null)
         {
             // 1. 덱 빌더에게 "이 직업(className)으로 필터링해줘"라고 요청합니다.
-            deckBuilder.SetClassFilter(className);
+            DeckBuilder.Instance.SetClassFilter(className);
 
             // 2. UI 매니저에게 팝업창(직업 선택창)을 닫아달라고 요청합니다.
             UIManager.Instance.ClearPopupList();

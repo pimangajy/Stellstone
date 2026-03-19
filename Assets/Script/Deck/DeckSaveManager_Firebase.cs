@@ -27,7 +27,9 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     private bool isInitialized = false;
 
     // 서버 주소 (REST API 엔드포인트)
-    private const string ApiBaseUrl = "http://175.125.250.226:5123";
+    private string ApiBaseUrl = "http://175.125.250.226:5123";
+    private const string subUrl = "http://192.168.0.36:5123";
+    public bool notebook;
 
     private void Awake()
     {
@@ -41,6 +43,8 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             instance = this;
             DontDestroyOnLoad(gameObject);
         }
+
+        if(notebook) ApiBaseUrl = subUrl;
 
         // Firebase 도구 준비
         db = FirebaseFirestore.DefaultInstance;

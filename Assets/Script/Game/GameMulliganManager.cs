@@ -150,7 +150,7 @@ public class GameMulliganManager : MonoBehaviour
 
             var decision = new C_MulliganDecision
             {
-                action = "MULLIGAN_DECISION",
+                action = ActionTypes.MulliganDecision,
                 cardInstanceIdsToReplace = idsToSend
             };
             GameClient.Instance.SendMessageAsync(decision);
