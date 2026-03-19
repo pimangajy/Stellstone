@@ -1,0 +1,160 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: **/*.cs
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+BattleManager.cs
+CardDragManager.cs
+CardDrawManager.cs
+EntityAttackManager.cs
+EntityDetailViewer.cs
+FieldSlot.cs
+GameActionModels.cs
+GameCardDisplay.cs
+GameClient.cs
+GameEntityManager.cs
+GameInputManager.cs
+GameMulliganManager.cs
+GameStateManager.cs
+HandInteractionManager.cs
+ProjectileController.cs
+SpawnEffectData.cs
+SpriteGifPlayer.cs
+TargetingReticle.cs
+TestCardData/DummyEntitySetup.cs
+TurnEndController.cs
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="EntityDetailViewer.cs">
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+/// <summary>
+/// 카드의 상세 정보를 화면에 띄워주는 UI 관리자입니다.
+/// 이미지, 이름, 설명, 종족, 버프 목록 등을 표시합니다.
+/// </summary>
+public class EntityDetailViewer : MonoBehaviour
+{
+    public static EntityDetailViewer Instance;
+
+    [Header("UI 연결")]
+    [Tooltip("상세 정보창 전체를 껐다 켤 부모 패널")]
+    public GameObject viewerPanel;
+
+    [Header("텍스트 및 이미지 연결")]
+    public Image cardPortrait;
+    public TextMeshProUGUI nameText;
+    public TextMeshProUGUI descriptionText;
+    public TextMeshProUGUI tribeText;
+    public TextMeshProUGUI buffListText;
+
+    private void Awake()
+    {
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
+
+        // 시작할 때는 숨겨둡니다.
+        HideDetail();
+    }
+
+    /// <summary>
+    /// 특정 카드의 정보를 읽어와 UI에 채우고 창을 띄웁니다.
+    /// </summary>
+    public void ShowDetail(GameCardDisplay cardDisplay)
+    {
+        if (cardDisplay == null || cardDisplay._cardData == null) return;
+
+        CardData data = cardDisplay._cardData;
+        EntityData entity = cardDisplay.CurrentEntityData;
+
+        // 1. 패널 켜기
+        viewerPanel.SetActive(true);
+
+        // 2. 이미지 & 기본 텍스트 설정
+        if (cardPortrait != null)
+            cardPortrait.sprite = data.memberIcon;
+
+        if (nameText != null) nameText.text = data.cardName;
+        if (descriptionText != null) descriptionText.text = data.description;
+
+        // 3. 종족 텍스트 설정 (없음이 아닐 때만 표시)
+        if (tribeText != null)
+        {
+            if (data.minionTribe != MinionTribe.없음)
+                tribeText.text = $"종족: {data.minionTribe}";
+            else
+                tribeText.text = ""; // 종족 없음
+        }
+
+        // 4. 버프 목록 설정 (임시 구현)
+        if (buffListText != null)
+        {
+            // TODO: 추후 EntityData에 List<Buff> 데이터가 생기면 루프를 돌며 출력합니다.
+            // 현재는 공격력이 원본보다 높으면 버프를 받은 것으로 간주하여 임시 출력합니다.
+            if (entity != null && entity.attack > data.attack)
+            {
+                buffListText.text = "<color=green>• 공격력 증가 버프</color>";
+            }
+            else
+            {
+                buffListText.text = "<color=#888888>적용된 효과 없음</color>";
+            }
+        }
+    }
+
+    /// <summary>
+    /// 상세 정보 창을 닫습니다.
+    /// </summary>
+    public void HideDetail()
+    {
+        if (viewerPanel != null)
+        {
+            viewerPanel.SetActive(false);
+        }
+    }
+}
+</file>
+
+</files>

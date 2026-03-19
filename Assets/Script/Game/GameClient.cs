@@ -70,8 +70,6 @@ public class GameClient : MonoBehaviour
         _auth = FirebaseAuth.DefaultInstance;
         FirebaseUser user = _auth.CurrentUser;
         if (user != null) UserUid = user.UserId;
-
-        ConnectToServerAsync();
     }
 
     void Update()
@@ -197,6 +195,7 @@ public class GameClient : MonoBehaviour
         }
     }
 
+    // 카드 플레이
     public void SendPlayCardRequest(string cardInstanceId, int slotIndex, int targetEntityId = 0)
     {
         C_PlayCard action = new C_PlayCard
@@ -209,6 +208,8 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
+
+    // 공격 전송
     public void SendAttackRequest(int attackerId, int defenderId)
     {
         C_Attack action = new C_Attack
@@ -220,6 +221,7 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
+    // 턴엔드 전송
     public void RequestEndTurn()
     {
         C_EndTurn action = new C_EndTurn
@@ -229,6 +231,7 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
+    // 서버에 메세지를 보내는 함수
     public async void SendMessageAsync(BaseGameAction actionMessage)
     {
         if (_webSocket == null || _webSocket.State != WebSocketState.Open) return;

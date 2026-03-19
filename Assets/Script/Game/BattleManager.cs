@@ -65,6 +65,8 @@ public class BattleManager : MonoBehaviour
         // 서버 통신 이벤트 구독
         if (GameClient.Instance != null)
         {
+            GameClient.Instance.ConnectToServerAsync();
+
             myUid = GameClient.Instance.UserUid;
             GameClient.Instance.OnPhaseStartEvent += HandlePhaseStart;
             GameClient.Instance.OnUpdateManaEvent += HandleUpdateMana;
@@ -81,6 +83,18 @@ public class BattleManager : MonoBehaviour
         {
             timerSlider.minValue = 0;
             timerSlider.interactable = false;
+        }
+    }
+
+    private void OnDisable()
+    {
+        // 메모리 누수 방지를 위한 이벤트 구독 해제
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.OnPhaseStartEvent -= HandlePhaseStart;
+            GameClient.Instance.OnUpdateManaEvent -= HandleUpdateMana;
+            GameClient.Instance.OnEntitiesUpdatedEvent -= HandleEntitiesUpdated;
+            GameClient.Instance.OnGameReadyEvent -= HandleGameReady;
         }
     }
 
@@ -106,7 +120,6 @@ public class BattleManager : MonoBehaviour
         OnHandUpdated?.Invoke();
         OnStateChanged?.Invoke();
         RefreshTurnUI();
-        UpdateManaUI(); // 게임 시작 시 마나 UI 초기화
     }
 
     private void HandlePhaseStart(S_PhaseStart info)

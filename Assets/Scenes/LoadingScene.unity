@@ -221,7 +221,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 409eb6d48628f80488fe7a8dc5755961, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  notebook: 1
+  notebook: 0
 --- !u!4 &281802850
 Transform:
   m_ObjectHideFlags: 0
@@ -266,7 +266,7 @@ MonoBehaviour:
   UserUid: 
   serverAddress: ws://175.125.250.226:5123/ws/game
   notebookAddress: ws://192.168.0.36:5123/ws/game
-  notebook: 1
+  notebook: 0
   GameId: 
 --- !u!1 &407297494
 GameObject:

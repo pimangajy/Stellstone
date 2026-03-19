@@ -154,7 +154,7 @@ public class GameInputManager : MonoBehaviour
                     }
                 }
             }
-            else if(Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer))
+            else if(Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer) && !HandInteractionManager.instance.isMulliganPhase)
             {
                 Debug.Log("필드 클릭");
                 EntityDetailViewer.Instance.HideDetail();
