@@ -18,6 +18,7 @@ public static class ActionTypes
 
     // S -> C (서버 응답)
     public const string MulliganInfo = "MULLIGAN_INFO";
+    public const string EnemyMulligunInfo = "OPPONENT_MULLIGAN_STATUS";
     public const string GameReady = "GAME_READY";
     public const string PhaseStart = "PHASE_START";
     public const string UpdateMana = "UPDATE_MANA";
@@ -165,6 +166,19 @@ public class S_MulliganInfo : BaseGameAction
     // action = "MULLIGAN_INFO"
     public List<CardInfo> cardsToMulligan; // 교체할 수 있는 카드 5장 목록
     public long mulliganEndTime; // 멀리건 종료 시간 (Unix timestamp)
+}
+
+/// <summary>
+/// (S->C) 상대방이 멀리건을 확정했을 때 알립니다.
+/// 어떤 슬롯(인덱스)의 카드를 교체했는지 정보를 포함합니다.
+/// </summary>
+public class S_OpponentMulliganStatus : BaseGameAction
+{
+    // action = "OPPONENT_MULLIGAN_STATUS"
+    public string? opponentUid;
+    public List<int>? replacedIndices; // 교체된 카드의 슬롯 번호 (0~4)
+    public int replacedCount;          // 교체된 카드 수
+    public bool isReady;               // 멀리건 완료 여부
 }
 
 /// <summary>
