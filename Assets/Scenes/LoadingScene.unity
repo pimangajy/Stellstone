@@ -266,7 +266,7 @@ MonoBehaviour:
   UserUid: 
   serverAddress: ws://175.125.250.226:5123/ws/game
   notebookAddress: ws://192.168.0.36:5123/ws/game
-  notebook: 0
+  notebook: 1
   GameId: 
 --- !u!1 &407297494
 GameObject:

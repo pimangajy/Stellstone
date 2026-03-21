@@ -27,9 +27,10 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     private bool isInitialized = false;
 
     // 서버 주소 (REST API 엔드포인트)
-    private string ApiBaseUrl = "http://175.125.250.226:5123";
-    private const string subUrl = "http://192.168.0.36:5123";
-    public bool notebook;
+    public string deckloadApiUrl => $"{GameClient.Instance.BaseApiUrl}/decks";
+    public string deckcreateApiUrl => $"{GameClient.Instance.BaseApiUrl}/decks/create";
+    public string deckupdateApiUrl => $"{GameClient.Instance.BaseApiUrl}/decks/update";
+    public string deckdeleteApiUrl => $"{GameClient.Instance.BaseApiUrl}/decks/delete";
 
     private void Awake()
     {
@@ -43,9 +44,6 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             instance = this;
             DontDestroyOnLoad(gameObject);
         }
-
-        if(notebook) ApiBaseUrl = subUrl;
-
         // Firebase 도구 준비
         db = FirebaseFirestore.DefaultInstance;
         auth = FirebaseAuth.DefaultInstance;
@@ -145,12 +143,12 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
         // 1. 보안 토큰(신분증)을 발급받습니다.
         string idToken = await auth.CurrentUser.TokenAsync(true);
-        // 2. 요청할 주소 설정
-        string apiUrl = $"{ApiBaseUrl}/api/decks";
+
+        Debug.Log(deckloadApiUrl + "메세지 보냄");
 
         // 3. UnityWebRequest: 유니티의 웹 브라우저 같은 역할
         // GET 방식: "데이터 조회" 요청
-        using (UnityWebRequest request = UnityWebRequest.Get(apiUrl))
+        using (UnityWebRequest request = UnityWebRequest.Get(deckloadApiUrl))
         {
             // 헤더에 신분증 첨부
             request.SetRequestHeader("Authorization", "Bearer " + idToken);
@@ -202,7 +200,6 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         if (auth.CurrentUser == null) return null;
 
         string idToken = await auth.CurrentUser.TokenAsync(true);
-        string apiUrl = $"{ApiBaseUrl}/api/decks/create";
 
         // 보낼 데이터 준비 (직업 이름)
         UnityCreateDeckRequest requestBody = new UnityCreateDeckRequest { className = className };
@@ -210,7 +207,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
 
         // POST 방식: "데이터 생성" 요청
-        using (UnityWebRequest request = new UnityWebRequest(apiUrl, "POST"))
+        using (UnityWebRequest request = new UnityWebRequest(deckcreateApiUrl, "POST"))
         {
             request.uploadHandler = new UploadHandlerRaw(bodyRaw); // 보낼 데이터
             request.downloadHandler = new DownloadHandlerBuffer(); // 받을 준비
@@ -252,7 +249,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         if (auth.CurrentUser == null) return;
 
         string idToken = await auth.CurrentUser.TokenAsync(true);
-        string apiUrl = $"{ApiBaseUrl}/api/decks/update/{updatedDeck.deckId}";
+        string apiUrl = $"{deckupdateApiUrl}/{updatedDeck.deckId}";
 
         // 업데이트할 내용 포장 (UnityUpdateDeckRequest 사용)
         UnityUpdateDeckRequest requestBody = new UnityUpdateDeckRequest
@@ -307,7 +304,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         if (auth.CurrentUser == null) return;
 
         string idToken = await auth.CurrentUser.TokenAsync(true);
-        string apiUrl = $"{ApiBaseUrl}/api/decks/delete/{deckId}";
+        string apiUrl = $"{deckdeleteApiUrl}/{deckId}";
 
         // DELETE 방식: "삭제" 요청
         using (UnityWebRequest request = UnityWebRequest.Delete(apiUrl))

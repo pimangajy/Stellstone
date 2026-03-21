@@ -87,10 +87,6 @@ public class OpponentHandVisualizer : MonoBehaviour
 
             // Y축 높이를 약간씩 조절하여 부채꼴의 입체감을 더함
             targetLocalPosition.y += Mathf.Abs(i - (cardCount / 2f)) * yOffsetSpacing;
-
-            // 3. DOTween을 이용해 부드럽게 이동 및 회전
-            _opponentCards[i].transform.DOLocalMove(targetLocalPosition, animationDuration).SetEase(Ease.OutOut);
-            _opponentCards[i].transform.DOLocalRotateQuaternion(targetRotation, animationDuration).SetEase(Ease.OutOut);
         }
     }
 }

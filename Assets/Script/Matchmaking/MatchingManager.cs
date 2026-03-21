@@ -54,7 +54,9 @@ public class MatchingManager : MonoBehaviour
     [SerializeField] private GameObject lobbyPanel;
 
     //  DeckSaveManager에서 서버 주소 복사
-    private const string ApiBaseUrl = "http://175.125.250.226:5123";
+
+    private string ApiBaseUrl = GameClient.Instance.BaseUrl;
+    private string selectdeckRequestUrl => GameClient.Instance.GetApiUrl("user/select-deck");
 
     //  서버로 보낼 DTO(데이터 전송 객체)
     [System.Serializable]
@@ -169,9 +171,8 @@ public class MatchingManager : MonoBehaviour
         try
         {
             string idToken = await auth.CurrentUser.TokenAsync(true);
-            string apiUrl = $"{ApiBaseUrl}/api/user/select-deck";
 
-            using (UnityWebRequest request = UnityWebRequest.Get(apiUrl))
+            using (UnityWebRequest request = UnityWebRequest.Get(selectdeckRequestUrl))
             {
                 request.SetRequestHeader("Authorization", "Bearer " + idToken);
 
@@ -317,17 +318,13 @@ public class MatchingManager : MonoBehaviour
             // 1. Firebase 인증 토큰 가져오기
             string idToken = await auth.CurrentUser.TokenAsync(true);
 
-            // 2. 서버 API 엔드포인트 (서버에 구현해야 할 주소)
-            //    (예: "PUT /api/user/select-deck")
-            string apiUrl = $"{ApiBaseUrl}/api/user/select-deck";
-
             // 3. 서버로 보낼 JSON 본문 생성
             SelectDeckRequest requestBody = new SelectDeckRequest { deckId = deckId };
             string jsonBody = JsonUtility.ToJson(requestBody);
             byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
 
             // 4. UnityWebRequest 생성 (PUT 방식)
-            using (UnityWebRequest request = new UnityWebRequest(apiUrl, "PUT"))
+            using (UnityWebRequest request = new UnityWebRequest(selectdeckRequestUrl, "PUT"))
             {
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
@@ -336,7 +333,7 @@ public class MatchingManager : MonoBehaviour
                 request.SetRequestHeader("Content-Type", "application/json");
                 request.SetRequestHeader("Authorization", "Bearer " + idToken);
 
-                Debug.Log($"선택 덱 저장 API 호출: {apiUrl} (DeckID: {deckId})");
+                Debug.Log($"선택 덱 저장 API 호출: {selectdeckRequestUrl} (DeckID: {deckId})");
 
                 // 6. API 요청 전송
                 var operation = request.SendWebRequest();

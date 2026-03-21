@@ -43,10 +43,20 @@ public class GameClient : MonoBehaviour
     private ConcurrentQueue<BaseGameAction> _receivedActions = new ConcurrentQueue<BaseGameAction>();
 
     [Header("서버 주소")]
-    public string serverAddress = "ws://175.125.250.226:5123/ws/game";
-    public string notebookAddress = "ws://192.168.0.36:5123/ws/game";
-    public bool notebook;
+    [SerializeField] private string serverIp = "175.125.250.226";
+    [SerializeField] private string notebookserverIp = "192.168.0.36";
+    [SerializeField] private string serverPort = "5123";
+    [SerializeField] private bool useHttps = false;
+    [SerializeField] private bool notebook = false;
 
+    [Header("서버 주소")]
+    public string BaseUrl => $"{(useHttps ? "https" : "http")}://{(notebook ? notebookserverIp : serverIp)}:{serverPort}";
+
+    /// <summary>
+    /// API 호출을 위한 기본 경로
+    /// </summary>
+    public string BaseApiUrl => $"{BaseUrl}/api";
+    public string serverAddress => $"ws://{(notebook ? notebookserverIp : serverIp)}:5123/ws/game";
     public string GameId;
 
     void Awake()
@@ -61,8 +71,6 @@ public class GameClient : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
-        if (notebook) serverAddress = notebookAddress;
     }
 
     void Start()
@@ -90,6 +98,17 @@ public class GameClient : MonoBehaviour
             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client shutting down", CancellationToken.None);
             _webSocket.Dispose();
         }
+    }
+
+    /// <summary>
+    /// 특정 엔드포인트에 대한 전체 URL을 반환합니다.
+    /// </summary>
+    /// <param name="subPath">e.g., "auth/signup"</param>
+    public string GetApiUrl(string subPath)
+    {
+        // subPath의 시작 부분에 '/'가 있으면 제거하여 중복 방지
+        string path = subPath.StartsWith("/") ? subPath.Substring(1) : subPath;
+        return $"{BaseApiUrl}/{path}";
     }
 
     public async void ConnectToServerAsync()
