@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 // (중요) 서버의 GameActionModels.cs에서 'namespace GameServer' 부분만
@@ -60,6 +61,7 @@ public class BaseGameAction
 /// <summary>
 /// 카드를 식별하는 기본 데이터입니다.
 /// </summary>
+[Serializable]
 public class CardInfo
 {
     public string cardId; // 카드 원본 ID (예: "Fireball_001")
@@ -76,6 +78,7 @@ public class CardInfo
 /// 필드, 손, 덱에 있는 모든 '개체'를 나타냅니다.
 /// (플레이어 리더, 하수인, 멤버)
 /// </summary>
+[Serializable]
 public class EntityData
 {
     public int entityId; // 이 게임의 모든 개체를 식별하는 고유 ID (예: 1=A리더, 2=B리더, 101=A하수인, 201=B하수인)
@@ -189,6 +192,7 @@ public class S_GameReady : BaseGameAction
     // action = "GAME_READY"
     public string firstPlayerUid; // 선공 플레이어의 UID
     public List<CardInfo> finalHand; // 나의 최종 손패
+    public List<CardInfo>? enermyfinalHand; // 적의 최종 손패
     // TODO: 상대방 정보 (영웅, 이름 등)
 }
 

@@ -221,7 +221,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 409eb6d48628f80488fe7a8dc5755961, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  notebook: 0
 --- !u!4 &281802850
 Transform:
   m_ObjectHideFlags: 0
@@ -264,8 +263,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UserUid: 
-  serverAddress: ws://175.125.250.226:5123/ws/game
-  notebookAddress: ws://192.168.0.36:5123/ws/game
+  serverIp: 175.125.250.226
+  notebookserverIp: 192.168.0.36
+  serverPort: 5123
+  useHttps: 0
   notebook: 1
   GameId: 
 --- !u!1 &407297494

@@ -42,6 +42,7 @@ public class BattleManager : MonoBehaviour
     public TextMeshProUGUI statusText; // 버튼 중앙 텍스트 ("나의 턴" 등)
     public Slider timerSlider;         // 시간 게이지 슬라이더
     public Image sliderFillImage;      // 슬라이더 색상 변경을 위한 이미지
+    float prevRemainingTime;           // 턴종료 타이밍을 위한 변수
 
     [Header("UI Settings (UI 설정)")]
     public float warningThreshold = 10f; // 경고 색상 시작 시간 (초)
@@ -73,6 +74,8 @@ public class BattleManager : MonoBehaviour
             GameClient.Instance.OnEntitiesUpdatedEvent += HandleEntitiesUpdated;
             GameClient.Instance.OnGameReadyEvent += HandleGameReady;
         }
+
+        OnStateChanged += UpdateManaUI;
 
         // 버튼 클릭 이벤트 연결
         if (turnButton != null)
@@ -112,21 +115,25 @@ public class BattleManager : MonoBehaviour
 
     // --- 서버 패킷 처리 핸들러 ---
 
+    // 게임 시작시 시작 플레이어가 누구인지 내 손패와 상대폰패가 무엇인지 설정
     private void HandleGameReady(S_GameReady info)
     {
         isPlayerTurn = (info.firstPlayerUid == myUid);
         playerHand = info.finalHand;
+        enemyHand = info.enermyfinalHand;
 
         OnHandUpdated?.Invoke();
         OnStateChanged?.Invoke();
         RefreshTurnUI();
     }
 
+    // 페이즈 시작마다 실행
     private void HandlePhaseStart(S_PhaseStart info)
     {
         currentPhase = info.phase;
         isPlayerTurn = (info.newTurnPlayerUid == myUid);
         _turnEndTimeTimestamp = info.turnEndTime;
+        SetTimer();
 
         if (timerSlider != null)
         {
@@ -135,8 +142,10 @@ public class BattleManager : MonoBehaviour
 
         OnStateChanged?.Invoke();
         RefreshTurnUI();
+        Debug.Log($"[BattleManager] 페이즈 시작 {info.newTurnPlayerUid}의 턴");
     }
 
+    // 마나 업데이트마다 실행
     private void HandleUpdateMana(S_UpdateMana info)
     {
         if (info.ownerUid == myUid)
@@ -153,6 +162,7 @@ public class BattleManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
+    // 필드가 변할때마다 실행
     private void HandleEntitiesUpdated(List<EntityData> updatedEntities)
     {
         foreach (var entity in updatedEntities)
@@ -244,13 +254,30 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    // 턴종료 타이밍을 맞추기 위한 변수 초기화
+    public void SetTimer()
+    {
+        prevRemainingTime = float.MaxValue; // 초기화
+    }
+
+    // 타이머 계산
     private void UpdateRemainingTime()
     {
         long currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         float diff = _turnEndTimeTimestamp - currentUnixTime;
         remainingTime = Mathf.Max(0, diff);
+        // "처음 0이 되는 순간"만 감지
+        if (prevRemainingTime > 0 && remainingTime <= 0)
+        {
+            Debug.Log("시간 초과로 턴 변경");
+            RequestEndTurn();
+        }
+
+        prevRemainingTime = remainingTime;  // prevRemainingTime = 0 이 되면서 턴종료 증복 실행 방지
+
     }
 
+    // 타이머 감소
     private void UpdateTimerUI()
     {
         if (timerSlider == null) return;
@@ -263,6 +290,7 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    // 턴종료 버튼 설정
     private void RefreshTurnUI()
     {
         if (turnButton == null || statusText == null) return;
@@ -283,6 +311,7 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    // 턴종료
     public void RequestEndTurn()
     {
         GameClient.Instance.RequestEndTurn();
