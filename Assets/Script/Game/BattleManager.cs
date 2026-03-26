@@ -124,14 +124,17 @@ public class BattleManager : MonoBehaviour
 
         OnHandUpdated?.Invoke();
         OnStateChanged?.Invoke();
-        RefreshTurnUI();
     }
 
     // 페이즈 시작마다 실행
     private void HandlePhaseStart(S_PhaseStart info)
     {
         currentPhase = info.phase;
-        isPlayerTurn = (info.newTurnPlayerUid == myUid);
+        // Standby -> Draw -> Main 3개의 페이즈 정보를 보내주지만 info.newTurnPlayerUid의 값은 Standby에서만 보냄
+        if (!string.IsNullOrEmpty(info.newTurnPlayerUid))
+        {
+            isPlayerTurn = (info.newTurnPlayerUid == myUid);
+        }
         _turnEndTimeTimestamp = info.turnEndTime;
         SetTimer();
 
@@ -315,16 +318,5 @@ public class BattleManager : MonoBehaviour
     public void RequestEndTurn()
     {
         GameClient.Instance.RequestEndTurn();
-    }
-
-    private void OnDestroy()
-    {
-        if (GameClient.Instance != null)
-        {
-            GameClient.Instance.OnPhaseStartEvent -= HandlePhaseStart;
-            GameClient.Instance.OnUpdateManaEvent -= HandleUpdateMana;
-            GameClient.Instance.OnEntitiesUpdatedEvent -= HandleEntitiesUpdated;
-            GameClient.Instance.OnGameReadyEvent -= HandleGameReady;
-        }
     }
 }

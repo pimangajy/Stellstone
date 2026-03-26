@@ -181,6 +181,7 @@ public class GameClient : MonoBehaviour
                     switch (baseAction.action)
                     {
                         case ActionTypes.MulliganInfo: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
+                        case ActionTypes.EnemyMulligunInfo: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
                         case ActionTypes.GameReady: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
                         case ActionTypes.PhaseStart: parsedAction = JsonConvert.DeserializeObject<S_PhaseStart>(receivedJson); break;
                         case ActionTypes.UpdateMana: parsedAction = JsonConvert.DeserializeObject<S_UpdateMana>(receivedJson); break;
@@ -280,6 +281,11 @@ public class GameClient : MonoBehaviour
                 OnMulliganInfoReceived((S_MulliganInfo)action);
                 break;
 
+            case ActionTypes.EnemyMulligunInfo:
+                Debug.Log("상대 멀리건 결정");
+                StartCoroutine(OnMulliganInfoReceivedenemy((S_OpponentMulliganStatus)action));
+                break;
+
             case ActionTypes.GameReady:
                 Debug.Log("GAME_READY 발생");
                 var gameReadyInfo = (S_GameReady)action;
@@ -348,6 +354,8 @@ public class GameClient : MonoBehaviour
 
         if (CardDrawManager.Instance != null)
             CardDrawManager.Instance.PerformBatchDraw(info.cardsToMulligan);
+        if (OpponentHandVisualizer.Instance != null)
+            OpponentHandVisualizer.Instance.PerformBatchDraw(info.cardsToMulligan.Count);
     }
 
     private void OnGameReady(S_GameReady info)
@@ -356,6 +364,7 @@ public class GameClient : MonoBehaviour
         StartCoroutine(SyncHandWithServer(info.finalHand));
     }
 
+    // 멀리건 받은 카드를 뽄는 함수
     private IEnumerator SyncHandWithServer(List<CardInfo> finalHand)
     {
         var handManager = HandInteractionManager.instance;
@@ -380,6 +389,30 @@ public class GameClient : MonoBehaviour
                     CardDrawManager.Instance.PerformDrawAnimation(serverCard);
                 yield return new WaitForSeconds(0.3f);
             }
+        }
+    }
+
+    // 상대 멀리건 돌아가는 함수
+    private IEnumerator OnMulliganInfoReceivedenemy(S_OpponentMulliganStatus info)
+    {
+        foreach (var mulligan in info.replacedIndices)
+        {
+            OpponentHandVisualizer.Instance.ReturnCardToDeck(mulligan);
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        yield return new WaitForSeconds(1.5f);
+
+        OpponentHandVisualizer.Instance.PerformBatchDraw(info.replacedCount);
+    }
+
+    // 상대 멀리건을 뽄는 함수
+    private IEnumerator SyncHandWithServerenemy(int count)
+    {
+        for(int i = 0; i < count; i++) 
+        {
+            OpponentHandVisualizer.Instance.DrawCard();
+            yield return new WaitForSeconds(0.2f);
         }
     }
 

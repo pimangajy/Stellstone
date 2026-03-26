@@ -7665,7 +7665,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87ba01bc7ba544b945e4f395fa757d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameEntityManager
-  test: 1
+  test: 0
   myFieldTransform: {fileID: 659780449}
   opponentFieldTransform: {fileID: 542942072}
   myMemberTransform: {fileID: 2061546253}
@@ -7721,7 +7721,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c826ce2c47ca2164ead13c309896bdde, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OpponentHandVisualizer
-  cardBackPrefab: {fileID: 9059637528763846517, guid: a617b4cac94ba4740b11fda3a84db27b, type: 3}
+  cardBackPrefab: {fileID: 9059637528763846517, guid: ed7212bbc8421f248a5d6e058d477488, type: 3}
   opponentHandAnchor: {fileID: 456346432}
   opponentDeckTransform: {fileID: 477956135}
   cardSpacing: 0.6
@@ -7730,8 +7730,11 @@ MonoBehaviour:
   drawMoveDuration: 0.5
   batchDrawInterval: 0.2
   useMoveOffset: {x: 0, y: 0, z: -3}
+  useSize: 1.5
   useDuration: 0.6
   fadeOutDelay: 0.2
+  returnDuration: 0.5
+  returnEase: 5
 --- !u!1 &1272785805
 GameObject:
   m_ObjectHideFlags: 0

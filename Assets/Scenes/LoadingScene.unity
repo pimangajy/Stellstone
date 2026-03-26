@@ -267,7 +267,7 @@ MonoBehaviour:
   notebookserverIp: 192.168.0.36
   serverPort: 5123
   useHttps: 0
-  notebook: 1
+  notebook: 0
   GameId: 
 --- !u!1 &407297494
 GameObject:

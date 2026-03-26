@@ -26,13 +26,19 @@ public class OpponentHandVisualizer : MonoBehaviour
 
     [Header("드로우 애니메이션 설정")]
     public float drawMoveDuration = 0.5f;
+    [Tooltip("연속으로 뽑을시 딜레이 시간.")]
     public float batchDrawInterval = 0.2f;
 
     [Header("카드 사용(Use) 연출 설정")]
     [Tooltip("카드를 낼 때 앞으로 이동하는 방향과 거리입니다.")]
     public Vector3 useMoveOffset = new Vector3(0, -1.5f, 0);
+    public float useSize = 0.8f;
     public float useDuration = 0.6f;
     public float fadeOutDelay = 0.2f;
+
+    [Header("덱 귀환(Return) 연출 설정")]
+    public float returnDuration = 0.5f;
+    public Ease returnEase = Ease.InQuad;
 
     private List<GameObject> opponentCards = new List<GameObject>();
     private Vector3 _originalCardScale = Vector3.one;
@@ -136,7 +142,7 @@ public class OpponentHandVisualizer : MonoBehaviour
         useSeq.Append(card.transform.DOLocalMove(card.transform.localPosition + useMoveOffset, useDuration).SetEase(Ease.OutBack));
 
         // 약간 커지면서 강조 효과 (선택 사항)
-        useSeq.Join(card.transform.DOScale(_originalCardScale * 0.8f, useDuration * 0.5f));
+        useSeq.Join(card.transform.DOScale(_originalCardScale * useSize, useDuration * 0.5f));
 
         // 서서히 투명해지며 사라짐 (SpriteRenderer 또는 CanvasGroup 대응)
         // 카드 뒷면에 SpriteRenderer가 있다고 가정하거나, 3D Mesh라면 Material을 조정해야 합니다.
@@ -158,6 +164,38 @@ public class OpponentHandVisualizer : MonoBehaviour
         });
     }
 
+    /// <summary>
+    /// 특정 인덱스의 카드를 덱으로 되돌리는 애니메이션을 실행합니다.
+    /// </summary>
+    public void ReturnCardToDeck(int cardIndex)
+    {
+        if (cardIndex < 0 || cardIndex >= opponentCards.Count) return;
+        StartCoroutine(ReturnToDeckRoutine(opponentCards[cardIndex]));
+    }
+    private IEnumerator ReturnToDeckRoutine(GameObject card)
+    {
+        // 1. 리스트에서 제거 및 즉시 정렬
+        opponentCards.Remove(card);
+        UpdateHandLayout();
+
+        // 2. 덱으로 날아가는 연출
+        card.transform.DOKill();
+
+        // 월드 좌표 기준으로 덱 위치로 이동해야 하므로 부모 해제 혹은 월드 트윈 사용
+        // 여기서는 깔끔하게 월드 좌표 이동을 사용합니다.
+        Sequence returnSeq = DOTween.Sequence();
+
+        // 살짝 위로 들렸다가 덱으로 들어가는 느낌
+        returnSeq.Append(card.transform.DOMove(card.transform.position + Vector3.up * 0.5f, 0.15f).SetEase(Ease.OutQuad));
+        returnSeq.Append(card.transform.DOMove(opponentDeckTransform.position, returnDuration).SetEase(returnEase));
+        returnSeq.Join(card.transform.DORotateQuaternion(opponentDeckTransform.rotation, returnDuration).SetEase(returnEase));
+        returnSeq.Join(card.transform.DOScale(Vector3.zero, returnDuration).SetEase(Ease.InExpo));
+
+        yield return returnSeq.WaitForCompletion();
+
+        Destroy(card);
+    }
+
     private void Update()
     {
         // 실시간 수치 변경 감지
@@ -176,6 +214,27 @@ public class OpponentHandVisualizer : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.K) && opponentCards.Count > 0)
         {
             PlayUseCardAnimation(Random.Range(0, opponentCards.Count));
+        }
+
+        // L키를 누르면 맨 앞의 카드(0번)를 사용하는 연출 실행
+        if (Input.GetKeyDown(KeyCode.L) && opponentCards.Count > 0)
+        {
+            ReturnCardToDeck(Random.Range(0, opponentCards.Count));
+        }
+    }
+
+    // 여러장 뻡는 함수
+    public void PerformBatchDraw(int count)
+    {
+        StartCoroutine(BatchDrawRoutine(count));
+    }
+
+    private IEnumerator BatchDrawRoutine(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            DrawCard();
+            yield return new WaitForSeconds(batchDrawInterval);
         }
     }
 
