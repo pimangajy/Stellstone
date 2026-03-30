@@ -62,6 +62,7 @@ public class GameEntityManager : MonoBehaviour
     // 1. 이벤트 처리 및 판단
     // ==================================================================
 
+
     /// <summary>
     /// [핵심] 서버에서 개체 리스트를 보내주면 루프를 돌며 하나씩 처리합니다.
     /// </summary>
@@ -190,9 +191,8 @@ public class GameEntityManager : MonoBehaviour
         bool attackerHit = false;
         FireProjectile(attacker, target, () => { attackerHit = true; });
 
-        // [연출 2] 아주 약간의 딜레이 (선공과 반격의 리듬감을 만듦)
-        // 공격자의 투사체가 날아가는 도중에 수비자가 반격하게 됩니다.
-        yield return new WaitForSeconds(0.2f);
+        // [연출 2] 공격 명중시 데미지 표시
+        yield return new WaitUntil(() => attackerHit);
 
         // [연출 3] 수비자의 반격 투사체 발사!
         bool targetHit = false;
@@ -211,7 +211,7 @@ public class GameEntityManager : MonoBehaviour
         }
 
         // [연출 4] 양쪽의 투사체가 모두 상대방에게 적중할 때까지 대기
-        yield return new WaitUntil(() => attackerHit && targetHit);
+        yield return new WaitUntil(() => targetHit);
 
         Debug.Log($"[전투 완료] {attacker.EntityId}와 {target.EntityId}의 교전이 끝났습니다.");
 

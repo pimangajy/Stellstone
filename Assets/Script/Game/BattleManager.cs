@@ -130,11 +130,31 @@ public class BattleManager : MonoBehaviour
     private void HandlePhaseStart(S_PhaseStart info)
     {
         currentPhase = info.phase;
-        // Standby -> Draw -> Main 3개의 페이즈 정보를 보내주지만 info.newTurnPlayerUid의 값은 Standby에서만 보냄
-        if (!string.IsNullOrEmpty(info.newTurnPlayerUid))
+        // Standby -> Draw -> Main 3개의 페이즈 정보를 보내주지만 info.newTurnPlayerUid의 값은 Standby,Draw 에서만 보냄
+        if (info.TurnPlayerUid == myUid)
         {
-            isPlayerTurn = (info.newTurnPlayerUid == myUid);
+            switch (info.phase)
+            {
+                case "Standby":
+                    isPlayerTurn = (info.TurnPlayerUid == myUid);
+                    break;
+                case "Draw":
+                    CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
+                    break;
+            }
+        }else
+        {
+            switch (info.phase)
+            {
+                case "Standby":
+                    isPlayerTurn = false;
+                    break;
+                case "Draw":
+                    OpponentHandVisualizer.Instance.DrawCard();
+                    break;
+            }
         }
+
         _turnEndTimeTimestamp = info.turnEndTime;
         SetTimer();
 
@@ -145,7 +165,7 @@ public class BattleManager : MonoBehaviour
 
         OnStateChanged?.Invoke();
         RefreshTurnUI();
-        Debug.Log($"[BattleManager] 페이즈 시작 {info.newTurnPlayerUid}의 턴");
+        Debug.Log($"[BattleManager] 페이즈 시작 {info.TurnPlayerUid}의 턴");
     }
 
     // 마나 업데이트마다 실행

@@ -27,6 +27,7 @@ public class GameClient : MonoBehaviour
     public event Action<S_PhaseStart> OnPhaseStartEvent;
     public event Action<string> OnPlayCardSuccessEvent;
     public event Action<S_UpdateMana> OnUpdateManaEvent;
+    public event Action<S_UpdateEntities> OnUpdateEntitiesEvent;
     public event Action<List<EntityData>> OnEntitiesUpdatedEvent;
     public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;
     public event Action<string> OnErrorEvent;
@@ -310,6 +311,7 @@ public class GameClient : MonoBehaviour
             case ActionTypes.UpdateEntities:
                 Debug.Log("UPDATE_ENTITIES 발생");
                 var updateEntitiesInfo = (S_UpdateEntities)action;
+                OnUpdateEntitiesEvent?.Invoke(updateEntitiesInfo);
                 OnEntitiesUpdatedEvent?.Invoke(updateEntitiesInfo.updatedEntities);
                 break;
 
@@ -321,6 +323,7 @@ public class GameClient : MonoBehaviour
                 break;
 
             case ActionTypes.PlayCardSuccess:
+                Debug.Log("PlayCardSuccess 발생");
                 var successInfo = (S_PlayCardSuccess)action;
                 OnPlayCardSuccessEvent?.Invoke(successInfo.serverInstanceId);
                 break;
@@ -419,11 +422,6 @@ public class GameClient : MonoBehaviour
     private void OnPhaseStart(S_PhaseStart info)
     {
         Debug.Log($"[GameClient] 페이즈 시작: {info.phase}");
-        if (info.phase == PhaseTypes.Draw && info.drawnCard != null)
-        {
-            Debug.Log($"[GameClient] 카드 드로우: {info.drawnCard.cardId}");
-            CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
-        }
     }
 
     private void OnUpdateMana(S_UpdateMana info)

@@ -1386,6 +1386,7 @@ Transform:
   - {fileID: 1416409526}
   - {fileID: 1375200333}
   - {fileID: 456346432}
+  - {fileID: 1788890907}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &261775203
@@ -7484,6 +7485,8 @@ GameObject:
   - component: {fileID: 1271275095}
   - component: {fileID: 1271275096}
   - component: {fileID: 1271275097}
+  - component: {fileID: 1271275098}
+  - component: {fileID: 1271275099}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -7615,7 +7618,7 @@ MonoBehaviour:
   manaOnSprite: {fileID: 21300000, guid: e9b34125d336f8544a54887c0ed37e9f, type: 3}
   manaOffSprite: {fileID: 21300000, guid: 98a09e76ec3da5842882531bea61326c, type: 3}
   manaLockedSprite: {fileID: 0}
-  manaHighlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  manaHighlightColor: {r: 1, g: 0.015686274, b: 0.14981875, a: 1}
   turnButton: {fileID: 496484467}
   statusText: {fileID: 1274826050}
   timerSlider: {fileID: 119702833}
@@ -7665,7 +7668,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87ba01bc7ba544b945e4f395fa757d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameEntityManager
-  test: 0
+  test: 1
   myFieldTransform: {fileID: 659780449}
   opponentFieldTransform: {fileID: 542942072}
   myMemberTransform: {fileID: 2061546253}
@@ -7721,9 +7724,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c826ce2c47ca2164ead13c309896bdde, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OpponentHandVisualizer
-  cardBackPrefab: {fileID: 9059637528763846517, guid: ed7212bbc8421f248a5d6e058d477488, type: 3}
+  cardBackPrefab: {fileID: 9059637528763846517, guid: a617b4cac94ba4740b11fda3a84db27b, type: 3}
   opponentHandAnchor: {fileID: 456346432}
   opponentDeckTransform: {fileID: 477956135}
+  handRotation: {x: 0, y: 0, z: 180}
   cardSpacing: 0.6
   cardDepthOffset: 0.01
   alignDuration: 0.3
@@ -7735,6 +7739,37 @@ MonoBehaviour:
   fadeOutDelay: 0.2
   returnDuration: 0.5
   returnEase: 5
+--- !u!114 &1271275098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1271275086}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4588299575933d84591a28ba48761370, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardActionQueueManager
+  centerShowPosition: {fileID: 1788890907}
+  queueOffset: {x: 0.5, y: -0.5, z: 0}
+  activeScaleMultiplier: 1.4
+  waitingScaleMultiplier: 0.9
+  moveDuration: 0.3
+  stayDuration: 1
+  fadeOutDuration: 0.1
+--- !u!114 &1271275099
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1271275086}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75824c35784b0c5479c9350603cd81b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ActionQueueManager
 --- !u!1 &1272785805
 GameObject:
   m_ObjectHideFlags: 0
@@ -10221,6 +10256,37 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1787557117}
   m_Mesh: {fileID: -2477511411847689622, guid: 76479727f600df64db8bba46bbe86727, type: 3}
+--- !u!1 &1788890906
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1788890907}
+  m_Layer: 0
+  m_Name: centerShowPosition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1788890907
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1788890906}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -5.5, y: 17, z: -17.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 258901864}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1790317433
 GameObject:
   m_ObjectHideFlags: 0

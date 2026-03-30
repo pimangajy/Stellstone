@@ -202,7 +202,7 @@ public class S_GameReady : BaseGameAction
 public class S_PhaseStart : BaseGameAction
 {
     // action = "PHASE_START"
-    public string newTurnPlayerUid; // (턴 시작 시에만) 새 턴을 시작하는 플레이어 UID
+    public string TurnPlayerUid; // (턴 시작 시에만) 새 턴을 시작하는 플레이어 UID
     public string phase; // "Standby", "Draw", "Main", "End"
     public CardInfo drawnCard; // (Draw Phase 전용) 방금 뽑은 카드 (null일 수 있음)
     public long turnEndTime; // (Main Phase 전용) 턴 종료 시간 (Unix timestamp)
@@ -236,6 +236,7 @@ public class S_OpponentPlayCard : BaseGameAction
 {
     // action = "OPPONENT_PLAY_CARD"
     public CardInfo cardPlayed; // 상대가 낸 카드
+    public int handNum; // 상대손에 있을때 위치
     public int targetEntityId; // 상대가 지정한 대상
     // TODO: 애니메이션 처리를 위한 추가 정보
 }
