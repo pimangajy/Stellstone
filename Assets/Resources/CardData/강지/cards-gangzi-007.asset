@@ -37,10 +37,13 @@ MonoBehaviour:
       rid: -2
   targetRule: 0
   animationFrames: []
-  spawnEffectData: {fileID: 0}
+  spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds:

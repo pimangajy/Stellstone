@@ -115,6 +115,7 @@ public class GameCardDisplay : MonoBehaviour
         if (descriptionText != null) descriptionText.text = _cardData.description;
 
         UpdateEntityStats(entityData);
+        _cardData.spawnEffectData.PlaySpawnVFX(this.transform);
     }
 
     /// <summary>

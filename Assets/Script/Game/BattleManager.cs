@@ -71,7 +71,6 @@ public class BattleManager : MonoBehaviour
             myUid = GameClient.Instance.UserUid;
             GameClient.Instance.OnPhaseStartEvent += HandlePhaseStart;
             GameClient.Instance.OnUpdateManaEvent += HandleUpdateMana;
-            GameClient.Instance.OnEntitiesUpdatedEvent += HandleEntitiesUpdated;
             GameClient.Instance.OnGameReadyEvent += HandleGameReady;
         }
 
@@ -96,7 +95,6 @@ public class BattleManager : MonoBehaviour
         {
             GameClient.Instance.OnPhaseStartEvent -= HandlePhaseStart;
             GameClient.Instance.OnUpdateManaEvent -= HandleUpdateMana;
-            GameClient.Instance.OnEntitiesUpdatedEvent -= HandleEntitiesUpdated;
             GameClient.Instance.OnGameReadyEvent -= HandleGameReady;
         }
     }
@@ -185,15 +183,6 @@ public class BattleManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
-    // 필드가 변할때마다 실행
-    private void HandleEntitiesUpdated(List<EntityData> updatedEntities)
-    {
-        foreach (var entity in updatedEntities)
-        {
-            entities[entity.entityId] = entity;
-        }
-        OnEntitiesUpdated?.Invoke(updatedEntities);
-    }
 
     // --- 내부 헬퍼 및 UI 로직 ---
 

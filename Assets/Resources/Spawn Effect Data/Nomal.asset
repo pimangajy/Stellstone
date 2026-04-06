@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c255f96884bb86428cae4f0d771af84, type: 3}
   m_Name: Nomal
   m_EditorClassIdentifier: 
-  motionType: 1
-  duration: 0.5
-  spawnVFXPrefab: {fileID: 0}
+  motionType: 0
+  duration: 1
+  spawnVFXPrefab: {fileID: 4932088507883938021, guid: 0e5709a7ddb77924090c112cf73bb98a, type: 3}
   vfxOffset: {x: 0, y: 0, z: 0}
   vfxDelay: 0
   spawnSound: {fileID: 0}
