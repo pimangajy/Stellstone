@@ -83,7 +83,7 @@ public class CardDragManager : MonoBehaviour
 
     // --- 서버 응답 처리 핸들러 ---
 
-    // 성공: 마나 업데이트가 왔다는 건 카드가 정상적으로 처리되었다는 뜻
+    // 카드 사용 성공
     private void OnServerSuccessResponse(string instanceId)
     {
         if (_waitingCard != null)
@@ -93,8 +93,9 @@ public class CardDragManager : MonoBehaviour
             if (display != null && display.InstanceId == instanceId)
             {
                 Debug.Log($"카드 [{instanceId}] 사용 승인됨. 손패에서 제거.");
+                CardActionQueueManager.Instance.AddToQueue(_waitingCard, false );
                 handManager.SetDraggedCard(null);
-                handManager.RemoveCardFromHand(_waitingCard);
+                // handManager.RemoveCardFromHand(_waitingCard);
                 _waitingCard = null;
             }
         }

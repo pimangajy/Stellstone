@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 using System;
+using System.ComponentModel;
 
 /// <summary>
 /// 필드 위에 나와있는 하수인이나 영웅(Entity)들을 관리하는 '현장 감독'입니다.
@@ -45,7 +46,7 @@ public class GameEntityManager : MonoBehaviour
         if (GameClient.Instance != null)
         {
             myUid = GameClient.Instance.UserUid;
-            GameClient.Instance.OnEntitiesUpdatedEvent += HandleEntitiesUpdated;
+            // GameClient.Instance.OnEntitiesUpdatedEvent += HandleEntitiesUpdated;
         }
     }
 
@@ -54,13 +55,14 @@ public class GameEntityManager : MonoBehaviour
         // 2. 이벤트 구독 해제 (메모리 누수 방지)
         if (GameClient.Instance != null)
         {
-            GameClient.Instance.OnEntitiesUpdatedEvent -= HandleEntitiesUpdated;
+            // GameClient.Instance.OnEntitiesUpdatedEvent -= HandleEntitiesUpdated;
         }
     }
 
     // ==================================================================
     // 1. 이벤트 처리 및 판단
     // ==================================================================
+
 
     /// <summary>
     /// [핵심] 서버에서 개체 리스트를 보내주면 루프를 돌며 하나씩 처리합니다.
@@ -85,26 +87,32 @@ public class GameEntityManager : MonoBehaviour
                 // 없는데 살아있다면 새로 소환!
                 if (entityData.health > 0)
                 {
-                    SpawnEntity(entityData, isMine);
+                    StartCoroutine(SpawnEntity(entityData, isMine));
                 }
             }
         }
+    }
+
+    public void SpawnCard(EntityData entityData)
+    {
+        bool isMine = entityData.ownerUid == myUid;
+        StartCoroutine(SpawnEntity(entityData, isMine));
     }
 
     // ==================================================================
     // 2. 소환 및 갱신 로직
     // ==================================================================
 
-    private void SpawnEntity(EntityData entityData, bool isMine)
+    private IEnumerator SpawnEntity(EntityData entityData, bool isMine)
     {
         if (_spawnedEntities.ContainsKey(entityData.entityId))
         {
             Debug.Log("필드에 이미 하수인이 있음");
-            return;
+            yield break;
         }
 
         CardData cardData = ResourceManager.Instance.GetCardData(entityData.cardId);
-        if (cardData == null) return;
+        if (cardData == null) yield break;
 
         // 1. 하수인이 놓일 '부모' 구역 결정 (필드 vs 멤버존)
         Transform zoneGroup;
@@ -126,12 +134,15 @@ public class GameEntityManager : MonoBehaviour
         // 3. 생성 및 배치 (슬롯의 위치와 회전값에 맞춤)
         GameObject newObj = Instantiate(minionPrefab, finalParent.position, finalParent.rotation, finalParent);
         GameCardDisplay display = newObj.GetComponent<GameCardDisplay>();
+        newObj.SetActive(false);
 
         if (display != null)
         {
             Debug.Log("필드 카드에 값 주입");
             display.SetupEntity(entityData, cardData);
             _spawnedEntities.Add(entityData.entityId, display);
+            yield return new WaitForSeconds(cardData.spawnEffectData.duration);
+            newObj.SetActive(true);
         }
     }
 
@@ -190,9 +201,8 @@ public class GameEntityManager : MonoBehaviour
         bool attackerHit = false;
         FireProjectile(attacker, target, () => { attackerHit = true; });
 
-        // [연출 2] 아주 약간의 딜레이 (선공과 반격의 리듬감을 만듦)
-        // 공격자의 투사체가 날아가는 도중에 수비자가 반격하게 됩니다.
-        yield return new WaitForSeconds(0.2f);
+        // [연출 2] 공격 명중시 데미지 표시
+        yield return new WaitUntil(() => attackerHit);
 
         // [연출 3] 수비자의 반격 투사체 발사!
         bool targetHit = false;
@@ -211,7 +221,7 @@ public class GameEntityManager : MonoBehaviour
         }
 
         // [연출 4] 양쪽의 투사체가 모두 상대방에게 적중할 때까지 대기
-        yield return new WaitUntil(() => attackerHit && targetHit);
+        yield return new WaitUntil(() => targetHit);
 
         Debug.Log($"[전투 완료] {attacker.EntityId}와 {target.EntityId}의 교전이 끝났습니다.");
 

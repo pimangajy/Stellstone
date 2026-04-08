@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 // (중요) 서버의 GameActionModels.cs에서 'namespace GameServer' 부분만
 // 제거했습니다. 이렇게 하면 GameClient.cs가 바로 찾을 수 있습니다.
@@ -18,6 +19,7 @@ public static class ActionTypes
     public const string Concede = "CONCEDE";
 
     // S -> C (서버 응답)
+    public const string ActionList = "ACTION_RESOLUTION";
     public const string MulliganInfo = "MULLIGAN_INFO";
     public const string EnemyMulligunInfo = "OPPONENT_MULLIGAN_STATUS";
     public const string GameReady = "GAME_READY";
@@ -30,6 +32,15 @@ public static class ActionTypes
     public const string UpdateHandCards = "UPDATE_HAND_CARDS";
     public const string GameOver = "GAME_OVER";
     public const string Error = "ERROR";
+}
+
+public static class EventLog
+{
+    public const string Summon = "SUMMON";
+    public const string Attack = "ATTACK";
+    public const string Damage = "DAMAGE";
+    public const string Death = "DEATH";
+    public const string Effact_Trigger = "EFFECT_TRIGGER";
 }
 
 public static class PhaseTypes
@@ -92,6 +103,22 @@ public class EntityData
     public List<string> keywords; // (신규) '도발', '은신' 등
     public int position;
     public bool isMember;
+}
+
+/// <summary>
+/// 게임 내에서 발생하는 하나의 '사건'을 정의합니다.
+/// 유니티의 JsonUtility 호환성을 위해 상속보다는 평탄화(Flat)된 구조를 권장합니다.
+/// </summary>
+public class GameEvent
+{
+    public string eventType; // 사건 종류: "ATTACK", "DAMAGE", "DEATH", "EFFECT_TRIGGER", "SUMMON" 등
+
+    public int sourceEntityId; // 사건의 주체 (누가)
+    public int targetEntityId; // 사건의 대상 (누구에게)
+
+    public int value;          // 수치 (데미지량, 힐량 등)
+    public string stringValue;// 문자열 데이터 (발동한 효과의 이름, 카드 ID 등)
+    public EntityData entityData;
 }
 
 // ==================================================================
@@ -162,6 +189,21 @@ public class C_Concede : BaseGameAction
 // ==================================================================
 
 /// <summary>
+/// 하나의 논리적 행동(예: 공격, 카드사용)으로 인해 발생한 
+/// 모든 사건의 순차적 기록과 최종 상태를 한 번에 클라이언트에게 전달합니다.
+/// </summary>
+public class S_ActionResolution : BaseGameAction
+{
+    // action = "ACTION_RESOLUTION"
+
+    // 1. 애니메이션 재생을 위한 순차적 사건 기록 (대본)
+    public List<GameEvent> eventLog = new List<GameEvent>();
+
+    // 2. 동기화 어긋남 방지를 위한 최종 엔티티 상태 (애니메이션이 끝난 후 최종 보정용)
+    public List<EntityData>? finalStateUpdates;
+}
+
+/// <summary>
 /// (S->C) 게임 시작 전, 멀리건할 카드 정보를 보냅니다.
 /// </summary>
 public class S_MulliganInfo : BaseGameAction
@@ -202,7 +244,7 @@ public class S_GameReady : BaseGameAction
 public class S_PhaseStart : BaseGameAction
 {
     // action = "PHASE_START"
-    public string newTurnPlayerUid; // (턴 시작 시에만) 새 턴을 시작하는 플레이어 UID
+    public string TurnPlayerUid; // (턴 시작 시에만) 새 턴을 시작하는 플레이어 UID
     public string phase; // "Standby", "Draw", "Main", "End"
     public CardInfo drawnCard; // (Draw Phase 전용) 방금 뽑은 카드 (null일 수 있음)
     public long turnEndTime; // (Main Phase 전용) 턴 종료 시간 (Unix timestamp)
@@ -236,6 +278,7 @@ public class S_OpponentPlayCard : BaseGameAction
 {
     // action = "OPPONENT_PLAY_CARD"
     public CardInfo cardPlayed; // 상대가 낸 카드
+    public int handNum; // 상대손에 있을때 위치
     public int targetEntityId; // 상대가 지정한 대상
     // TODO: 애니메이션 처리를 위한 추가 정보
 }

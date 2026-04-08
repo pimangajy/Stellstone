@@ -83,7 +83,7 @@ public class CardDrawManager : MonoBehaviour
     /// <summary>
     /// [핵심] 카드 ID를 이용해 실제 데이터를 찾습니다. (DB나 리소스 매니저 사용)
     /// </summary>
-    private CardData GetCardDataById(string id)
+    public CardData GetCardDataById(string id)
     {
         if (ResourceManager.Instance == null) return null;
 

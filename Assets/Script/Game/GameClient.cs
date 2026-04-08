@@ -26,8 +26,10 @@ public class GameClient : MonoBehaviour
     public event Action<S_GameReady> OnGameReadyEvent;
     public event Action<S_PhaseStart> OnPhaseStartEvent;
     public event Action<string> OnPlayCardSuccessEvent;
+    public event Action<S_ActionResolution> OnActionResolutionEvent;
     public event Action<S_UpdateMana> OnUpdateManaEvent;
-    public event Action<List<EntityData>> OnEntitiesUpdatedEvent;
+    public event Action<S_UpdateEntities> OnUpdateEntitiesEvent;
+    public event Action<List<S_ActionResolution>> OnEntitiesUpdatedEvent;
     public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;
     public event Action<string> OnErrorEvent;
     public event Action<string> OnPlayCardFailedEvent;
@@ -180,6 +182,7 @@ public class GameClient : MonoBehaviour
 
                     switch (baseAction.action)
                     {
+                        case ActionTypes.ActionList: parsedAction = JsonConvert.DeserializeObject<S_ActionResolution>(receivedJson); break;
                         case ActionTypes.MulliganInfo: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
                         case ActionTypes.EnemyMulligunInfo: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
                         case ActionTypes.GameReady: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
@@ -300,6 +303,13 @@ public class GameClient : MonoBehaviour
                 OnPhaseStart(phaseStartInfo);
                 break;
 
+            case ActionTypes.ActionList:
+                Debug.Log("ActionList 발생");
+                var actionInfo = (S_ActionResolution)action;
+                OnActionResolutionEvent?.Invoke(actionInfo);
+                OnActionResolution(actionInfo);
+                break;
+
             case ActionTypes.UpdateMana:
                 Debug.Log("UPDATE_MANA 발생");
                 var updateManaInfo = (S_UpdateMana)action;
@@ -310,7 +320,7 @@ public class GameClient : MonoBehaviour
             case ActionTypes.UpdateEntities:
                 Debug.Log("UPDATE_ENTITIES 발생");
                 var updateEntitiesInfo = (S_UpdateEntities)action;
-                OnEntitiesUpdatedEvent?.Invoke(updateEntitiesInfo.updatedEntities);
+                OnUpdateEntitiesEvent?.Invoke(updateEntitiesInfo);
                 break;
 
             case ActionTypes.OpponentPlayCard:
@@ -321,6 +331,7 @@ public class GameClient : MonoBehaviour
                 break;
 
             case ActionTypes.PlayCardSuccess:
+                Debug.Log("PlayCardSuccess 발생");
                 var successInfo = (S_PlayCardSuccess)action;
                 OnPlayCardSuccessEvent?.Invoke(successInfo.serverInstanceId);
                 break;
@@ -419,11 +430,35 @@ public class GameClient : MonoBehaviour
     private void OnPhaseStart(S_PhaseStart info)
     {
         Debug.Log($"[GameClient] 페이즈 시작: {info.phase}");
-        if (info.phase == PhaseTypes.Draw && info.drawnCard != null)
+    }
+
+    private void OnActionResolution(S_ActionResolution info)
+    {
+        StartCoroutine(SyncActioninfo(info));
+    }
+
+    private IEnumerator SyncActioninfo(S_ActionResolution info)
+    {
+        foreach(var log in info.eventLog)
         {
-            Debug.Log($"[GameClient] 카드 드로우: {info.drawnCard.cardId}");
-            CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
+            switch(log.eventType)
+            {
+                case EventLog.Summon:
+                    if(log.entityData == null)
+                    {
+                        Debug.Log("EntityData Null!");
+                        break;
+                    }
+                    GameEntityManager.Instance.SpawnCard(log.entityData);
+                    break;
+
+                case EventLog.Attack:
+                    Debug.Log("Card Attack!");
+                    break;
+            }
+
         }
+        yield return new WaitForSeconds(1.0f);
     }
 
     private void OnUpdateMana(S_UpdateMana info)

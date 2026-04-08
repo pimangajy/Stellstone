@@ -17,6 +17,8 @@ public class OpponentHandVisualizer : MonoBehaviour
     public Transform opponentDeckTransform; // 상대방 덱 위치
 
     [Header("손패 레이아웃 설정 (가로 정렬)")]
+    [Tooltip("손패 정렬 회전각도")]
+    public Vector3 handRotation = new Vector3(0,0,0);
     [Tooltip("카드 사이의 가로 간격입니다.")]
     public float cardSpacing = 1.2f;
     [Tooltip("카드 간의 겹침 순서를 위한 Y축 오프셋입니다.")]
@@ -56,6 +58,11 @@ public class OpponentHandVisualizer : MonoBehaviour
 
     private void Start()
     {
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.OnOpponentPlayCardEvent += PlayUseCardAnimation;
+        }
+
         _lastSpacing = cardSpacing;
         _lastDepthOffset = cardDepthOffset;
     }
@@ -65,6 +72,8 @@ public class OpponentHandVisualizer : MonoBehaviour
     /// </summary>
     public void DrawCard()
     {
+        if (BattleManager.Instance.isPlayerTurn) return;
+
         if (cardBackPrefab == null || opponentDeckTransform == null || opponentHandAnchor == null) return;
 
         GameObject newCard = Instantiate(cardBackPrefab, opponentDeckTransform.position, opponentDeckTransform.rotation);
@@ -101,7 +110,7 @@ public class OpponentHandVisualizer : MonoBehaviour
             float targetY = i * cardDepthOffset; // 유저 요청에 따라 Z가 아닌 Y축으로 변경
 
             Vector3 targetLocalPos = new Vector3(targetX, targetY, 0);
-            Quaternion targetLocalRot = Quaternion.identity;
+            Quaternion targetLocalRot = Quaternion.Euler(handRotation);
 
             card.transform.DOKill();
 
@@ -128,40 +137,24 @@ public class OpponentHandVisualizer : MonoBehaviour
     /// [핵심] 카드를 필드 쪽으로 내는 연출을 실행하고 파괴합니다.
     /// </summary>
     /// <param name="cardIndex">사용할 카드의 인덱스</param>
-    public void PlayUseCardAnimation(int cardIndex)
+    public void PlayUseCardAnimation(S_OpponentPlayCard cardIndex)
     {
-        if (cardIndex < 0 || cardIndex >= opponentCards.Count) return;
+        if (cardIndex.handNum < 0 || cardIndex.handNum >= opponentCards.Count) return;
 
-        GameObject card = opponentCards[cardIndex];
-        opponentCards.RemoveAt(cardIndex); // 리스트에서 먼저 제거하여 다른 카드들이 즉시 정렬되게 함
+        GameObject card = opponentCards[cardIndex.handNum];
+        opponentCards.RemoveAt(cardIndex.handNum); // 리스트에서 먼저 제거하여 다른 카드들이 즉시 정렬되게 함
 
-        // 2. 사용되는 카드 연출
-        Sequence useSeq = DOTween.Sequence();
+        CardInfo cardInfo = cardIndex.cardPlayed;
+        CardData cardData = CardDrawManager.Instance.GetCardDataById(cardIndex.cardPlayed.cardId);
 
-        // 앞으로 슥 움직임
-        useSeq.Append(card.transform.DOLocalMove(card.transform.localPosition + useMoveOffset, useDuration).SetEase(Ease.OutBack));
 
-        // 약간 커지면서 강조 효과 (선택 사항)
-        useSeq.Join(card.transform.DOScale(_originalCardScale * useSize, useDuration * 0.5f));
-
-        // 서서히 투명해지며 사라짐 (SpriteRenderer 또는 CanvasGroup 대응)
-        // 카드 뒷면에 SpriteRenderer가 있다고 가정하거나, 3D Mesh라면 Material을 조정해야 합니다.
-        SpriteRenderer sr = card.GetComponentInChildren<SpriteRenderer>();
-        if (sr != null)
+        if (cardInfo != null && cardData != null)
         {
-            useSeq.Insert(fadeOutDelay, sr.DOFade(0, useDuration - fadeOutDelay));
+            card.GetComponent<GameCardDisplay>().Setup(cardData, cardInfo);
         }
-        else
-        {
-            // Sprite가 없을 경우 단순 크기 축소로 대체 혹은 예외 처리
-            useSeq.Insert(fadeOutDelay, card.transform.DOScale(Vector3.zero, useDuration - fadeOutDelay));
-        }
+        else Debug.Log("상대가 카드를 사용했지만 카드데이터 & 카드인포 없음");
 
-        // 연출 종료 후 삭제
-        useSeq.OnComplete(() => {
-            Destroy(card);
-            UpdateHandLayout();
-        });
+        CardActionQueueManager.Instance.AddToQueue(card, true);
     }
 
     /// <summary>
@@ -208,18 +201,27 @@ public class OpponentHandVisualizer : MonoBehaviour
         }
 
         // --- 테스트 입력 ---
-        if (Input.GetKeyDown(KeyCode.O)) DrawCard();
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            DrawCard();
+        }
 
         // K키를 누르면 맨 앞의 카드(0번)를 사용하는 연출 실행
         if (Input.GetKeyDown(KeyCode.K) && opponentCards.Count > 0)
         {
-            PlayUseCardAnimation(Random.Range(0, opponentCards.Count));
-        }
-
-        // L키를 누르면 맨 앞의 카드(0번)를 사용하는 연출 실행
-        if (Input.GetKeyDown(KeyCode.L) && opponentCards.Count > 0)
-        {
-            ReturnCardToDeck(Random.Range(0, opponentCards.Count));
+            var testCardData = new CardInfo
+            {
+                cardId = "cards-gangzi-001",
+                instanceId = "instance_" + Random.Range(1000, 9999)
+            };
+            var s_OpponentPlayCard = new S_OpponentPlayCard
+            {
+                cardPlayed = testCardData,
+                handNum = Random.Range(0, opponentCards.Count),
+                targetEntityId = 0
+            };
+            
+            PlayUseCardAnimation(s_OpponentPlayCard);
         }
     }
 

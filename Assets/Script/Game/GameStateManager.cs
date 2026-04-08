@@ -103,9 +103,9 @@ public class GameStateManager : MonoBehaviour
         }
 
         // 2. 턴 주인 정보가 같이 왔다면 갱신
-        if (!string.IsNullOrEmpty(info.newTurnPlayerUid))
+        if (!string.IsNullOrEmpty(info.TurnPlayerUid))
         {
-            CheckTurn(info.newTurnPlayerUid);
+            CheckTurn(info.TurnPlayerUid);
         }
     }
 

@@ -1,6 +1,8 @@
 using UnityEngine;
 using TMPro;
-using DG.Tweening; // 애니메이션
+using DG.Tweening;
+using UnityEngine.UI;
+using System.Collections; // 애니메이션
 
 /// <summary>
 /// 인게임(필드, 손패)에서 카드의 외형을 표시합니다.
@@ -41,6 +43,9 @@ public class GameCardDisplay : MonoBehaviour
     [Header("연출 - 대상 (Glow)")]
     [Tooltip("조준당할 때 켜질 하이라이트 오브젝트 (테두리 이미지 등)")]
     public GameObject glowEffectObject;
+
+    [Header("피격 모션")]
+    public GameObject damageIMG;
 
     private Vector3 _basePosition; // 원래 위치
     private bool _isFloating = false; // 현재 떠있는 상태인가?
@@ -110,6 +115,7 @@ public class GameCardDisplay : MonoBehaviour
         if (descriptionText != null) descriptionText.text = _cardData.description;
 
         UpdateEntityStats(entityData);
+        _cardData.spawnEffectData.PlaySpawnVFX(this.transform);
     }
 
     /// <summary>
@@ -188,6 +194,23 @@ public class GameCardDisplay : MonoBehaviour
         {
             glowEffectObject.SetActive(shouldGlow);
         }
+    }
+
+    // --- [연출 기능 3] 데미지 ---
+    public void DamageUI(int damage)
+    {
+        StartCoroutine(HitUI(damage));
+    }
+
+    public IEnumerator HitUI(int damage)
+    {
+        damageIMG.SetActive(true);
+        damageIMG.GetComponent<Text>().text = damage.ToString();
+
+        yield return new WaitForSeconds(1.0f);
+
+        damageIMG.SetActive(false);
+
     }
 
     // 위치 재설정 (이동 후 호출)

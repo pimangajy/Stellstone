@@ -95,6 +95,8 @@ public class EntityAttackManager : MonoBehaviour
 
             // 테스트
             GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
+            // 실제 전투
+            GameEntityManager.Instance.PerformAttack(attackerId, targetId);
 
             if (GameClient.Instance != null)
             {
