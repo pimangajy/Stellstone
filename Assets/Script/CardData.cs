@@ -64,7 +64,11 @@ public class CardData : ScriptableObject
     // 움직이는 이미지를 위해 배열로 변경
     [Tooltip("애니메이션 프레임들을 순서대로 넣으세요. 정지 화상은 1개만 넣으세요.")]
     public Sprite[] animationFrames;
+    [Tooltip("카드 사용 이팩트")]
+    public DissolveEffect cardDissolveEffect;
+    [Tooltip("스폰 이팩트")]
     public SpawnEffectData spawnEffectData;
+    [Tooltip("직업 아이콘")]
     public Sprite memberIcon;       // 직업 아이콘
 
     // 썸네일 (배열의 첫 번째 장을 대표 이미지로 사용)

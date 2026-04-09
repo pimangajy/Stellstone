@@ -41,8 +41,6 @@ public class EntityAttackManager : MonoBehaviour
 
         // 2. [연출] 공격자(내 카드) 공중 부양!
         _currentAttacker.SetFloatingState(true);
-
-        Debug.Log($"[Attack] {_currentAttacker.name} 공격 태세 돌입");
     }
 
     // --- 로직: 드래그 중 타겟 갱신 (GameInputManager에서 매 프레임 호출) ---
@@ -91,8 +89,6 @@ public class EntityAttackManager : MonoBehaviour
             int attackerId = _currentAttacker.EntityId;
             int targetId = _currentTargetInfo.EntityId;
 
-            Debug.Log($"[Attack] 공격 전송: {attackerId} -> {targetId}");
-
             // 테스트
             GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
             // 실제 전투
@@ -137,7 +133,6 @@ public class EntityAttackManager : MonoBehaviour
         // 내 하수인인지 확인
         if (data == null || data.ownerUid != MyUid)
         {
-            Debug.Log("플레이어 하수인이 아님");
             return false;
         }
 

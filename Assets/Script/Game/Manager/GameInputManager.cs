@@ -125,7 +125,6 @@ public class GameInputManager : MonoBehaviour
             }
             else if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
             {
-                Debug.Log("하수인 클릭");
                 EntityDetailViewer.Instance.HideDetail();
 
                 // 필드 하수인을 클릭함 
@@ -212,7 +211,6 @@ public class GameInputManager : MonoBehaviour
             if (_selectedHandCard != null)
             {
                 currentState = InputState.DraggingHand;
-                Debug.Log($"[InputManager] 손패 드래그 시작: {_selectedHandCard.name}");
 
                 // [연동 완료] CardDragManager에게 드래그 시작 명령
                 if (CardDragManager.instance != null)
@@ -221,7 +219,6 @@ public class GameInputManager : MonoBehaviour
             else if (_selectedFieldEntity != null)
             {
                 currentState = InputState.DraggingField;
-                Debug.Log($"[InputManager] 필드 공격 조준 시작: {_selectedFieldEntity.name}");
 
                 // [연동 완료] EntityAttackManager에게 공격 조준 시작 명령
                 if (EntityAttackManager.Instance != null)
@@ -237,8 +234,6 @@ public class GameInputManager : MonoBehaviour
     {
         if (Input.GetMouseButtonUp(0))
         {
-            Debug.Log($"[InputManager] 손패 드래그 종료 (필드에 소환 시도)");
-
             // [연동 완료] CardDragManager에게 드래그 종료 명령
             if (CardDragManager.instance != null)
                 CardDragManager.instance.EndDrag();
@@ -266,8 +261,6 @@ public class GameInputManager : MonoBehaviour
 
         if (Input.GetMouseButtonUp(0))
         {
-            Debug.Log($"[InputManager] 필드 공격 조준 종료 (공격 실행 시도)");
-
             // [연동 완료] 공격 실행 및 상태 초기화 명령
             if (EntityAttackManager.Instance != null)
                 EntityAttackManager.Instance.TryCompleteAttack();

@@ -450,6 +450,7 @@ public class GameClient : MonoBehaviour
                         break;
                     }
                     GameEntityManager.Instance.SpawnCard(log.entityData);
+                    HandInteractionManager.instance.AlignHand();
                     break;
 
                 case EventLog.Attack:

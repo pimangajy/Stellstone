@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
+using Unity.VisualScripting;
 
 /// <summary>
 /// 플레이어와 적이 사용한 카드를 큐(Queue)에 쌓아 순차적으로 보여주는 매니저입니다.
@@ -57,6 +58,8 @@ public class CardActionQueueManager : MonoBehaviour
     /// </summary>
     public void AddToQueue(GameObject card, bool isOpponent)
     {
+        Debug.Log("Card Use Actiopn");
+
         if (!_hasGrabbedBaseScale)
         {
             _baseScale = card.transform.localScale;
@@ -134,25 +137,25 @@ public class CardActionQueueManager : MonoBehaviour
 
             // 중앙에서는 회전값을 0으로 리셋하여 정면을 보여줌
             currentCard.transform.DORotate(new Vector3(0, 0, 0), moveDuration).SetEase(Ease.OutBack);
-
-            // 3. 중앙에서 머무르며 카드 공개
+            // 정면 보여준후 잠시 대기
             yield return new WaitForSeconds(stayDuration);
 
-            // 4. 퇴장 연출 (위로 이동하며 투명해짐)
-            Sequence fadeSeq = DOTween.Sequence();
-            fadeSeq.Append(currentCard.transform.DOMove(centerShowPosition.position + Vector3.up * 1.5f, fadeOutDuration).SetEase(Ease.InQuad));
+            // 3. 카드 사용 이팩트 실행
+            GameCardDisplay display = currentCard.GetComponent<GameCardDisplay>();
+            DissolveEffect dissolveData = display._cardData.cardDissolveEffect;
 
-            SpriteRenderer sr = currentCard.GetComponentInChildren<SpriteRenderer>();
-            if (sr != null)
-                fadeSeq.Join(sr.DOFade(0, fadeOutDuration));
-            else
-                fadeSeq.Join(currentCard.transform.DOScale(Vector3.one * 0.01f, fadeOutDuration));
+            if (dissolveData != null)
+            {
+                dissolveData.PlayCard(currentCard.transform);
 
-            yield return fadeSeq.WaitForCompletion();
+                // 3. 사용 이팩트 대기
+                yield return new WaitForSeconds(dissolveData.dissolveTime);
+            }
+            else Debug.Log("DissolveEffect 데이터 없음"); 
 
             // 카드 파괴 및 다음 카드 전 대기
             Destroy(currentCard);
-            yield return new WaitForSeconds(0.15f);
+            yield return new WaitForSeconds( 0.15f);
 
             _visualList.Remove(currentCard);
             UpdateQueueVisuals();

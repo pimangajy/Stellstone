@@ -38,6 +38,7 @@ MonoBehaviour:
       rid: -2
   targetRule: 0
   animationFrames: []
+  cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
   spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}

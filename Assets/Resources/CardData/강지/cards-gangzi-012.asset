@@ -38,10 +38,14 @@ MonoBehaviour:
       rid: -2
   targetRule: 0
   animationFrames: []
+  cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
   spawnEffectData: {fileID: 0}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds:

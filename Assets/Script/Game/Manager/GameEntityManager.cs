@@ -95,6 +95,7 @@ public class GameEntityManager : MonoBehaviour
 
     public void SpawnCard(EntityData entityData)
     {
+        Debug.Log("소환");
         bool isMine = entityData.ownerUid == myUid;
         StartCoroutine(SpawnEntity(entityData, isMine));
     }
@@ -134,11 +135,12 @@ public class GameEntityManager : MonoBehaviour
         // 3. 생성 및 배치 (슬롯의 위치와 회전값에 맞춤)
         GameObject newObj = Instantiate(minionPrefab, finalParent.position, finalParent.rotation, finalParent);
         GameCardDisplay display = newObj.GetComponent<GameCardDisplay>();
+
+        // 4. 스폰 이팩트 실행동안 비활성화
         newObj.SetActive(false);
 
         if (display != null)
         {
-            Debug.Log("필드 카드에 값 주입");
             display.SetupEntity(entityData, cardData);
             _spawnedEntities.Add(entityData.entityId, display);
             yield return new WaitForSeconds(cardData.spawnEffectData.duration);
@@ -222,8 +224,6 @@ public class GameEntityManager : MonoBehaviour
 
         // [연출 4] 양쪽의 투사체가 모두 상대방에게 적중할 때까지 대기
         yield return new WaitUntil(() => targetHit);
-
-        Debug.Log($"[전투 완료] {attacker.EntityId}와 {target.EntityId}의 교전이 끝났습니다.");
 
         // TODO: 여기서 서버가 보내준 결과(남은 체력, 파괴 여부)를 화면(UI)에 반영하거나
         // 파괴(Death) 연출을 실행하면 완벽합니다.

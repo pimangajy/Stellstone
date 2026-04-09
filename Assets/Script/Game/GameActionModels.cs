@@ -200,7 +200,7 @@ public class S_ActionResolution : BaseGameAction
     public List<GameEvent> eventLog = new List<GameEvent>();
 
     // 2. 동기화 어긋남 방지를 위한 최종 엔티티 상태 (애니메이션이 끝난 후 최종 보정용)
-    public List<EntityData>? finalStateUpdates;
+    public List<EntityData> finalStateUpdates;
 }
 
 /// <summary>
@@ -220,8 +220,8 @@ public class S_MulliganInfo : BaseGameAction
 public class S_OpponentMulliganStatus : BaseGameAction
 {
     // action = "OPPONENT_MULLIGAN_STATUS"
-    public string? opponentUid;
-    public List<int>? replacedIndices; // 교체된 카드의 슬롯 번호 (0~4)
+    public string opponentUid;
+    public List<int> replacedIndices; // 교체된 카드의 슬롯 번호 (0~4)
     public int replacedCount;          // 교체된 카드 수
     public bool isReady;               // 멀리건 완료 여부
 }
@@ -234,7 +234,7 @@ public class S_GameReady : BaseGameAction
     // action = "GAME_READY"
     public string firstPlayerUid; // 선공 플레이어의 UID
     public List<CardInfo> finalHand; // 나의 최종 손패
-    public List<CardInfo>? enermyfinalHand; // 적의 최종 손패
+    public List<CardInfo> enermyfinalHand; // 적의 최종 손패
     // TODO: 상대방 정보 (영웅, 이름 등)
 }
 
