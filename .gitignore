@@ -76,7 +76,6 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 Assets/TextMesh Pro/Fonts/NotoSansKR-Bold SDF.asset
 Assets/TextMesh Pro/Fonts/NotoSansKR-VariableFont_wght SDF.asset
-*.asset
 /Assets/TextMesh Pro/Fonts
 /Assets/TextMesh Pro/Fonts
 /Assets/TextMesh Pro/Fonts
@@ -91,3 +90,7 @@ Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt
 Assets/TextMesh Pro/Fonts/CinzelDecorative-Bold.ttf.meta
 Assets/TextMesh Pro/Fonts/CinzelDecorative-Bold SDF.asset.meta
 Assets/TextMesh Pro/Fonts/CinzelDecorative-Bold SDF.asset
+Assets/Spine Examples/
+Assets/Spine/
+Assets/Firebase/
+Assets/Editor Default Resources/
