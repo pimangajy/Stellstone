@@ -449,7 +449,7 @@ public class GameClient : MonoBehaviour
                         Debug.Log("EntityData Null!");
                         break;
                     }
-                    GameEntityManager.Instance.SpawnCard(log.entityData);
+                    CardActionQueueManager.Instance.ResolvePlay(log.entityData);
                     HandInteractionManager.instance.AlignHand();
                     break;
 

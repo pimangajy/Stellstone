@@ -154,7 +154,8 @@ public class OpponentHandVisualizer : MonoBehaviour
         }
         else Debug.Log("상대가 카드를 사용했지만 카드데이터 & 카드인포 없음");
 
-        CardActionQueueManager.Instance.AddToQueue(card, true);
+        CardActionQueueManager.Instance.PreparePlay(card, true);
+        // CardActionQueueManager.Instance.AddToQueue(card, true);
     }
 
     /// <summary>

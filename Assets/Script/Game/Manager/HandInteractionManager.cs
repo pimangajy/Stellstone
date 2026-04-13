@@ -353,7 +353,19 @@ public class HandInteractionManager : MonoBehaviour
         UpdateHandLayout();
     }
 
-    private void RemoveLastCardFromHand()
+    /// <summary>
+    ///  특정 카드를 사용
+    /// </summary>
+    public void UseCardFromHand(GameObject cardToRemove)
+    {
+        if (cardToRemove == null || !handCards.Contains(cardToRemove)) return;
+        handCards.Remove(cardToRemove);
+        if (cardToRemove == _currentlyHoveredCard) _currentlyHoveredCard = null;
+
+        UpdateHandLayout();
+    }
+
+private void RemoveLastCardFromHand()
     {
         if (handCards.Count == 0) return;
         RemoveCardFromHand(handCards[handCards.Count - 1]);

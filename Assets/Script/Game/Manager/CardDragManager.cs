@@ -93,8 +93,8 @@ public class CardDragManager : MonoBehaviour
             if (display != null && display.InstanceId == instanceId)
             {
                 Debug.Log($"카드 [{instanceId}] 사용 승인됨. 손패에서 제거.");
-                CardActionQueueManager.Instance.AddToQueue(_waitingCard, false );
                 handManager.SetDraggedCard(null);
+                CardActionQueueManager.Instance.PreparePlay(_waitingCard, true);
                 // handManager.RemoveCardFromHand(_waitingCard);
                 _waitingCard = null;
             }

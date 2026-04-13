@@ -104,6 +104,13 @@ public class GameEntityManager : MonoBehaviour
     // 2. 소환 및 갱신 로직
     // ==================================================================
 
+
+    /// <summary>
+    /// EntityData전용 소환 스크립트
+    /// </summary>
+    /// <param name="entityData"></param>
+    /// <param name="isMine"></param>
+    /// <returns></returns>
     private IEnumerator SpawnEntity(EntityData entityData, bool isMine)
     {
         if (_spawnedEntities.ContainsKey(entityData.entityId))
