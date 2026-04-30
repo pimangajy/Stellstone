@@ -72,7 +72,7 @@ public class HandInteractionManager : MonoBehaviour
     {
         _handMathPlane = new Plane(handAnchor.up, handAnchor.position);
         // 테스트 모드일 때만 작동하도록 조건문을 걸어두면 좋습니다.
-        if (isFolded && Application.isEditor)
+        if (isFolded && Application.isEditor && GameEntityManager.Instance.test)
         {
             // 매 프레임 anchor의 위치를 동기화 (DOTween이 아닌 직접 대입)
             handAnchor.position = foldAnchor.position;
@@ -159,6 +159,8 @@ public class HandInteractionManager : MonoBehaviour
     /// <summary>
     /// [GameInputManager가 호출] 매 프레임 마우스 위치를 받아 호버링(확대) 효과를 계산합니다.
     /// 기존의 수학적 거리 계산(부채꼴 모양 대응)을 그대로 유지합니다.
+    /// 콜라이더를 이용하지 않은 이유는 호버된 카드를 커서가 위로 벗어날때 화면의 0.4이상일 경우 호버취소된 카드가 
+    /// 다시 커서에 닿아 무한떨림이 발생하기때문에 수학적 거리계산을 통해 범위 조절
     /// </summary>
     public void ProcessHover(Vector2 mousePosition)
     {
@@ -266,6 +268,7 @@ public class HandInteractionManager : MonoBehaviour
             }
             return;
         }
+        
 
         Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
         float enter = 0.0f;

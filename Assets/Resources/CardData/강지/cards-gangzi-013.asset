@@ -11,12 +11,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-gangzi-013
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-013
-  cardName: "\uBC29\uC1A1 \uC720\uC785"
+  cardName: "\uC775\uBA85\uC758 \uAC15\uB3C4\uB2E8"
   cardType: 0
   member: 0
-  rarity: 1
+  rarity: 0
   expansion: 0
   manaCost: 5
   attack: 3
@@ -25,6 +25,7 @@ MonoBehaviour:
   description: "\uB4F1\uC7A5: \uC774\uBC88 \uAC8C\uC784\uC5D0\uC11C \uC8FD\uC740
     \uBB34\uC791\uC704 '\uAC15\uB3C4\uB2E8' \uD558\uB098\uB97C \uBD80\uD65C\uC2DC\uD0B5\uB2C8\uB2E4."
   additionalExplanation: 
+  keyward: []
   effects:
   - trigger: ON_PLAY
     effectName: RESURRECT
@@ -37,11 +38,16 @@ MonoBehaviour:
     elseEffect:
       rid: -2
   targetRule: 0
-  animationFrames: []
-  spawnEffectData: {fileID: 0}
+  animationFrames:
+  - {fileID: 21300000, guid: 614a7ffd56bbd394abf1e1de39f2dd77, type: 3}
+  cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 976789555600343322, guid: 4b0e5d08ac3fd0d4ea83172b9ecd05df, type: 3}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds:

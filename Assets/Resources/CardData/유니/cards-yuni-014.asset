@@ -11,9 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-yuni-014
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-yuni-014
-  cardName: "\uB2C8\uC5BC\uAD6C\uB974"
+  cardName: "\uB300\uB450\uBC84\uC12F"
   cardType: 1
   member: 1
   rarity: 0
@@ -25,6 +25,7 @@ MonoBehaviour:
   description: "\uBAA8\uB4E0 \uC801 \uD558\uC218\uC778\uC5D0\uAC8C \uD53C\uD574\uB97C
     3 \uC90D\uB2C8\uB2E4."
   additionalExplanation: 
+  keyward: []
   effects:
   - trigger: ON_PLAY
     effectName: DAMAGE
@@ -37,11 +38,16 @@ MonoBehaviour:
     elseEffect:
       rid: -2
   targetRule: 0
-  animationFrames: []
-  spawnEffectData: {fileID: 0}
+  animationFrames:
+  - {fileID: 21300000, guid: 232640e3e28fab342ab7f6f12d0553fb, type: 3}
+  cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 3300439051078825739, guid: 7128603d714ada24090d8c6a938a8ebd, type: 3}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds:

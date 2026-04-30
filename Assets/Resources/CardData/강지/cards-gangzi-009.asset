@@ -11,9 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-gangzi-009
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-009
-  cardName: "\uAC15\uB3C4\uB2E8\uC758 \uC120\uBB3C"
+  cardName: "\uD63C\uC790\uB180\uAE30"
   cardType: 1
   member: 0
   rarity: 0
@@ -24,6 +24,7 @@ MonoBehaviour:
   minionTribe: 0
   description: "\uC544\uAD70 \uD558\uC218\uC778\uC5D0\uAC8C +2/+2\uC744 \uBD80\uC5EC\uD569\uB2C8\uB2E4."
   additionalExplanation: 
+  keyward: []
   effects:
   - trigger: ON_PLAY
     effectName: BUFF
@@ -36,13 +37,14 @@ MonoBehaviour:
     elseEffect:
       rid: -2
   targetRule: 0
-  animationFrames: []
+  animationFrames:
+  - {fileID: 21300000, guid: 6e76d6b5dadd8d14d97bb13304ed72fd, type: 3}
   cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
   spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
-  projectilePrefab: {fileID: 0}
+  projectilePrefab: {fileID: 976789555600343322, guid: 0ab072b7b043d234ebe1346d283acd68, type: 3}
   projectileSpeed: 15
   projectileArcHeight: 1.5
   references:

@@ -99,7 +99,7 @@ public class CardActionQueueManager : MonoBehaviour
 
         // 리스트에 추가하고 부모를 연출용 오브젝트로 변경 (좌표계 동기화)
         _actionList.Add(newRequest);
-        cardObj.transform.SetParent(centerShowPosition, false);
+        cardObj.transform.SetParent(centerShowPosition, true);
 
         // 대기열 비주얼 갱신 (줄 세우기)
         UpdateQueueVisuals();
@@ -158,8 +158,24 @@ public class CardActionQueueManager : MonoBehaviour
 
             // 1. 중앙 이동 및 확대 연출 (Card Motion)
             currentCard.transform.DOKill();
-            currentCard.transform.DOLocalMove(Vector3.zero, moveDuration).SetEase(Ease.OutBack);
-            currentCard.transform.DOScale(_baseScale * 1.4f, moveDuration).SetEase(Ease.OutBack);
+
+            // [수정됨] DOLocalMove -> DOMove로 변경! 
+            // 부모 공간(Vector3.zero)이 아닌, 실제 목표 오브젝트의 월드 좌표(position)로 직진합니다.
+            currentCard.transform.DOMove(centerShowPosition.position, moveDuration).SetEase(Ease.OutQuad);
+            currentCard.transform.DOScale(_baseScale * 1.4f, moveDuration).SetEase(Ease.OutQuad);
+
+            // [수정됨] 회전도 부모의 로컬이 아닌 월드 회전(DORotate)으로 맞춥니다.
+            if (!current.isOpponent)
+            {
+                // 상대방 카드는 centerShowPosition의 회전값에 Z축 180도 추가
+                Vector3 targetRot = centerShowPosition.eulerAngles + new Vector3(0, 0, 180f);
+                currentCard.transform.DORotate(targetRot, moveDuration).SetEase(Ease.OutQuad);
+            }
+            else
+            {
+                // 내 카드는 centerShowPosition의 회전값과 동일하게 맞춤
+                currentCard.transform.DORotate(centerShowPosition.eulerAngles, moveDuration).SetEase(Ease.OutQuad);
+            }
 
             // 유저가 카드를 확인할 시간을 줌
             yield return new WaitForSeconds(stayDuration);
@@ -190,13 +206,15 @@ public class CardActionQueueManager : MonoBehaviour
     /// </summary>
     private void UpdateQueueVisuals()
     {
-        for (int i = 0; i < _actionList.Count; i++)
+        // i = 0 (첫 번째 카드)는 어차피 ProcessQueueRoutine에서 바로 가져가서 
+        // Vector3.zero로 이동시킬 것이므로 대기열 이동 연출에서 제외합니다.
+        for (int i = 1; i < _actionList.Count; i++) // 0이 아니라 1부터 시작!
         {
             GameObject card = _actionList[i].cardObject;
             if (card == null) continue;
 
-            // 첫 번째 카드(i=0)는 연출을 위해 중앙 자리를 비워두고, i+1부터 대기 위치 지정
-            Vector3 targetLocalPos = queueOffset * (i + 1);
+            // 대기열 순서에 따른 목표 위치 (첫 번째 카드가 빠졌으므로 i 그대로 곱함)
+            Vector3 targetLocalPos = queueOffset * i;
 
             // 부드러운 위치 및 크기 조절
             card.transform.DOLocalMove(targetLocalPos, 0.4f).SetEase(Ease.OutQuad);

@@ -27,6 +27,7 @@ public class CardDragManager : MonoBehaviour
     public float handZoneHeightRatio = 0.35f; // 화면 아래쪽 35%는 '손패 영역'으로 취급
     public LayerMask cardLayer;
     public LayerMask fieldSlotLayer; // 카드를 내려놓을 수 있는 '필드 슬롯' 레이어
+    public LayerMask gameBoardLayer; // 게임 보드의 레이어
 
     [Header("타겟팅")]
     public bool temp_CardIsTargeted = true; // (테스트용) 타겟팅 기능 켜기/끄기
@@ -155,12 +156,22 @@ public class CardDragManager : MonoBehaviour
         }
         else // 필드 영역
         {
-            if (_playfieldMathPlane.Raycast(ray, out enter))
+            // Physics.Raycast로 카메라에서 쏜 광선이 gameBoardLayer와 부딪히는지 검사
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f, gameBoardLayer))
             {
-                Vector3 hitPoint = ray.GetPoint(enter);
-                Vector3 localHit = handManager.handAnchor.InverseTransformPoint(hitPoint);
-                Vector3 targetLocal = new Vector3(localHit.x, dragHeight, localHit.z);
-                targetPos = handManager.handAnchor.TransformPoint(targetLocal);
+                // hit.point는 마우스가 실제 GameBoard 표면에 닿은 정확한 3D 좌표입니다.
+                // 보드의 Y 높이(hit.point.y)에 dragHeight를 더해서 띄워줍니다.
+                targetPos = new Vector3(hit.point.x, hit.point.y + dragHeight, hit.point.z);
+            }
+            else
+            {
+                // (예외 처리) 마우스가 게임 보드 밖으로 나갔을 때는 
+                // 기존의 가상 평면(Y=0)을 백업으로 사용해 카드가 허공으로 사라지는 걸 막습니다.
+                if (_playfieldMathPlane.Raycast(ray, out enter))
+                {
+                    Vector3 backupHitPoint = ray.GetPoint(enter);
+                    targetPos = new Vector3(backupHitPoint.x, dragHeight, backupHitPoint.z);
+                }
             }
         }
 

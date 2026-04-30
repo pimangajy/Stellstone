@@ -11,12 +11,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-gangzi-020
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-020
   cardName: "\uC0AC\uCD78"
   cardType: 0
   member: 0
-  rarity: 3
+  rarity: 0
   expansion: 0
   manaCost: 10
   attack: 15
@@ -24,16 +24,19 @@ MonoBehaviour:
   minionTribe: 1
   description: '-'
   additionalExplanation: 
+  keyward: []
   effects: []
   targetRule: 0
-  animationFrames: []
-  spawnEffectData: {fileID: 0}
+  animationFrames:
+  - {fileID: 21300000, guid: 9d44fa3e8007a9b47851efe38e93073a, type: 3}
+  cardDissolveEffect: {fileID: 11400000, guid: f2fa66e4d64d4ac4182ff47d83821e4f, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: 731cd3f5b236bf84eb92df42f9045823, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
-  projectilePrefab: {fileID: 3300439051078825739, guid: 7128603d714ada24090d8c6a938a8ebd, type: 3}
-  projectileSpeed: 30
-  projectileArcHeight: 3
+  projectilePrefab: {fileID: 976789555600343322, guid: 6f2b6067f6ad9b349af1ccb748554ba7, type: 3}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds: []

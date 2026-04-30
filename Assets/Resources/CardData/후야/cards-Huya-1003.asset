@@ -11,26 +11,45 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-Huya-1003
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-Huya-1003
-  cardName: "\uBC14\uCFE0 1\uC778\uC790"
+  cardName: "\uC18C\uD658\uB41C \uBC14\uCFE02"
   cardType: 0
   member: 2
   rarity: 0
   expansion: 0
-  manaCost: 5
-  attack: 5
-  health: 5
+  manaCost: 2
+  attack: 2
+  health: 3
   minionTribe: 0
   description: "\uB3C4\uBC1C"
   additionalExplanation: 
-  effects: []
+  keyward:
+  - TAUNT
+  effects:
+  - trigger: ON_PLAY
+    effectName: '[KEYWORDS'
+    value1: 0
+    value2: 0
+    target: 
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
   targetRule: 0
-  animationFrames: []
-  spawnEffectData: {fileID: 0}
+  animationFrames:
+  - {fileID: 21300000, guid: 398a40be110a39a4189f595de9a3d3f7, type: 3}
+  cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 976789555600343322, guid: 4b0e5d08ac3fd0d4ea83172b9ecd05df, type: 3}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

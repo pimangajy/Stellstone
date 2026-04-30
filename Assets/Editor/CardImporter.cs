@@ -118,8 +118,10 @@ public class CardImporter : EditorWindow
             card.cardType = ParseCardType(values[7]);
             card.expansion = (values[8] == "기본") ? Expansion.기본 : ParseEnum<Expansion>(values[8], Expansion.기본);
 
-            // 설명 (따옴표 처리)
             card.description = values[9].Replace("\"", "").Replace("\"\"", "\"");
+
+            string rawEffects = values[10].Trim();
+            card.keyward = ExtractKeywords(ref rawEffects);
 
             // 효과
             card.effects = ParseEffects(values[10]);
@@ -137,6 +139,37 @@ public class CardImporter : EditorWindow
     }
 
     // --- Enum 매핑 도우미 ---
+
+    private List<string> ExtractKeywords(ref string effectString)
+    {
+        List<string> foundKeywords = new List<string>();
+
+        // 정규식으로 [KEYWORDS:...] 패턴 찾기
+        Match match = Regex.Match(effectString, @"^\[KEYWORDS:(.*?)\]");
+
+        if (match.Success)
+        {
+            string keywordContent = match.Groups[1].Value;
+            if (!string.IsNullOrEmpty(keywordContent))
+            {
+                // 콤마로 구분하여 리스트에 저장
+                string[] splitKeywords = keywordContent.Split(',');
+                foreach (string k in splitKeywords)
+                {
+                    foundKeywords.Add(k.Trim());
+                }
+            }
+
+            // 원본 문자열에서 [KEYWORDS:...] 부분을 제거하여 효과 파싱에 방해 안 되게 함
+            effectString = effectString.Substring(match.Length).Trim();
+
+            // 제거 후 만약 맨 앞에 \n이 있다면 추가 제거
+            if (effectString.StartsWith("\n") || effectString.StartsWith("\r"))
+                effectString = effectString.TrimStart();
+        }
+
+        return foundKeywords;
+    }
 
     // [신규] CSV의 영문 Class(Gangzi)를 한글 Enum(강지)으로 매핑
     private ClassType ParseMemberType(string value)

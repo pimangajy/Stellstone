@@ -7547,7 +7547,7 @@ MonoBehaviour:
   handArcRadius: 27
   baseCardSpacingAngle: 6
   handSpreadMultiplier: -1
-  cardVerticalOffset: 0.1
+  cardVerticalOffset: -0.1
   shuffleDuration: 0.3
   newCardTravelDuration: 0.4
   temporaryBaseCardSpacingAngle: 0
@@ -7558,7 +7558,7 @@ MonoBehaviour:
   hoverOffset: {x: 0, y: 1, z: 28.5}
   hoverScaleMultiplier: 1.3
   hoverAnimDuration: 0.2
-  maxHoverActivationDistance: 1.5
+  maxHoverActivationDistance: 3.5
   handCards: []
 --- !u!114 &1271275091
 MonoBehaviour:
@@ -7642,9 +7642,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   handManager: {fileID: 1271275090}
   mainCamera: {fileID: 963194227}
-  dragHeight: 0.5
+  dragHeight: 2
   dragFollowSpeed: 10
-  tiltStrength: 20
+  tiltStrength: 100
   maxTiltAngle: 20
   tiltReturnSpeed: 5
   handZoneHeightRatio: 0.2
@@ -7654,8 +7654,11 @@ MonoBehaviour:
   fieldSlotLayer:
     serializedVersion: 2
     m_Bits: 64
+  gameBoardLayer:
+    serializedVersion: 2
+    m_Bits: 128
   temp_CardIsTargeted: 0
-  targetingSourceTransform: {fileID: 0}
+  targetingSourceTransform: {fileID: 1485891839533799670}
   testMinionPrefab: {fileID: 428873999600211589, guid: de81eb54ed9729143bf62525559898cd, type: 3}
 --- !u!114 &1271275094
 MonoBehaviour:
@@ -7669,7 +7672,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87ba01bc7ba544b945e4f395fa757d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameEntityManager
-  test: 1
+  test: 0
   myFieldTransform: {fileID: 659780449}
   opponentFieldTransform: {fileID: 542942072}
   myMemberTransform: {fileID: 2061546253}
@@ -7754,11 +7757,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardActionQueueManager
   centerShowPosition: {fileID: 1788890907}
   queueOffset: {x: 0.5, y: -0.5, z: 0}
-  activeScaleMultiplier: 1.4
-  waitingScaleMultiplier: 0.9
-  moveDuration: 1
-  stayDuration: 2
-  fadeOutDuration: 1
+  moveDuration: 0.2
+  stayDuration: 1
 --- !u!114 &1271275099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12051,7 +12051,7 @@ Transform:
   m_GameObject: {fileID: 2293777441000260172}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -5.2, y: 1.1999998, z: 0.8000002}
+  m_LocalPosition: {x: 0, y: 0, z: -6.78}
   m_LocalScale: {x: 1, y: 1, z: 0.10000001}
   m_ConstrainProportionsScale: 0
   m_Children: []

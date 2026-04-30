@@ -11,9 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-Huya-004
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-Huya-004
-  cardName: "\uD6C4\uC544\uC544\uC559"
+  cardName: "\u3161\u3154?"
   cardType: 1
   member: 2
   rarity: 0
@@ -25,6 +25,7 @@ MonoBehaviour:
   description: "\uB0B4 \uC601\uC6C5\uC774 \uB2E4\uC74C\uC5D0 \uBC1B\uB294 \uD53C\uD574\uB97C
     0\uC73C\uB85C \uD569\uB2C8\uB2E4."
   additionalExplanation: 
+  keyward: []
   effects:
   - trigger: ON_PLAY
     effectName: PREVENT_DAMAGE
@@ -37,11 +38,16 @@ MonoBehaviour:
     elseEffect:
       rid: -2
   targetRule: 0
-  animationFrames: []
-  spawnEffectData: {fileID: 0}
+  animationFrames:
+  - {fileID: 21300000, guid: 61906875be04afd489ec6045508119fb, type: 3}
+  cardDissolveEffect: {fileID: 11400000, guid: f2fa66e4d64d4ac4182ff47d83821e4f, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: 731cd3f5b236bf84eb92df42f9045823, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 3300439051078825739, guid: 67bd697acb0c84942bff828976114557, type: 3}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds:

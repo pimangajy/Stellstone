@@ -11,12 +11,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-gangzi-016
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-016
-  cardName: "\uC548\uC0B0 \uBD88\uBE73\uB530"
+  cardName: "\uB9E4\uB3C4"
   cardType: 1
   member: 0
-  rarity: 1
+  rarity: 0
   expansion: 0
   manaCost: 5
   attack: 0
@@ -25,6 +25,7 @@ MonoBehaviour:
   description: "\uC801 \uCE90\uB9AD\uD130 \uD558\uB098\uC5D0\uAC8C \uD53C\uD574\uB97C
     10 \uC90D\uB2C8\uB2E4."
   additionalExplanation: 
+  keyward: []
   effects:
   - trigger: ON_PLAY
     effectName: DAMAGE
@@ -37,11 +38,16 @@ MonoBehaviour:
     elseEffect:
       rid: -2
   targetRule: 0
-  animationFrames: []
-  spawnEffectData: {fileID: 0}
+  animationFrames:
+  - {fileID: 21300000, guid: d96923c46c27ede4d9d932ca5f1a450f, type: 3}
+  cardDissolveEffect: {fileID: 11400000, guid: f2fa66e4d64d4ac4182ff47d83821e4f, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: 731cd3f5b236bf84eb92df42f9045823, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 3300439051078825739, guid: 7128603d714ada24090d8c6a938a8ebd, type: 3}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds:

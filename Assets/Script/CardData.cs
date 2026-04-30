@@ -53,6 +53,7 @@ public class CardData : ScriptableObject
     public string additionalExplanation; // CSV: additional
 
     [Header("3. 효과 데이터")]
+    public List<string> keyward;
     // [수정됨] 파싱된 효과 리스트
     public List<EffectInstance> effects = new List<EffectInstance>();
 

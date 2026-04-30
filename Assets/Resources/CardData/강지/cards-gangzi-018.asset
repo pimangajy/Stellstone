@@ -11,12 +11,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
   m_Name: cards-gangzi-018
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-018
   cardName: "\uAC15\uD615"
   cardType: 0
   member: 0
-  rarity: 2
+  rarity: 0
   expansion: 0
   manaCost: 8
   attack: 10
@@ -24,13 +24,19 @@ MonoBehaviour:
   minionTribe: 1
   description: '-'
   additionalExplanation: 
+  keyward: []
   effects: []
   targetRule: 0
-  animationFrames: []
-  spawnEffectData: {fileID: 0}
+  animationFrames:
+  - {fileID: 21300000, guid: 7a3e23004e70d564e8e6e10eac7a56e3, type: 3}
+  cardDissolveEffect: {fileID: 11400000, guid: f2fa66e4d64d4ac4182ff47d83821e4f, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: 731cd3f5b236bf84eb92df42f9045823, type: 2}
   memberIcon: {fileID: 0}
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 976789555600343322, guid: 4b0e5d08ac3fd0d4ea83172b9ecd05df, type: 3}
+  projectileSpeed: 15
+  projectileArcHeight: 1.5
   references:
     version: 2
     RefIds: []
