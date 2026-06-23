@@ -18,9 +18,9 @@ public class FilterManager : MonoBehaviour
     // '?' (Nullable)을 붙여서 "선택 안 함(null)" 상태를 표현할 수 있게 했습니다.
     public struct FilterSettings
     {
-        public ClassType? Member;    // 직업 (null이면 전체 직업)
+        public CardClass? cardClass;    // 직업 (null이면 전체 직업)
         public CardType? CardType;   // 카드 종류
-        public Rarity? Rarity;       // 희귀도
+        public CardRarity? Rarity;       // 희귀도
         public Expansion? Expansion; // 확장팩
     }
 
@@ -68,7 +68,7 @@ public class FilterManager : MonoBehaviour
         // 설정값을 모두 null(전체)로 초기화
         currentSettings = new FilterSettings
         {
-            Member = null,
+            cardClass = null,
             CardType = null,
             Rarity = null,
             Expansion = null
@@ -84,10 +84,10 @@ public class FilterManager : MonoBehaviour
         // InitializeCategory<Enum타입> 형태로 호출하여 코드를 재사용합니다.
 
         // (1) 직업 필터 생성
-        InitializeCategory<ClassType>(memberToggleParent, memberToggleGroup, (val) =>
+        InitializeCategory<CardClass>(memberToggleParent, memberToggleGroup, (val) =>
         {
             // 버튼 눌리면 설정값 변수에 저장
-            currentSettings.Member = val;
+            currentSettings.cardClass = val;
         });
 
         // (2) 카드 종류 필터 생성
@@ -97,7 +97,7 @@ public class FilterManager : MonoBehaviour
         });
 
         // (3) 희귀도 필터 생성
-        InitializeCategory<Rarity>(rarityToggleParent, rarityToggleGroup, (val) =>
+        InitializeCategory<CardRarity>(rarityToggleParent, rarityToggleGroup, (val) =>
         {
             currentSettings.Rarity = val;
         });
@@ -177,7 +177,7 @@ public class FilterManager : MonoBehaviour
 
         foreach (string memberName in availableMembers)
         {
-            if (Enum.TryParse(memberName, out ClassType memberEnum))
+            if (Enum.TryParse(memberName, out CardClass memberEnum))
             {
                 // 첫 번째 직업(내 직업)을 기본 선택으로
                 bool isDefault = (memberName == availableMembers[0]);
@@ -186,7 +186,7 @@ public class FilterManager : MonoBehaviour
                 {
                     if (isOn)
                     {
-                        currentSettings.Member = memberEnum;
+                        currentSettings.cardClass = memberEnum;
                     }
                 });
             }

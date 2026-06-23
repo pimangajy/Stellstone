@@ -48,6 +48,10 @@ public class UIPanelToggler : MonoBehaviour
     private Vector2 originalPosition; // 패널의 원래 위치를 저장할 변수
     private Vector2 originalSize;     // 패널의 원래 크기
 
+    [Tooltip("hidengUI가 꺼져있을 때(SetActive(true)) 유효합니다. 시작 시 오브젝트는 켜두되, 물리적 비주얼과 상태는 즉시 '닫힘'으로 초기 설정합니다. (서랍 버튼이 패널 자식으로 있을 때 필수 체크!)")]
+    public bool startActiveButClosed = false;
+    private bool _isPanelOpened;
+
     void Awake()
     {
         // 시작 시 패널이 보이지 않도록 확실하게 비활성화합니다.
@@ -71,11 +75,77 @@ public class UIPanelToggler : MonoBehaviour
         if(hidengUI)
         {
             panelObject.SetActive(false);
+            _isPanelOpened = false;
+        }
+        else
+        {
+            if (startActiveButClosed)
+            {
+                panelObject.SetActive(true);
+                _isPanelOpened = false; // [핵심] 오브젝트는 켜져 있지만, 상태는 닫힘으로 초기화!
+
+                // [추가] 시작할 때 애니메이션 없이 물리적인 비주얼도 즉시 닫힌 상태로 강제 전환합니다.
+                ApplyClosedStateInstant();
+            }
+            else
+            {
+                panelObject.SetActive(true);
+                _isPanelOpened = true;  // 시작할 때 완전히 켜지고 열린 상태로 초기화
+            }
         }
 
         if (backgroundOverlay != null)
         {
             backgroundOverlay.gameObject.SetActive(false);
+        }
+    }
+
+    private void ApplyClosedStateInstant()
+    {
+        if (panelObject == null) return;
+
+        switch (animationType)
+        {
+            case AnimationType.Instant:
+                panelObject.SetActive(false);
+                break;
+
+            case AnimationType.FadeAndScale:
+                panelObject.transform.localScale = Vector3.one * startScale;
+                if (panelCanvasGroup != null) panelCanvasGroup.alpha = 0;
+                break;
+
+            case AnimationType.MoveFromPosition:
+                if (panelRectTransform != null && startPosition != null)
+                {
+                    panelRectTransform.anchoredPosition = startPosition.anchoredPosition;
+                }
+                break;
+
+            case AnimationType.AnimatePanelSize:
+                if (panelRectTransform != null)
+                {
+                    // 시작 시 크기를 강제로 원래의 작아진 크기(originalSize)로 고정합니다.
+                    panelRectTransform.sizeDelta = originalSize;
+                }
+                break;
+        }
+
+        if (backgroundOverlay != null)
+        {
+            backgroundOverlay.alpha = 0;
+            backgroundOverlay.gameObject.SetActive(false);
+        }
+    }
+    public void TogglePanel()
+    {
+        if (_isPanelOpened)
+        {
+            HidePanel();
+        }
+        else
+        {
+            ShowPanel();
         }
     }
 
@@ -85,6 +155,8 @@ public class UIPanelToggler : MonoBehaviour
     public void ShowPanel()
     {
         if (panelObject == null) return;
+
+        _isPanelOpened = true;
 
         UIManager.Instance.OpenPopup(panelObject.gameObject);
 
@@ -112,6 +184,8 @@ public class UIPanelToggler : MonoBehaviour
     public void HidePanel()
     {
         if (panelObject == null) return;
+
+        _isPanelOpened = false;
 
         switch (animationType)
         {

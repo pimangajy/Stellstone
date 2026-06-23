@@ -14,13 +14,22 @@ public class GameCardDisplay : MonoBehaviour
 {
     [Header("UI 연결")]
     public SpriteGifPlayer cardArtAnimator;
-    public TextMeshPro nameText;
-    public TextMeshPro descriptionText;
+    public TextMeshProUGUI nameText;
+    public TextMeshProUGUI descriptionText;
 
     [Header("스탯 UI")]
-    public TextMeshPro costText;
-    public TextMeshPro attackText;
-    public TextMeshPro healthText;
+    public TextMeshProUGUI costText;
+    public TextMeshProUGUI attackText;
+    public TextMeshProUGUI healthText;
+
+    [Header("필드 용 UI 연결")]
+    public TextMeshPro entityNameText;
+    public TextMeshPro entityDescriptionText;
+
+    [Header("필드 용 스탯 UI")]
+    public TextMeshPro entityCostText;
+    public TextMeshPro entityAttackText;
+    public TextMeshPro entityHealthText;
 
     [Header("색상 설정")]
     public Color normalColor = Color.white;
@@ -30,7 +39,7 @@ public class GameCardDisplay : MonoBehaviour
     [Header("데이터")]
     public CardData _cardData;
     public CardInfo _cardInfo;
-    public EntityData CurrentEntityData { get; private set; }
+    public EntityData CurrentEntityData;
     public int EntityId { get; private set; }
     public string InstanceId => _cardInfo?.instanceId;
 
@@ -109,9 +118,9 @@ public class GameCardDisplay : MonoBehaviour
         _basePosition = transform.localPosition;
 
         if (cardArtAnimator != null && _cardData.animationFrames != null)
-            cardArtAnimator.SetGif(_cardData.animationFrames);
+            cardArtAnimator.SetSpriteRender(_cardData.animationFrames);
 
-        if (nameText != null) nameText.text = _cardData.cardName;
+        if (entityNameText != null) entityNameText.text = _cardData.cardName;
         if (descriptionText != null) descriptionText.text = _cardData.description;
 
         UpdateEntityStats(entityData);
@@ -129,25 +138,48 @@ public class GameCardDisplay : MonoBehaviour
         // if (costText != null) costText.text = entityData.cost.ToString();
 
         // 공격력과 체력을 갱신하면서 색상도 같이 계산합니다.
-        if (attackText != null)
+        if (entityAttackText != null)
         {
+            entityAttackText.text = entityData.attack.ToString();
+
             // 현재 공격력 vs 원래 공격력 비교
-            SetStatText(attackText, entityData.attack, _cardData.attack);
+            EntitySetStatText(entityAttackText, entityData.attack, _cardData.attack);
         }
 
-        if (healthText != null)
+        if (entityHealthText != null)
         {
+            entityHealthText.text = entityData.health.ToString();
+
             // 현재 체력 vs 원래 체력 비교
             // (주의: 하스스톤 로직상 '피해를 입은 상태'는 빨강, '최대 체력이 늘어난 상태'는 초록입니다.
             // 여기서는 요청하신 대로 '현재 값 vs 원본 최대값' 기준으로 단순 비교합니다)
-            SetStatText(healthText, entityData.health, _cardData.health);
+            EntitySetStatText(entityHealthText, entityData.health, _cardData.health);
         }
     }
 
     /// <summary>
     /// [내부 함수] 값에 따라 텍스트 내용과 색상을 변경합니다.
     /// </summary>
-    private void SetStatText(TextMeshPro textComp, int currentVal, int originalVal)
+    /// 
+    private void SetStatText(TextMeshProUGUI textComp, int currentVal, int originalVal)
+    {
+        textComp.text = currentVal.ToString();
+
+        if (currentVal > originalVal)
+        {
+            textComp.color = buffColor; // 버프 (초록)
+        }
+        else if (currentVal < originalVal)
+        {
+            textComp.color = debuffColor; // 너프/피해 (빨강)
+        }
+        else
+        {
+            textComp.color = normalColor; // 정상 (흰색)
+        }
+    }
+
+    private void EntitySetStatText(TextMeshPro textComp, int currentVal, int originalVal)
     {
         textComp.text = currentVal.ToString();
 

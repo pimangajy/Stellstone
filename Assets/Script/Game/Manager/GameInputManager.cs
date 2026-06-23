@@ -1,5 +1,6 @@
 using UnityEngine;
-
+using UnityEngine.EventSystems; // UI 이벤트 시스템 처리를 위해 필수
+using System.Collections.Generic;
 /// <summary>
 /// 게임 내의 모든 마우스 입력(Hover, Click, Drag)을 중앙에서 관리하는 스크립트입니다.
 /// 
@@ -10,9 +11,6 @@ using UnityEngine;
 public class GameInputManager : MonoBehaviour
 {
     public static GameInputManager Instance;
-
-    [Header("테스트")]
-    //public DummyEntitySetup dummy;
 
     [Header("레이어 설정 (우선순위)")]
     [Tooltip("손패 카드 레이어 (가장 먼저 클릭 판정)")]
@@ -42,7 +40,9 @@ public class GameInputManager : MonoBehaviour
     private Vector2 _mouseDownPos;
 
     // 현재 선택된 대상들
+    [SerializeField]
     private GameCardDisplay _selectedHandCard; // 드래그하려고 잡은 손패 카드
+    [SerializeField]
     private GameCardDisplay _selectedFieldEntity; // 공격하려고 잡은 필드 하수인
 
     private void Awake()
@@ -57,7 +57,7 @@ public class GameInputManager : MonoBehaviour
     {
         // 1. 현재 내 턴인지 확인합니다.
         bool isMyTurn = GameStateManager.Instance == null || GameStateManager.Instance.IsMyTurn;
-        bool isFold = HandInteractionManager.instance.isFolded;
+        bool isFold = HandCardControllManager.instance.isFolded;
 
         // 상대 턴인데 마우스를 쥐고 있거나 드래그 상태라면 강제로 취소시킵니다 (Idle 상태로 복귀).
         if (!isMyTurn && currentState != InputState.Idle)
@@ -84,109 +84,124 @@ public class GameInputManager : MonoBehaviour
         }
     }
 
+
     // =========================================================
     // 1. 평상시 (Idle) : 호버링(Hover) 감지 및 클릭(Down) 대기
     // =========================================================
+    // UI 요소 감지용 함수
+    private List<RaycastResult> GetUIElementsUnderPointer()
+    {
+        PointerEventData pointerData = new PointerEventData(EventSystem.current)
+        {
+            position = Input.mousePosition
+        };
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(pointerData, results);
+        return results;
+    }
+
     private void HandleIdleAndHover(bool isMyTurn, bool isFold)
     {
-        // [클릭 감지] - "내 턴일 때만" 카드를 클릭해서 잡을 수 있도록 isMyTurn 조건 추가!
         if (isMyTurn && Input.GetMouseButtonDown(0))
         {
             _mouseDownPos = Input.mousePosition;
 
-            // 광선을 쏴서 무엇을 클릭했는지 확인합니다. (손패 우선!)
-            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+            // =======================================================
+            // 1단계: UI (2D 캔버스 - 손패 카드) 우선 판정
+            // =======================================================
+            List<RaycastResult> uiHits = GetUIElementsUnderPointer();
+            bool isUIClicked = false;
 
-            if (Physics.Raycast(ray, out RaycastHit handHit, 100f, handCardLayer))
+            foreach (RaycastResult hit in uiHits)
             {
-                // 손패가 접힌 상태라면 어떤 카드를 클릭해도 손패를 펼칩니다.
-                if (HandInteractionManager.instance.isFolded)
+                if (((1 << hit.gameObject.layer) & handCardLayer) != 0)
                 {
-                    HandInteractionManager.instance.ToggleHandFold();
-                    return;
-                }
+                    isUIClicked = true;
 
-                GameObject clickedObject = handHit.collider.gameObject;
+                    if (HandCardControllManager.instance.isFolded)
+                    {
+                        HandCardControllManager.instance.ToggleHandFold();
+                        return;
+                    }
 
-                // [연동 완료] 멀리건 단계인지 확인하고 맞으면 멀리건 클릭으로 넘김
-                if (HandInteractionManager.instance != null && HandInteractionManager.instance.isMulliganPhase)
-                {
-                    HandInteractionManager.instance.OnMulliganCardClicked(clickedObject);
-                    return; // 멀리건 중이면 카드를 드래그할 수 없으므로 여기서 종료
-                }
+                    if (HandCardControllManager.instance != null && HandCardControllManager.instance.isMulliganPhase)
+                    {
+                        HandCardControllManager.instance.OnMulliganCardClicked(hit.gameObject);
+                        return;
+                    }
 
-                // 멀리건이 아닐 경우 일반적인 드래그 준비 상태로 진입
-                _selectedHandCard = clickedObject.GetComponent<GameCardDisplay>();
-                if (_selectedHandCard != null)
-                {
-                    currentState = InputState.ReadyToDrag;
-                    return; // 손패를 눌렀으면 필드는 검사할 필요 없음
-                }
-            }
-            else if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
-            {
-                EntityDetailViewer.Instance.HideDetail();
-
-                // 필드 하수인을 클릭함 
-                // 테스트
-                //if(GameEntityManager.Instance.test)
-                //{
-                //    dummy = minionHit.collider.GetComponent<DummyEntitySetup>();
-                //  }
-                //else
-                {
-                    _selectedFieldEntity = minionHit.collider.GetComponent<GameCardDisplay>();
-                }
-
-                if (_selectedFieldEntity != null)
-                {
-                    // 테스트
-                    if(GameEntityManager.Instance.test)
+                    _selectedHandCard = hit.gameObject.GetComponentInParent<GameCardDisplay>();
+                    if (_selectedHandCard != null)
                     {
                         currentState = InputState.ReadyToDrag;
                         return;
                     }
-                    // [연동 완료] 내 하수인이 맞는지, 공격 가능한 상태인지 검사
-                    if (EntityAttackManager.Instance != null && EntityAttackManager.Instance.IsValidAttacker(_selectedFieldEntity))
-                    {
-                        currentState = InputState.ReadyToDrag;
-                    }
                 }
             }
-            else if(Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer) && !HandInteractionManager.instance.isMulliganPhase)
-            {
-                EntityDetailViewer.Instance.HideDetail();
 
-                if (!HandInteractionManager.instance.isFolded)
+            // =======================================================
+            // 2단계: UI를 클릭하지 않았다면 3D 물리(Physics) 기반 판정
+            // =======================================================
+            if (!isUIClicked)
+            {
+                Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+
+                // 필드 하수인 클릭 판정 [2]
+                if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
                 {
-                    HandInteractionManager.instance.ToggleHandFold();
+                    if (EntityDetailViewer.Instance != null) EntityDetailViewer.Instance.HideDetail();
+
+                    _selectedFieldEntity = minionHit.collider.GetComponentInParent<GameCardDisplay>();
+
+                    if (_selectedFieldEntity != null)
+                    {
+                        if (GameEntityManager.Instance != null && GameEntityManager.Instance.test)
+                        {
+                            currentState = InputState.ReadyToDrag;
+                            return;
+                        }
+
+                        if (EntityAttackManager.Instance != null && EntityAttackManager.Instance.IsValidAttacker(_selectedFieldEntity))
+                        {
+                            currentState = InputState.ReadyToDrag;
+                        }
+                    }
+                    return;
                 }
+                // 필드 배경 클릭 판정 [3]
+                else if (Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer) && !HandCardControllManager.instance.isMulliganPhase)
+                {
+                    if (EntityDetailViewer.Instance != null) EntityDetailViewer.Instance.HideDetail();
 
-                ResetInput();
+                    if (!HandCardControllManager.instance.isFolded)
+                    {
+                        HandCardControllManager.instance.ToggleHandFold();
+                    }
+
+                    ResetInput();
+                    return;
+                }
             }
         }
-        // [호버링 감지] - 클릭하지 않고 마우스만 움직일 때 (상대 턴에도 항상 동작)
-        else
+        else // 호버링 감지
         {
-            // [연동 완료] HandInteractionManager에게 현재 마우스 위치를 던져줌
-            if (HandInteractionManager.instance != null && !isFold)
+            if (HandCardControllManager.instance != null && !isFold)
             {
-                HandInteractionManager.instance.ProcessHover(Input.mousePosition);
+                HandCardControllManager.instance.ProcessHover(Input.mousePosition);
             }
         }
 
-        // 우클릭시 상세정보 창 띄우기
+        // 우클릭 상세정보 창 띄우기 (3D 기반 유지)
         if (Input.GetMouseButtonDown(1))
         {
             Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
-
-            // 필드 하수인을 우클릭했는지 검사
-            if (Physics.Raycast(ray, out RaycastHit fieldHit, 100f, minionEntityLayer))
+            if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
             {
-                GameCardDisplay targetCard = fieldHit.collider.GetComponent<GameCardDisplay>();
+                GameCardDisplay targetCard = minionHit.collider.GetComponentInParent<GameCardDisplay>();
                 if (targetCard != null && EntityDetailViewer.Instance != null)
                 {
                     EntityDetailViewer.Instance.ShowDetail(targetCard);
+                    Debug.Log("상세 정보");
                 }
             }
         }
@@ -222,7 +237,9 @@ public class GameInputManager : MonoBehaviour
 
                 // [연동 완료] EntityAttackManager에게 공격 조준 시작 명령
                 if (EntityAttackManager.Instance != null)
+                {
                     EntityAttackManager.Instance.StartAttackDrag(_selectedFieldEntity);
+                }
             }
         }
     }

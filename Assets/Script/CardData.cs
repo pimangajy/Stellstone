@@ -21,12 +21,94 @@ public class EffectInstance
     public EffectInstance elseEffect;
 }
 
-public enum ClassType { 강지, 유니, 후야 }
-public enum CardType { 하수인, 주문, 멤버, 무기 }
-public enum MinionTribe { 없음, 강도단, 아르냥, 바쿠, 멤버 }
-public enum Rarity { 일반, 희귀, 영웅, 전설 }
+public enum CardClass
+{
+    Gangzi,
+    Yuni,
+    Huya
+}
+public enum CardType
+{
+    UNKNOWN = 0,
+    하수인,
+    주문,
+    멤버,
+    READER
+}
+
+public enum CardTribe
+{
+    무소속,
+    강도단,
+    아르냥,
+    바쿠,
+    멤버
+}
+
+public enum CardRarity
+{
+    common,
+    rare,
+    epic,
+    legendary
+
+}
 public enum Expansion { 기본 }
-public enum TargetRule { None, Target_Enemy, Target_Friend, All }
+
+public enum CardKeywords
+{
+    Default = 0,
+    Charge = 1,       // 돌진
+    Rush = 2,         // 속공
+    Taunt = 3,        // 도발
+    DivineShield = 4, // 천보
+    Poisonous = 5,    // 독성
+    Stealth = 6,      // 은신
+    Lifesteal = 7,    // 생흡
+    Windfury = 8      // 질풍
+}
+
+public enum TargetRule
+{
+    None,
+
+    // --- 단일 지정 (플레이어가 직접 클릭해야 함) ---
+    Target_All,                 // 모든 캐릭터 중 하나 지정 
+    Target_Minion,              // 모든 하수인 중 하나 지정
+    Target_Enemy_All,           // 적 캐릭터 중 하나 지정
+    Target_Enemy_Minion,        // 적 하수인 중 하나 지정
+    Target_Enemy_Leader,        // 적 영웅(명치) 지정 
+    Target_Friend_All,          // 아군 캐릭터 중 하나 지정
+    Target_Friend_Minion,       // 아군 하수인 중 하나 지정
+    Target_Friend_Leader,       // 아군 영웅 지정 
+
+    // --- 광역 / 자동 (클릭 불필요, 범위 지정) ---
+    All_Characters,             // 모든 캐릭터 
+    All_Minions,                // 모든 하수인
+    All_Enemies,                // 모든 적
+    All_Enemy_Minions,          // 모든 적 하수인
+    All_Friends,                // 모든 아군
+    All_Friendly_Minions,       // 모든 아군 하수인
+
+    Random,                     // 랜덤
+
+    Self                        // 자기 자신
+}
+
+public enum CardCondition
+{
+    NONE,
+    TRIBE,
+    HAS_KEYWORD,
+    CARD_ID,
+    CARD_TYPE,
+    COST_LESS,
+    COST_MORE,
+    ATTACK_MORE,
+    ATTACK_LESS,
+    HEALTH_MORE,
+    HEALTH_LESS
+}
 
 [CreateAssetMenu(fileName = "New Card", menuName = "Card Game/Card Data")]
 public class CardData : ScriptableObject
@@ -36,15 +118,15 @@ public class CardData : ScriptableObject
     public string cardName;     // CSV: name
 
     [Header("2. 게임 로직 (Stats)")]
-    public CardType cardType;   // CSV: type (하수인, 주문 등)
-    public ClassType member;       // CSV 파일명이나 분류 (강지, 유니 등)
-    public Rarity rarity;       // CSV: rarity
+    public CardClass cardClass;   // CSV: type (하수인, 주문 등)
+    public CardType cardType;       // CSV 파일명이나 분류 (강지, 유니 등)
+    public CardRarity rarity;       // CSV: rarity
     public Expansion expansion; // CSV: expansion
 
     public int manaCost;        // CSV: cost
     public int attack;          // CSV: attack
     public int health;          // CSV: health
-    public MinionTribe minionTribe; // CSV: tribe
+    public CardTribe minionTribe; // CSV: tribe
 
     [TextArea(3, 10)]
     public string description;  // CSV: description

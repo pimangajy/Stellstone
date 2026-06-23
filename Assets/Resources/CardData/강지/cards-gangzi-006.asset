@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-006
   cardName: "\uD5C8\uC220\uD55C \uAC15\uB3C4\uB2E8"
+  cardClass: 0
   cardType: 0
-  member: 0
   rarity: 0
   expansion: 0
   manaCost: 2
@@ -36,7 +36,7 @@ MonoBehaviour:
     count: 0
     elseEffect:
       rid: -2
-  targetRule: 0
+  targetRule: 16
   animationFrames:
   - {fileID: 21300000, guid: 2fef6c9e254d58d43873f0a769fc54bb, type: 3}
   cardDissolveEffect: {fileID: 11400000, guid: f2fa66e4d64d4ac4182ff47d83821e4f, type: 2}

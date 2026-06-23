@@ -25,6 +25,9 @@ public class DeckData
     // 실제 카드 객체 전체를 저장하면 용량이 너무 커지므로 ID만 저장합니다.
     public List<string> cardIds;
 
+    public List<string> sideDeckCardIds = new List<string>(); // 사이드 덱 카드 (5장)
+    public List<string> sideDeckFirstTurnCardIds; // 선공 시 사용할 사이드 덱 카드 (3장)
+
     // 기본 생성자: new DeckData() 할 때 호출됨
     public DeckData()
     {
@@ -33,6 +36,8 @@ public class DeckData
         deckName = "";
         deckClass = "";
         cardIds = new List<string>();
+        sideDeckCardIds = new List<string>();
+        sideDeckFirstTurnCardIds = new List<string>();
     }
 
     // 편의용 생성자: 덱을 만들 때 값을 바로 넣으면서 생성할 수 있게 해줍니다.
@@ -42,5 +47,7 @@ public class DeckData
         deckName = name;
         deckClass = className;
         cardIds = new List<string>(); // 카드는 처음에 없으니까 빈 리스트
+        sideDeckCardIds = new List<string>();
+        sideDeckFirstTurnCardIds = new List<string>();
     }
 }

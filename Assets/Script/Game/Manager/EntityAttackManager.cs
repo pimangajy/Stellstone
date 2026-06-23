@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -15,6 +16,8 @@ public class EntityAttackManager : MonoBehaviour
     // --- 상태 변수 ---
     private GameCardDisplay _currentAttacker;   // 공격하는 내 하수인
     private GameCardDisplay _currentTargetInfo; // 조준 당하고 있는 적 하수인
+    // 드래그 중 하이라이트가 켜진 타겟들을 저장해둘 리스트
+    private List<GameCardDisplay> _highlightedTargets = new List<GameCardDisplay>();
 
     private Camera _mainCamera;
 
@@ -41,6 +44,28 @@ public class EntityAttackManager : MonoBehaviour
 
         // 2. [연출] 공격자(내 카드) 공중 부양!
         _currentAttacker.SetFloatingState(true);
+
+        // 3. [추가] 타겟팅 시작 즉시 모든 유효한 대상 하이라이트 켜기
+        HighlightAllValidTargets();
+    }
+
+    // 필드의 모든 카드를 확인하여 타겟팅 가능한 대상만 하이라이트 표시
+    private void HighlightAllValidTargets()
+    {
+        _highlightedTargets.Clear();
+
+        // 필드 위의 모든 GameCardDisplay 오브젝트를 찾습니다.
+        List<GameCardDisplay> allCards = new List<GameCardDisplay>(GameEntityManager.Instance._spawnedEntities.Values);
+
+        foreach (var targetCard in allCards)
+        {
+            // IsValidAttackTarget 검증을 통과한 유효한 적(타겟)인 경우
+            if (CardTargetingManager.Instance.IsValidAttackTarget(_currentAttacker, targetCard))
+            {
+                targetCard.SetGlowState(true);          // 하이라이트 켜기
+                _highlightedTargets.Add(targetCard);    // 초기화 시 끄기 위해 리스트에 보관
+            }
+        }
     }
 
     // --- 로직: 드래그 중 타겟 갱신 (GameInputManager에서 매 프레임 호출) ---
@@ -55,42 +80,30 @@ public class EntityAttackManager : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
         {
             GameCardDisplay tempCard = hit.collider.GetComponent<GameCardDisplay>();
-            if (IsValidTarget(tempCard))
+            if (CardTargetingManager.Instance.IsValidAttackTarget(_currentAttacker, tempCard))
             {
                 hitCard = tempCard;
             }
         }
 
-        // 대상이 바뀌었는지 체크
-        if (_currentTargetInfo != hitCard)
-        {
-            // 이전 타겟: 빛 끄기
-            if (_currentTargetInfo != null)
-            {
-                _currentTargetInfo.SetGlowState(false);
-            }
-
-            // 새 타겟: 빛 켜기
-            if (hitCard != null)
-            {
-                hitCard.SetGlowState(true);
-            }
-
-            _currentTargetInfo = hitCard;
-        }
+        _currentTargetInfo = hitCard;
     }
 
     // --- 로직: 공격 확정 (GameInputManager에서 호출) ---
     public void TryCompleteAttack()
     {
         // 마지막으로 타겟 확인
-        if (_currentTargetInfo != null && IsValidTarget(_currentTargetInfo))
+        if (_currentTargetInfo != null && CardTargetingManager.Instance.IsValidAttackTarget(_currentAttacker, _currentTargetInfo))
         {
             int attackerId = _currentAttacker.EntityId;
             int targetId = _currentTargetInfo.EntityId;
 
             // 테스트
-            GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
+            if(GameEntityManager.Instance.test)
+            {
+                GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
+                return;
+            }
             // 실제 전투
             GameEntityManager.Instance.PerformAttack(attackerId, targetId);
 
@@ -106,12 +119,16 @@ public class EntityAttackManager : MonoBehaviour
     // --- 로직: 상태 초기화 (원상복구) ---
     public void ResetState()
     {
-        // 1. 타겟 빛 끄기
-        if (_currentTargetInfo != null)
+        // 1. [수정] 켜져있던 모든 타겟의 빛 끄기
+        foreach (var target in _highlightedTargets)
         {
-            _currentTargetInfo.SetGlowState(false);
-            _currentTargetInfo = null;
+            if (target != null)
+            {
+                target.SetGlowState(false);
+            }
         }
+        _highlightedTargets.Clear();
+        _currentTargetInfo = null;
 
         // 2. 공격자(내 카드) 착륙시키기
         if (_currentAttacker != null)

@@ -30,7 +30,7 @@ public class DeckBuilder : MonoBehaviour
 
     // 1. 메인 직업 (예: 마법사를 선택하면 마법사 카드 + 중립 카드만 보여야 함)
     // '?'는 값이 없을 수도 있다(null 가능)는 뜻입니다.
-    private ClassType? currentClassFilter = null;
+    private CardClass? currentClassFilter = null;
 
     // 2. 상세 필터 (전설 카드만 보기, 짝수 비용만 보기 등)
     private FilterManager.FilterSettings currentDetailFilters;
@@ -40,8 +40,6 @@ public class DeckBuilder : MonoBehaviour
 
     // 4. 검색어 (검색창에 입력한 글자)
     private string currentSearchText = "";
-
-    #region Unity Lifecycle (유니티 생명주기)
 
     void Awake()
     {
@@ -74,8 +72,13 @@ public class DeckBuilder : MonoBehaviour
     // 게임 시작 시 딱 한 번 실행됩니다.
     void Start()
     {
+        // 서버(Firebase)에서 모든 카드 정보를 완전히 가져올 때까지 대기합니다(await).
+        // Firebase에 저장한 데이터를 불러와 저장하는 방식
+        // await CardDatabaseManager.instance.GetAllCardsAsync();
+
         // 리소스 매니저에게 "모든 카드 데이터 불러와!"라고 시킵니다.
-        ResourceManager.Instance.LoadAllCards();
+        // 클라이언트에 저장한 데이터를 저장하는 방식
+        // ResourceManager.Instance.LoadAllCards();
         // 불러온 데이터를 내 변수에 저장합니다.
         allCardsList = ResourceManager.Instance.GetAllCards();
 
@@ -86,7 +89,6 @@ public class DeckBuilder : MonoBehaviour
         }
     }
 
-    #endregion
 
     /// <summary>
     /// [핵심 기능] 현재 설정된 모든 조건(직업, 비용, 검색어 등)을 종합해서
@@ -106,16 +108,16 @@ public class DeckBuilder : MonoBehaviour
             // "내 직업이거나" 또는 "중립(강지)" 카드만 남깁니다.
             // .Where는 조건에 맞는 녀석만 통과시키는 거름망 역할을 합니다.
             filteredResult = filteredResult.Where(card =>
-                card.member == currentClassFilter.Value ||
-                card.member == ClassType.강지);
+                card.cardClass == currentClassFilter.Value ||
+                card.cardClass == CardClass.Gangzi);
         }
 
         // 2. 상세 필터 적용 (필터 매니저 설정값)
 
         // 직업 전용 필터가 있다면 적용
-        if (currentDetailFilters.Member.HasValue)
+        if (currentDetailFilters.cardClass.HasValue)
         {
-            filteredResult = filteredResult.Where(card => card.member == currentDetailFilters.Member.Value);
+            filteredResult = filteredResult.Where(card => card.cardClass == currentDetailFilters.cardClass.Value);
         }
 
         // 카드 종류(하수인/주문) 필터가 있다면 적용
@@ -194,21 +196,21 @@ public class DeckBuilder : MonoBehaviour
         currentSearchText = "";
 
         // 4. 문자열로 된 직업 이름(예: "Mage")을 컴퓨터가 이해하는 Enum(ClassType.Mage)으로 바꿉니다.
-        if (Enum.TryParse(className, out ClassType classEnum))
+        if (Enum.TryParse(className, out CardClass classEnum))
         {
             currentClassFilter = classEnum;
         }
         else
         {
             // 변환 실패하면 기본값(강지/중립)으로 설정
-            currentClassFilter = ClassType.강지;
+            currentClassFilter = CardClass.Gangzi;
         }
 
         // 5. 필터 UI(책갈피 탭)도 해당 직업만 보이게 갱신합니다.
         if (filterManager != null)
         {
             filterManager.ResetFilterUI();
-            var availableMembers = new List<string> { className, ClassType.강지.ToString() };
+            var availableMembers = new List<string> { className, CardClass.Gangzi.ToString() };
             filterManager.UpdateMemberToggles(availableMembers);
         }
 
@@ -222,15 +224,23 @@ public class DeckBuilder : MonoBehaviour
     public void LoadDeckForEditing(DeckData deckToLoad)
     {
         // 덱에는 카드 ID(문자열)만 들어있으므로, 실제 카드 데이터(객체)로 바꿔주는 작업입니다.
-        List<CardData> cardsForDeck = new List<CardData>();
+        // 메인덱
+        List<CardData> mainCardsForDeck = new List<CardData>();
         foreach (string cardId in deckToLoad.cardIds)
         {
             CardData card = ResourceManager.Instance.GetCardData(cardId);
-            if (card != null) cardsForDeck.Add(card);
+            if (card != null) mainCardsForDeck.Add(card);
+        }
+        // 사이드 덱
+        List<CardData> sideCardsForDeck = new List<CardData>();
+        foreach (string cardId in deckToLoad.sideDeckCardIds)
+        {
+            CardData card = ResourceManager.Instance.GetCardData(cardId);
+            if (card != null) sideCardsForDeck.Add(card);
         }
 
         // 덱 매니저에게 "이 덱 내용으로 채워넣어"라고 시킵니다.
-        DeckManager.instance.LoadDeck(deckToLoad, cardsForDeck);
+        DeckManager.instance.LoadDeck(deckToLoad, mainCardsForDeck, sideCardsForDeck);
 
         // 덱의 직업에 맞춰서 필터를 설정합니다.
         SetClassFilterForEditing(deckToLoad.deckClass);
@@ -243,7 +253,7 @@ public class DeckBuilder : MonoBehaviour
         currentCostFilter = -1;
         currentSearchText = "";
 
-        if (Enum.TryParse(className, out ClassType classEnum))
+        if (Enum.TryParse(className, out CardClass classEnum))
         {
             currentClassFilter = classEnum;
         }
@@ -255,7 +265,7 @@ public class DeckBuilder : MonoBehaviour
         if (filterManager != null)
         {
             filterManager.ResetFilterUI();
-            var availableMembers = new List<string> { className, ClassType.강지.ToString() };
+            var availableMembers = new List<string> { className, CardClass.Gangzi.ToString() };
             filterManager.UpdateMemberToggles(availableMembers);
         }
         UpdateCardDisplay();

@@ -14,7 +14,7 @@ public class BattleManager : MonoBehaviour
     [Header("Game State (게임 상태)")]
     public string myUid;               // 내 계정의 고유 ID
     public bool isPlayerTurn = false;  // 현재 내 턴 여부
-    public string currentPhase;        // 현재 페이즈
+    public GamePhase currentPhase;        // 현재 페이즈
     public float remainingTime;        // 서버 동기화 기반 남은 시간
     private long _turnEndTimeTimestamp; // 서버에서 보낸 종료 시점
 
@@ -133,10 +133,10 @@ public class BattleManager : MonoBehaviour
         {
             switch (info.phase)
             {
-                case "Standby":
+                case GamePhase.STANDBY:
                     isPlayerTurn = (info.TurnPlayerUid == myUid);
                     break;
-                case "Draw":
+                case GamePhase.DRAW:
                     CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
                     break;
             }
@@ -144,10 +144,10 @@ public class BattleManager : MonoBehaviour
         {
             switch (info.phase)
             {
-                case "Standby":
+                case GamePhase.STANDBY:
                     isPlayerTurn = false;
                     break;
-                case "Draw":
+                case GamePhase.DRAW:
                     OpponentHandVisualizer.Instance.DrawCard();
                     break;
             }
@@ -163,7 +163,6 @@ public class BattleManager : MonoBehaviour
 
         OnStateChanged?.Invoke();
         RefreshTurnUI();
-        Debug.Log($"[BattleManager] 페이즈 시작 {info.TurnPlayerUid}의 턴");
     }
 
     // 마나 업데이트마다 실행

@@ -37,8 +37,8 @@ MonoBehaviour:
     conditionValue: 
     count: 0
     elseEffect:
-      rid: 5804458665830776893
-  targetRule: 0
+      rid: 2117261678731591747
+  targetRule: 4
   animationFrames:
   - {fileID: 21300000, guid: eb4250dec36686747a508df4c851ae08, type: 3}
   cardDissolveEffect: {fileID: 11400000, guid: f2fa66e4d64d4ac4182ff47d83821e4f, type: 2}
@@ -54,7 +54,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 5804458665830776893
+    - rid: 2117261678731591747
       type: {class: EffectInstance, ns: , asm: Assembly-CSharp}
       data:
         trigger: ON_PLAY

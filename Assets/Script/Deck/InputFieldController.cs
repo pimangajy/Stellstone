@@ -40,7 +40,7 @@ public class InputFieldController : MonoBehaviour
         else
         {
             // 덱 매니저에게 이름 변경 요청
-            infoText.text = inputText;
+            // infoText.text = inputText;
             DeckManager.instance.UpdateDeckname(inputText);
         }
 
@@ -56,7 +56,7 @@ public class InputFieldController : MonoBehaviour
         }
         else
         {
-            infoText.text = text;
+            // infoText.text = text;
             DeckManager.instance.UpdateDeckname(text);
             UIManager.Instance.ClosePopup(); // 팝업 닫기
         }

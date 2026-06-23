@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-yuni-004
   cardName: "\uAC70\uB9CC\uD574\uC9C0\uAE30"
+  cardClass: 0
   cardType: 1
-  member: 1
   rarity: 0
   expansion: 0
   manaCost: 2
@@ -37,7 +37,7 @@ MonoBehaviour:
     count: 0
     elseEffect:
       rid: -2
-  targetRule: 0
+  targetRule: 16
   animationFrames:
   - {fileID: 21300000, guid: 2e9c2c16a882d17478cdb9d814c1aacc, type: 3}
   cardDissolveEffect: {fileID: 11400000, guid: f2fa66e4d64d4ac4182ff47d83821e4f, type: 2}

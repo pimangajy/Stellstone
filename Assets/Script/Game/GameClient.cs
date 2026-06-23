@@ -43,6 +43,8 @@ public class GameClient : MonoBehaviour
 
     // ★ [최적화 완료] 문자열(string) 대신, 파싱이 끝난 '객체(BaseGameAction)'를 담습니다.
     private ConcurrentQueue<BaseGameAction> _receivedActions = new ConcurrentQueue<BaseGameAction>();
+    // [디버그]
+    private ConcurrentQueue<BaseDebugAction> _debugdActions = new ConcurrentQueue<BaseDebugAction>();
 
     [Header("서버 주소")]
     [SerializeField] private string serverIp = "175.125.250.226";
@@ -88,6 +90,12 @@ public class GameClient : MonoBehaviour
         while (_receivedActions.TryDequeue(out BaseGameAction action))
         {
             HandleServerAction(action);
+        }
+
+        // [디버그]
+        while (_debugdActions.TryDequeue(out BaseDebugAction action))
+        {
+            HandleDebugAction(action);
         }
     }
 
@@ -177,29 +185,53 @@ public class GameClient : MonoBehaviour
                 // ★ [최적화 완료] 무거운 JSON 파싱 작업을 메인 화면(Update)이 아닌 백그라운드 스레드에서 처리합니다.
                 try
                 {
-                    var baseAction = JsonConvert.DeserializeObject<BaseGameAction>(receivedJson);
-                    BaseGameAction parsedAction = null;
-
-                    switch (baseAction.action)
+                    // 1. JSON 문자열에 "debugAction" 키가 있다면 디버그용 액션으로 처리합니다.
+                    if (receivedJson.Contains("\"debugAction\""))
                     {
-                        case ActionTypes.ActionList: parsedAction = JsonConvert.DeserializeObject<S_ActionResolution>(receivedJson); break;
-                        case ActionTypes.MulliganInfo: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
-                        case ActionTypes.EnemyMulligunInfo: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
-                        case ActionTypes.GameReady: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
-                        case ActionTypes.PhaseStart: parsedAction = JsonConvert.DeserializeObject<S_PhaseStart>(receivedJson); break;
-                        case ActionTypes.UpdateMana: parsedAction = JsonConvert.DeserializeObject<S_UpdateMana>(receivedJson); break;
-                        case ActionTypes.UpdateEntities: parsedAction = JsonConvert.DeserializeObject<S_UpdateEntities>(receivedJson); break;
-                        case ActionTypes.OpponentPlayCard: parsedAction = JsonConvert.DeserializeObject<S_OpponentPlayCard>(receivedJson); break;
-                        case ActionTypes.PlayCardSuccess: parsedAction = JsonConvert.DeserializeObject<S_PlayCardSuccess>(receivedJson); break;
-                        case ActionTypes.PlayCardFail: parsedAction = JsonConvert.DeserializeObject<S_PlayCardFail>(receivedJson); break;
-                        case ActionTypes.GameOver: parsedAction = JsonConvert.DeserializeObject<S_GameOver>(receivedJson); break;
-                        case ActionTypes.Error: parsedAction = JsonConvert.DeserializeObject<S_Error>(receivedJson); break;
+                        var baseDebugAction = JsonConvert.DeserializeObject<BaseDebugAction>(receivedJson);
+                        BaseDebugAction parsedDebugAction = null;
+
+                        switch (baseDebugAction.debugAction)
+                        {
+                            case DebugAction.ResponseDeckInfo:
+                                parsedDebugAction = JsonConvert.DeserializeObject<S_DebugResponseDeckInfo>(receivedJson);
+                                break;
+                                // 필요에 따라 다른 DebugAction 케이스를 이곳에 추가하세요.
+                        }
+
+                        if (parsedDebugAction != null)
+                        {
+                            // 새로 만드신 디버그 전용 큐에 넣습니다.
+                            _debugdActions.Enqueue(parsedDebugAction);
+                        }
                     }
-
-                    if (parsedAction != null)
+                    // 2. "action" 키가 있다면 기존의 일반 게임 액션으로 처리합니다.
+                    else if (receivedJson.Contains("\"action\""))
                     {
-                        // 파싱이 끝난 깨끗한 객체를 큐에 넣습니다.
-                        _receivedActions.Enqueue(parsedAction);
+                        var baseAction = JsonConvert.DeserializeObject<BaseGameAction>(receivedJson);
+                        BaseGameAction parsedAction = null;
+
+                        switch (baseAction.action)
+                        {
+                            case GameActionType.ACTION_RESOLUTION: parsedAction = JsonConvert.DeserializeObject<S_ActionResolution>(receivedJson); break;
+                            case GameActionType.MULLIGAN_INFO: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
+                            case GameActionType.OPPONENT_MULLIGAN_STATUS: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
+                            case GameActionType.GAME_READY: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
+                            case GameActionType.PHASE_START: parsedAction = JsonConvert.DeserializeObject<S_PhaseStart>(receivedJson); break;
+                            case GameActionType.UPDATE_MANA: parsedAction = JsonConvert.DeserializeObject<S_UpdateMana>(receivedJson); break;
+                            case GameActionType.UPDATE_ENTITIES: parsedAction = JsonConvert.DeserializeObject<S_UpdateEntities>(receivedJson); break;
+                            case GameActionType.OPPONENT_PLAY_CARD: parsedAction = JsonConvert.DeserializeObject<S_OpponentPlayCard>(receivedJson); break;
+                            case GameActionType.PLAY_CARD_SUCCESS: parsedAction = JsonConvert.DeserializeObject<S_PlayCardSuccess>(receivedJson); break;
+                            case GameActionType.PLAY_CARD_FAIL: parsedAction = JsonConvert.DeserializeObject<S_PlayCardFail>(receivedJson); break;
+                            case GameActionType.GAME_OVER: parsedAction = JsonConvert.DeserializeObject<S_GameOver>(receivedJson); break;
+                            case GameActionType.ERROR: parsedAction = JsonConvert.DeserializeObject<S_Error>(receivedJson); break;
+                        }
+
+                        if (parsedAction != null)
+                        {
+                            // 파싱이 끝난 깨끗한 객체를 기존 게임 액션 큐에 넣습니다.
+                            _receivedActions.Enqueue(parsedAction);
+                        }
                     }
                 }
                 catch (Exception parseEx)
@@ -218,12 +250,24 @@ public class GameClient : MonoBehaviour
         }
     }
 
+    // 디버그 전송
+    public void SendDebugRequest(int userId, int cardId)
+    {
+        C_Attack action = new C_Attack
+        {
+            action = GameActionType.ATTACK,
+            attackerEntityId = userId,
+            defenderEntityId = cardId
+        };
+        SendMessageAsync(action);
+    }
+
     // 카드 플레이
     public void SendPlayCardRequest(string cardInstanceId, int slotIndex, int targetEntityId = 0)
     {
         C_PlayCard action = new C_PlayCard
         {
-            action = ActionTypes.PlayCard,
+            action = GameActionType.PLAY_CARD,
             handCardInstanceId = cardInstanceId,
             position = slotIndex,
             targetEntityId = targetEntityId
@@ -237,7 +281,7 @@ public class GameClient : MonoBehaviour
     {
         C_Attack action = new C_Attack
         {
-            action = ActionTypes.Attack,
+            action = GameActionType.ATTACK,
             attackerEntityId = attackerId,
             defenderEntityId = defenderId
         };
@@ -249,13 +293,31 @@ public class GameClient : MonoBehaviour
     {
         C_EndTurn action = new C_EndTurn
         {
-            action = ActionTypes.EndTurn,
+            action = GameActionType.END_TURN,
         };
         SendMessageAsync(action);
     }
 
     // 서버에 메세지를 보내는 함수
     public async void SendMessageAsync(BaseGameAction actionMessage)
+    {
+        if (_webSocket == null || _webSocket.State != WebSocketState.Open) return;
+
+        try
+        {
+            string jsonMessage = JsonConvert.SerializeObject(actionMessage);
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonMessage);
+
+            await _webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[GameClient] 전송 실패: {e.Message}");
+        }
+    }
+
+    // 서버에 디버그 메세지를 보내는 함수
+    public async void SendDebugMessageAsync(BaseDebugAction actionMessage)
     {
         if (_webSocket == null || _webSocket.State != WebSocketState.Open) return;
 
@@ -279,80 +341,93 @@ public class GameClient : MonoBehaviour
     {
         switch (action.action)
         {
-            case ActionTypes.MulliganInfo:
-                Debug.Log("MULLIGAN_INFO 발생");
+            case GameActionType.MULLIGAN_INFO:
                 OnMulliganInfoReceived((S_MulliganInfo)action);
                 break;
 
-            case ActionTypes.EnemyMulligunInfo:
-                Debug.Log("상대 멀리건 결정");
+            case GameActionType.OPPONENT_MULLIGAN_STATUS:
                 StartCoroutine(OnMulliganInfoReceivedenemy((S_OpponentMulliganStatus)action));
                 break;
 
-            case ActionTypes.GameReady:
-                Debug.Log("GAME_READY 발생");
+            case GameActionType.GAME_READY:
                 var gameReadyInfo = (S_GameReady)action;
                 OnGameReadyEvent?.Invoke(gameReadyInfo);
                 OnGameReady(gameReadyInfo);
                 break;
 
-            case ActionTypes.PhaseStart:
-                Debug.Log("PHASE_START 발생");
+            case GameActionType.PHASE_START:
                 var phaseStartInfo = (S_PhaseStart)action;
                 OnPhaseStartEvent?.Invoke(phaseStartInfo);
                 OnPhaseStart(phaseStartInfo);
                 break;
 
-            case ActionTypes.ActionList:
-                Debug.Log("ActionList 발생");
+            case GameActionType.ACTION_RESOLUTION:
                 var actionInfo = (S_ActionResolution)action;
                 OnActionResolutionEvent?.Invoke(actionInfo);
                 OnActionResolution(actionInfo);
                 break;
 
-            case ActionTypes.UpdateMana:
-                Debug.Log("UPDATE_MANA 발생");
+            case GameActionType.UPDATE_MANA:
                 var updateManaInfo = (S_UpdateMana)action;
                 OnUpdateManaEvent?.Invoke(updateManaInfo);
                 OnUpdateMana(updateManaInfo);
                 break;
 
-            case ActionTypes.UpdateEntities:
-                Debug.Log("UPDATE_ENTITIES 발생");
+            case GameActionType.UPDATE_ENTITIES:
                 var updateEntitiesInfo = (S_UpdateEntities)action;
                 OnUpdateEntitiesEvent?.Invoke(updateEntitiesInfo);
                 break;
 
-            case ActionTypes.OpponentPlayCard:
-                Debug.Log("OPPONENT_PLAY_CARD 발생");
+            case GameActionType.OPPONENT_PLAY_CARD:
                 var opponentPlayCardInfo = (S_OpponentPlayCard)action;
                 OnOpponentPlayCardEvent?.Invoke(opponentPlayCardInfo);
                 OnOpponentPlayCard(opponentPlayCardInfo);
                 break;
 
-            case ActionTypes.PlayCardSuccess:
-                Debug.Log("PlayCardSuccess 발생");
+            case GameActionType.PLAY_CARD_SUCCESS:
                 var successInfo = (S_PlayCardSuccess)action;
                 OnPlayCardSuccessEvent?.Invoke(successInfo.serverInstanceId);
                 break;
 
-            case ActionTypes.PlayCardFail:
-                Debug.Log("PLAY_CARD_FAIL 발생");
+            case GameActionType.PLAY_CARD_FAIL:
                 var playCardFailInfo = (S_PlayCardFail)action;
                 OnPlayCardFailedEvent?.Invoke(playCardFailInfo.reason);
                 OnPlayCardFail(playCardFailInfo);
                 break;
 
-            case ActionTypes.GameOver:
-                Debug.Log("GAME_OVER 발생");
+            case GameActionType.GAME_OVER:
                 OnGameOver((S_GameOver)action);
                 break;
 
-            case ActionTypes.Error:
+            case GameActionType.ERROR:
                 Debug.Log("ERROR 발생");
                 var errorInfo = (S_Error)action;
                 OnErrorEvent?.Invoke(errorInfo.message);
                 Debug.LogError($"[GameClient] 서버 오류: {errorInfo.message}");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// [처리하기] 큐에서 꺼낸 완성된 객체를 게임에 반영합니다. (타입 캐스팅만 수행)
+    /// </summary>
+    private void HandleDebugAction(BaseDebugAction action)
+    {
+        switch (action.debugAction)
+        {
+            case DebugAction.ResponseDeckInfo:
+                var gameReadyInfo = (S_DebugResponseDeckInfo)action;
+                ClientDebugAction.Instance.DebugDeckinfo(gameReadyInfo.deckCards);
+                break;
+
+            case DebugAction.SpecificCardDraw:
+                
+                break;
+
+            
+
+            case DebugAction.NONE:
+                Debug.Log("ERROR 발생");
                 break;
         }
     }
@@ -375,10 +450,10 @@ public class GameClient : MonoBehaviour
         StartCoroutine(SyncHandWithServer(info.finalHand));
     }
 
-    // 멀리건 받은 카드를 뽄는 함수
+    // 멀리건 받은 카드를 뽑는 함수
     private IEnumerator SyncHandWithServer(List<CardInfo> finalHand)
     {
-        var handManager = HandInteractionManager.instance;
+        var handManager = HandCardControllManager.instance;
         if (handManager == null) yield break;
 
         foreach (var serverCard in finalHand)
@@ -401,20 +476,29 @@ public class GameClient : MonoBehaviour
                 yield return new WaitForSeconds(0.3f);
             }
         }
+
+        // 멀리건 카드를 전부 뽑은 후 isMulliganPhase를 변경하여 손패각도 정상화
+        HandCardControllManager.instance.isMulliganPhase = false;
+        HandCardControllManager.instance.isMulligan = false;
     }
 
     // 상대 멀리건 돌아가는 함수
     private IEnumerator OnMulliganInfoReceivedenemy(S_OpponentMulliganStatus info)
     {
+        Debug.Log($"enamy mulligan : {info.replacedCount}");
+        int m = 0;
+
         foreach (var mulligan in info.replacedIndices)
         {
             OpponentHandVisualizer.Instance.ReturnCardToDeck(mulligan);
+            m++;
             yield return new WaitForSeconds(0.1f);
         }
 
         yield return new WaitForSeconds(1.5f);
 
         OpponentHandVisualizer.Instance.PerformBatchDraw(info.replacedCount);
+        Debug.Log($"mulligan Count : {m} info.replacedCount : {info.replacedCount}");
     }
 
     // 상대 멀리건을 뽄는 함수
@@ -429,7 +513,7 @@ public class GameClient : MonoBehaviour
 
     private void OnPhaseStart(S_PhaseStart info)
     {
-        Debug.Log($"[GameClient] 페이즈 시작: {info.phase}");
+
     }
 
     private void OnActionResolution(S_ActionResolution info)
@@ -443,7 +527,7 @@ public class GameClient : MonoBehaviour
         {
             switch(log.eventType)
             {
-                case EventLog.Summon:
+                case GameEventType.SUMMON:
                     if(log.entityData == null)
                     {
                         Debug.Log("EntityData Null!");
@@ -453,8 +537,8 @@ public class GameClient : MonoBehaviour
                     HandInteractionManager.instance.AlignHand();
                     break;
 
-                case EventLog.Attack:
-                    Debug.Log("Card Attack!");
+                case GameEventType.ATTACK:
+                    Debug.Log($"{info.eventLog[0].sourceEntityId}이가 {info.eventLog[0].targetEntityId}에게 Card Attack!");
                     break;
             }
 
@@ -464,7 +548,7 @@ public class GameClient : MonoBehaviour
 
     private void OnUpdateMana(S_UpdateMana info)
     {
-        Debug.Log($"[GameClient] 마나 갱신: {info.currentMana}/{info.maxMana}");
+
     }
 
     private void OnOpponentPlayCard(S_OpponentPlayCard info)
@@ -474,12 +558,12 @@ public class GameClient : MonoBehaviour
 
     private void OnPlayCardFail(S_PlayCardFail info)
     {
-        Debug.LogWarning($"[GameClient] 카드 내기 실패: {info.reason}");
+
     }
 
     private void OnGameOver(S_GameOver info)
     {
-        Debug.Log($"[GameClient] 게임 종료! 승자: {info.winnerUid}");
+
         _cts.Cancel();
     }
 }

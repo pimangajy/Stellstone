@@ -53,7 +53,7 @@ public class EntityDetailViewer : MonoBehaviour
         // 3. 종족 텍스트 설정 (없음이 아닐 때만 표시)
         if (tribeText != null)
         {
-            if (data.minionTribe != MinionTribe.없음)
+            if (data.minionTribe != CardTribe.무소속)
                 tribeText.text = $"종족: {data.minionTribe}";
             else
                 tribeText.text = ""; // 종족 없음

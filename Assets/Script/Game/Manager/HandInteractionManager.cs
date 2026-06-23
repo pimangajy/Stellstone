@@ -39,6 +39,10 @@ public class HandInteractionManager : MonoBehaviour
     public float hoverAnimDuration = 0.2f;
     public float maxHoverActivationDistance = 2.0f; // 마우스와 얼마나 가까워야 반응할지
 
+    [Header("잔상 카드 설정")]
+    public GameObject phantomCardPrefab; // 잔상으로 사용할 투명한 프리팹 (선택사항)
+    private GameObject _activePhantomCard; // 현재 생성된 잔상 카드
+
     // --- 내부 변수 ---
     public List<GameObject> handCards = new List<GameObject>(); // 현재 내 손에 있는 카드들
     private Dictionary<GameObject, (Vector3 position, Quaternion rotation)> _cardLayoutTargets = new Dictionary<GameObject, (Vector3, Quaternion)>();
@@ -152,6 +156,7 @@ public class HandInteractionManager : MonoBehaviour
 
         if (isHandCard || isSelectedCard)
         {
+            RemoveCardFromHandListOnly(clickedCard);
             mulliganManager.OnCardClicked(clickedCard);
         }
     }
@@ -482,5 +487,37 @@ private void RemoveLastCardFromHand()
             card.transform.DOLocalRotateQuaternion(targetLocalRotation, duration).SetEase(easeType);
             card.transform.DOScale(_originalCardScale, duration).SetEase(easeType);
         }
+    }
+
+    /// <summary>
+    /// 드래그 시작 시 호출하여 잔상 카드를 생성합니다.
+    /// </summary>
+    public void CreatePhantomCard(GameObject originalCard)
+    {
+        if (phantomCardPrefab == null) return;
+
+        // 1. 원래 카드의 위치 인덱스 찾기
+        int index = handCards.IndexOf(originalCard);
+        if (index == -1) return;
+
+        // 2. 잔상 프리팹 생성 (부모를 handAnchor로 설정)
+        _activePhantomCard = Instantiate(phantomCardPrefab);
+        _activePhantomCard.transform.localPosition = originalCard.transform.position;
+        _activePhantomCard.transform.localRotation = originalCard.transform.rotation * Quaternion.Euler(90f, 0f, 0f);
+
+        // 3. 잔상 카드가 마우스 레이캐스트에 걸리지 않도록 콜라이더가 있다면 끕니다.
+        if (_activePhantomCard.TryGetComponent<Collider>(out var col)) col.enabled = false;
+    }
+
+    /// <summary>
+    /// 드래그 종료 시 호출하여 잔상 카드를 제거하고 실제 카드를 다시 리스트에 넣습니다.
+    /// </summary>
+    public void RemovePhantomCard(GameObject originalCard)
+    {
+        if (_activePhantomCard == null) return;
+
+        // 3. 잔상 오브젝트 제거
+        Destroy(_activePhantomCard);
+        _activePhantomCard = null;
     }
 }

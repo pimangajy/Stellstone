@@ -22,7 +22,7 @@ public class DeckListItemDisplay : MonoBehaviour, ICardDataHolder
         cardCostText.text = data.manaCost.ToString();
 
         // 전설 카드는 보통 덱에 1장만 넣을 수 있어서 별표(*)로 표시하기도 합니다.
-        if (data.rarity == Rarity.전설)
+        if (data.rarity == CardRarity.legendary)
         {
             cardCountText.text = "*";
         }

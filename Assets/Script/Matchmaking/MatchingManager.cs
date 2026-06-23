@@ -9,6 +9,7 @@ using System.Text;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
 /// <summary>
 /// 메인 로비/매치메이킹 씬의 UI와 상태를 관리합니다.
@@ -33,8 +34,10 @@ public class MatchingManager : MonoBehaviour
 
     // (추가) 로비의 덱 카드 목록 UI
     [Header("덱 카드 목록 UI (로비)")]
-    [Tooltip("선택된 덱의 카드 목록이 표시될 스크롤 뷰의 Content")]
+    [Tooltip("선택된 메인 덱의 카드 목록이 표시될 스크롤 뷰의 Content")]
     [SerializeField] private Transform deckCardListParent;
+    [Tooltip("선택된 사이드 덱의 카드 목록이 표시될 스크롤 뷰의 Content")]
+    [SerializeField] private Transform  sideDeckCardListParent;
     [Tooltip("카드 목록에 사용될 프리팹 (LobbyDeckCardDisplay.cs 스크립트 포함)")]
     [SerializeField] private GameObject deckCardPrefab;
 
@@ -248,8 +251,9 @@ public class MatchingManager : MonoBehaviour
     private void UpdateDeckCardList(DeckData deck)
     {
         // 1. 기존 UI 삭제
-        if (deckCardListParent == null || deckCardPrefab == null) return;
+        if (deckCardListParent == null || sideDeckCardListParent == null || deckCardPrefab == null) return;
         foreach (Transform child in deckCardListParent) Destroy(child.gameObject);
+        foreach (Transform child in sideDeckCardListParent) Destroy(child.gameObject);
 
         // 2. 덱 검사
         if (deck == null || deck.cardIds == null || deck.cardIds.Count == 0) return;
@@ -277,7 +281,23 @@ public class MatchingManager : MonoBehaviour
             }
         }
 
-        // 4. 정렬 및 그룹화 (CardData 기준)
+        // 4. 덱의 카드 ID들을 순회하며 실제 CardData(ScriptableObject) 찾기 사이드 덱 전용
+        List<CardData> sideCardsInDeck = new List<CardData>();
+        foreach (string cardId in deck.sideDeckCardIds)
+        {
+            // ResourceManager에서 ID로 카드 데이터를 '즉시' 가져옵니다.
+            CardData card = ResourceManager.Instance.GetCardData(cardId);
+            if (card != null)
+            {
+                sideCardsInDeck.Add(card);
+            }
+            else
+            {
+                Debug.LogWarning($"ResourceManager에서 ID가 '{cardId}'인 카드를 찾을 수 없습니다.");
+            }
+        }
+
+        // 5. 메인 덱 정렬 및 그룹화 (CardData 기준)
         var groupedAndSortedDeck = cardsInDeck
             .GroupBy(card => card.cardID) // ID 기준 그룹화
             .Select(group => new
@@ -288,7 +308,12 @@ public class MatchingManager : MonoBehaviour
             .OrderBy(item => item.Card.manaCost) // cost -> manaCost
             .ThenBy(item => item.Card.cardName); // name -> cardName
 
-        // 5. UI 생성
+        // 6. 사이드 덱 정렬 및 그룹화 (CardData 기준)
+        var sideGroupedAndSortedDeck = sideCardsInDeck
+            .OrderBy(card => card.manaCost) // cost -> manaCost
+            .ThenBy(card => card.cardName); // name -> cardName
+
+        // 7. 메인 덱 리스트 UI 생성
         foreach (var item in groupedAndSortedDeck)
         {
             GameObject newDeckCardUI = Instantiate(deckCardPrefab, deckCardListParent);
@@ -297,7 +322,20 @@ public class MatchingManager : MonoBehaviour
             if (itemDisplay != null)
             {
                 // (수정) CardData 객체를 그대로 전달
-                itemDisplay.Setup(item.Card, item.Count);
+                itemDisplay.Setup(item.Card, 1);
+            }
+        }
+
+        // 8. 사이드 덱 리스트 UI 생성
+        foreach (var item in sideGroupedAndSortedDeck)
+        {
+            GameObject newDeckCardUI = Instantiate(deckCardPrefab, sideDeckCardListParent);
+            LobbyDeckCardDisplay itemDisplay = newDeckCardUI.GetComponent<LobbyDeckCardDisplay>();
+
+            if (itemDisplay != null)
+            {
+                // (수정) CardData 객체를 그대로 전달
+                itemDisplay.Setup(item, 1);
             }
         }
     }

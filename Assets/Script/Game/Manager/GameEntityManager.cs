@@ -32,7 +32,7 @@ public class GameEntityManager : MonoBehaviour
     private string myUid;
 
     // 소환된 녀석들을 관리하는 명부 (ID로 찾음)
-    private Dictionary<int, GameCardDisplay> _spawnedEntities = new Dictionary<int, GameCardDisplay>();
+    public Dictionary<int, GameCardDisplay> _spawnedEntities = new Dictionary<int, GameCardDisplay>();
 
     void Awake()
     {
@@ -46,6 +46,7 @@ public class GameEntityManager : MonoBehaviour
         if (GameClient.Instance != null)
         {
             myUid = GameClient.Instance.UserUid;
+            test = false;
             // GameClient.Instance.OnEntitiesUpdatedEvent += HandleEntitiesUpdated;
         }
     }
@@ -95,7 +96,6 @@ public class GameEntityManager : MonoBehaviour
 
     public void SpawnCard(EntityData entityData)
     {
-        Debug.Log("소환");
         bool isMine = entityData.ownerUid == myUid;
         StartCoroutine(SpawnEntity(entityData, isMine));
     }
@@ -153,6 +153,8 @@ public class GameEntityManager : MonoBehaviour
             yield return new WaitForSeconds(cardData.spawnEffectData.duration);
             newObj.SetActive(true);
         }
+        else
+            Debug.Log("Card Data Null");
     }
 
     private void UpdateEntity(EntityData entityData)
@@ -199,7 +201,6 @@ public class GameEntityManager : MonoBehaviour
         if (_spawnedEntities.TryGetValue(attackerId, out var attacker) &&
             _spawnedEntities.TryGetValue(targetId, out var target))
         {
-            Debug.Log("필드에 하수인이 없음");
             StartCoroutine(AttackRoutine(attacker, target));
         }
     }

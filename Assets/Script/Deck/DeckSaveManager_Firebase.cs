@@ -257,7 +257,9 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             deckId = updatedDeck.deckId,
             deckName = updatedDeck.deckName,
             deckClass = updatedDeck.deckClass,
-            cardIds = updatedDeck.cardIds
+            cardIds = updatedDeck.cardIds,
+            sideDeckCardIds = updatedDeck.sideDeckCardIds,
+            sideDeckFirstTurnCardIds = updatedDeck.sideDeckFirstTurnCardIds,
         };
 
         string jsonBody = JsonUtility.ToJson(requestBody);
@@ -294,6 +296,8 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         public string deckName;
         public string deckClass;
         public List<string> cardIds;
+        public List<string> sideDeckCardIds;
+        public List<string> sideDeckFirstTurnCardIds;
     }
 
     // ==================================================================

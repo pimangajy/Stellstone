@@ -36,7 +36,7 @@ MonoBehaviour:
     count: 0
     elseEffect:
       rid: -2
-  targetRule: 0
+  targetRule: 7
   animationFrames:
   - {fileID: 21300000, guid: 6e76d6b5dadd8d14d97bb13304ed72fd, type: 3}
   cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}

@@ -15,7 +15,7 @@ public class GameStateManager : MonoBehaviour
     // 1. 상태 변화 알림 이벤트 (UI나 다른 매니저가 구독함)
     // ==================================================================
     // "페이즈가 바뀌었습니다" (예: "Draw", "Main", "End")
-    public event Action<string> OnPhaseChanged;
+    public event Action<GamePhase> OnPhaseChanged;
 
     // "내 턴 상태가 바뀌었습니다" (true: 내 턴, false: 상대 턴)
     public event Action<bool> OnTurnChanged;
@@ -29,7 +29,7 @@ public class GameStateManager : MonoBehaviour
     // ==================================================================
     [Header("게임 상태 정보")]
     [SerializeField] private bool _isMyTurn = false;
-    [SerializeField] private string _currentPhase = "None";
+    [SerializeField] private GamePhase _currentPhase = GamePhase.MAIN;
 
     [Header("내 마나")]
     [SerializeField] private int _myCurrentMana = 0;
@@ -41,7 +41,7 @@ public class GameStateManager : MonoBehaviour
 
     public string MyUid => (GameClient.Instance != null) ? GameClient.Instance.UserUid : null;
     public bool IsMyTurn => _isMyTurn;
-    public string CurrentPhase => _currentPhase;
+    public GamePhase CurrentPhase => _currentPhase;
     public int MyCurrentMana => _myCurrentMana;
     public int MyMaxMana => _myMaxMana;
 

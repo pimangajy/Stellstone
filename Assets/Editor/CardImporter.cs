@@ -87,7 +87,7 @@ public class CardImporter : EditorWindow
             string id = values[0].Trim();
 
             // [수정됨] CSV의 Class값(Gangzi 등)을 Enum(강지)으로 변환
-            ClassType memberType = ParseMemberType(values[1]);
+            CardClass memberType = ParseMemberType(values[1]);
 
             // [수정됨] 직업별 폴더 경로 설정 (Enum 이름인 '강지', '유니' 폴더로 저장)
             string memberFolderPath = $"{cardAssetPath}/{memberType}";
@@ -108,13 +108,13 @@ public class CardImporter : EditorWindow
 
             // --- 2. 데이터 매핑 (인덱스 수정됨) ---
             card.cardID = id;
-            card.member = memberType;           // Index 1: Class
-            card.cardName = values[2];          // Index 2: Name
-            card.manaCost = ParseInt(values[3]); // Index 3: Cost
-            card.attack = ParseInt(values[4]);   // Index 4: Attack
-            card.health = ParseInt(values[5]);   // Index 5: Health
+            card.cardClass = memberType;        // Index 1: cardClass
+            card.cardName = values[5];          // Index 2: Name
+            card.manaCost = ParseInt(values[2]);// Index 3: Cost
+            card.attack = ParseInt(values[6]);  // Index 4: Attack
+            card.health = ParseInt(values[9]);  // Index 5: Health
 
-            card.rarity = ParseEnum<Rarity>(values[6], Rarity.일반);
+            card.rarity = ParseEnum<CardRarity>(values[6], CardRarity.common);
             card.cardType = ParseCardType(values[7]);
             card.expansion = (values[8] == "기본") ? Expansion.기본 : ParseEnum<Expansion>(values[8], Expansion.기본);
 
@@ -125,8 +125,9 @@ public class CardImporter : EditorWindow
 
             // 효과
             card.effects = ParseEffects(values[10]);
+            card.targetRule = DetermineTargetRule(card.effects);
 
-            card.minionTribe = ParseEnum<MinionTribe>(values[11], MinionTribe.없음);
+            card.minionTribe = ParseEnum<CardTribe>(values[11], CardTribe.무소속);
 
             // 추가 설명
             if (values.Length > 12)
@@ -172,23 +173,23 @@ public class CardImporter : EditorWindow
     }
 
     // [신규] CSV의 영문 Class(Gangzi)를 한글 Enum(강지)으로 매핑
-    private ClassType ParseMemberType(string value)
+    private CardClass ParseMemberType(string value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return ClassType.강지;
+        if (string.IsNullOrWhiteSpace(value)) return CardClass.Gangzi;
 
         // 1. Enum과 정확히 일치하는 경우 (예: "강지")
-        if (System.Enum.TryParse(value, true, out ClassType result)) return result;
+        if (System.Enum.TryParse(value, true, out CardClass result)) return result;
 
         // 2. CSV가 영문(Gangzi)이고 Enum이 한글(강지)인 경우 매핑
         switch (value.Trim().ToLower())
         {
-            case "gangzi": return ClassType.강지;
-            case "yuni": return ClassType.유니;
-            case "huya": return ClassType.후야;
+            case "gangzi": return CardClass.Gangzi;
+            case "yuni": return CardClass.Yuni;
+            case "huya": return CardClass.Huya;
             // 필요한 경우 추가
             default:
                 Debug.LogWarning($"알 수 없는 직업 타입: {value}. 기본값(강지)으로 설정됩니다.");
-                return ClassType.강지;
+                return CardClass.Gangzi;
         }
     }
 
@@ -256,6 +257,44 @@ public class CardImporter : EditorWindow
         return instance;
     }
 
+    // 제너레이터의 문자열(Target)을 CardData의 TargetRule Enum으로 변환
+    private TargetRule DetermineTargetRule(List<EffectInstance> effects)
+    {
+        // 효과가 없으면 None 반환
+        if (effects == null || effects.Count == 0) return TargetRule.None;
+
+        // 카드를 낼 때의 기준 타겟팅은 주로 첫 번째 효과(메인 효과)를 따름
+        string primaryTarget = effects[0].target;
+
+        if (string.IsNullOrEmpty(primaryTarget)) return TargetRule.None;
+
+        switch (primaryTarget.ToUpper())
+        {
+            // 1. 단일 지정 계열 매핑
+            case "TARGET":
+            case "TARGET_CHARACTER": return TargetRule.Target_All;
+            case "TARGET_MINION": return TargetRule.Target_Minion;
+            case "TARGET_ENEMY_CHARACTER": return TargetRule.Target_Enemy_All;
+            case "TARGET_ENEMY_MINION": return TargetRule.Target_Enemy_Minion;
+            case "ENEMY_HERO": return TargetRule.Target_Enemy_Leader;
+            case "TARGET_FRIENDLY_CHARACTER": return TargetRule.Target_Friend_All;
+            case "TARGET_FRIENDLY_MINION": return TargetRule.Target_Friend_Minion;
+            case "FRIENDLY_HERO": return TargetRule.Target_Friend_Leader;
+
+            // 2. 광역/자동 범위 계열 매핑
+            case "ALL_CHARACTERS": return TargetRule.All_Characters;
+            case "ALL_MINIONS": return TargetRule.All_Minions;
+            case "ALL_ENEMIES": return TargetRule.All_Enemies;
+            case "ALL_ENEMY_MINIONS": return TargetRule.All_Enemy_Minions;
+            case "ALL_FRIENDS": return TargetRule.All_Friends;
+            case "ALL_FRIENDLY_MINIONS": return TargetRule.All_Friendly_Minions;
+
+            case "SELF": return TargetRule.Self;
+
+            default: return TargetRule.None; // 무작위(RANDOM_) 등의 경우 None 처리
+        }
+    }
+
     // --- 유틸리티 ---
     private int ParseInt(string value)
     {
@@ -277,7 +316,7 @@ public class CardImporter : EditorWindow
         if (string.IsNullOrEmpty(koreanType)) return CardType.하수인;
         if (koreanType.Contains("하수인")) return CardType.하수인;
         if (koreanType.Contains("주문")) return CardType.주문;
-        if (koreanType.Contains("무기")) return CardType.무기;
+        if (koreanType.Contains("무기")) return CardType.READER;
         if (koreanType.Contains("멤버")) return CardType.멤버;
         return CardType.하수인;
     }

@@ -36,7 +36,7 @@ public class DeckCardDisplay : MonoBehaviour, ICardDataHolder
         descriptionText.text = cardData.description;
 
         // 종족 값이 있으면 보여주고, 없으면 숨깁니다.
-        if (cardData.minionTribe != MinionTribe.없음)
+        if (cardData.minionTribe != CardTribe.무소속)
         {
             tribeText.gameObject.SetActive(true);
             tribeText.text = cardData.minionTribe.ToString();
@@ -77,25 +77,32 @@ public class DeckCardDisplay : MonoBehaviour, ICardDataHolder
     }
 
     // 희귀도에 따라 보석 색상을 바꿔주는 내부 함수
-    private void SetRarityVisuals(Rarity rarity)
+    private void SetRarityVisuals(CardRarity rarity)
     {
         switch (rarity)
         {
-            case Rarity.일반:
+            case CardRarity.common:
                 rarityGemImage.color = Color.white; // 흰색
                 break;
-            case Rarity.희귀:
+            case CardRarity.rare:
                 rarityGemImage.color = Color.blue; // 파란색
                 break;
-            case Rarity.영웅:
+            case CardRarity.epic:
                 rarityGemImage.color = new Color(0.5f, 0, 1); // 보라색 (RGB 혼합)
                 break;
-            case Rarity.전설:
+            case CardRarity.legendary:
                 rarityGemImage.color = Color.yellow; // 노란색(황금색)
                 break;
             default:
                 rarityGemImage.color = Color.gray; // 기본 회색
                 break;
         }
+    }
+
+
+    // 디버그용 deckInfo
+    public void DeckInfo(CardInfo cardInfo)
+    {
+        nameText.text = cardInfo.cardId.ToString();
     }
 }

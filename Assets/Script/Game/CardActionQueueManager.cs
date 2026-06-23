@@ -8,217 +8,191 @@ using System.Collections;
 /// </summary>
 public enum ActionState
 {
-    WaitingForData, // 시각적 오브젝트는 생성되었으나 서버로부터 상세 데이터(CardData)를 기다리는 상태
-    Ready           // 오브젝트와 데이터가 모두 매칭되어 연출 실행이 가능한 상태
+    WaitingForData,
+    Ready
 }
 
-/// <summary>
-/// 하나의 카드 액션 연출에 필요한 모든 정보를 담는 컨테이너 클래스입니다.
-/// </summary>
 public class CardActionRequest
-{ 
-    public GameObject cardObject;  // 화면에 표시될 카드 게임 오브젝트
-    public EntityData entytidata;      // 서버에서 전달받은 카드의 실제 스펙 데이터
-    public bool isOpponent;        // 카드를 사용한 주체 (true: 상대방, false: 본인)
-    public ActionState state;      // 현재 액션의 준비 상태
+{
+    public GameObject cardObject;
+    public EntityData entityData;
+    public bool isOpponent;
+    public ActionState state;
 }
 
 /// <summary>
-/// 서버 메시지(Success, Resolution)의 수신 순서에 상관없이 
-/// 카드 사용 연출과 실제 필드 스폰을 동기화하여 실행하는 매니저입니다.
+/// 2D UI 기반: 카드 사용 연출 매니저
+/// - 내 카드: 중앙 연출 생략하고 즉시 필드 스폰
+/// - 상대 카드: 대기열 없이 중앙에 하나씩만 보여줌 (새 카드 사용 시 기존 카드 즉시 덮어쓰기)
 /// </summary>
 public class CardActionQueueManager : MonoBehaviour
 {
     public static CardActionQueueManager Instance;
 
-    [Header("연출 위치 및 부모 설정")]
-    [Tooltip("카드가 공개될 중앙 위치이자 부모가 될 Transform입니다.")]
-    public Transform centerShowPosition;
-
-    [Tooltip("대기열에 있는 카드들이 나열될 로컬 간격입니다.")]
-    public Vector3 queueOffset = new Vector3(0, 40f, 20f);
+    [Header("UI 씬 연결")]
+    [Tooltip("상대방 카드가 공개될 화면 중앙 위치 (RectTransform)")]
+    public RectTransform centerShowAnchor;
 
     [Header("타이밍 설정")]
-    [Tooltip("카드가 이동하는 시간입니다.")]
-    public float moveDuration = 0.5f;
-    [Tooltip("중앙에서 카드를 보여주며 멈춰있는 시간입니다.")]
-    public float stayDuration = 1.0f;
+    public float moveDuration = 0.4f; // 카드가 중앙으로 오는 시간
+    public float stayDuration = 1.0f; // 중앙에서 멈춰서 보여주는 시간
 
-    // 현재 화면에 배치되어 연출을 기다리는 카드 액션 리스트 (순서 보장)
-    private List<CardActionRequest> _actionList = new List<CardActionRequest>();
-
-    // [중요] 네트워크 지연으로 인해 CardData(Resolution)가 오브젝트(Success)보다 먼저 도착했을 때 저장하는 버퍼
+    // 네트워크 동기화를 위한 보이지 않는 내부 데이터 리스트 (시각적 대기열 아님)
+    private List<CardActionRequest> _internalList = new List<CardActionRequest>();
     private Queue<EntityData> _orphanedDataBuffer = new Queue<EntityData>();
+    private bool _isProcessing = false;
 
-    private bool _isProcessing = false; // 코루틴 중복 실행 방지 플래그
-    private Vector3 _baseScale = Vector3.one; // 카드의 기본 크기 저장용
-    private bool _hasGrabbedBaseScale = false;
+    // 현재 화면 중앙에서 보여주고 있는 상대방 카드
+    private GameObject _currentShownCard = null;
+    private Coroutine _hideCardCoroutine = null;
 
     private void Awake()
     {
-        // 싱글톤 초기화
         if (Instance != null && Instance != this) Destroy(this.gameObject);
         else Instance = this;
     }
 
     /// <summary>
-    /// [1단계: S_PlayCardSuccess 수신 시 호출]
-    /// 카드 오브젝트를 먼저 등록하고 대기열로 이동시킵니다.
+    /// 카드 사용 오브젝트가 생성되었을 때 호출 (클라이언트 드래그 또는 서버 메시지)
     /// </summary>
-    /// <param name="cardObj">생성된 카드 오브젝트</param>
-    /// <param name="isOpponent">상대방 여부</param>
     public void PreparePlay(GameObject cardObj, bool isOpponent)
     {
-        // 최초 1회 기본 스케일 값 저장
-        if (!_hasGrabbedBaseScale)
-        {
-            _baseScale = cardObj.transform.localScale;
-            _hasGrabbedBaseScale = true;
-        }
-
-        // 새로운 액션 요청 생성
         CardActionRequest newRequest = new CardActionRequest
         {
             cardObject = cardObj,
             isOpponent = isOpponent
         };
 
-        // [체크] 만약 데이터(Resolution)가 버퍼에 미리 도착해 있다면 즉시 매칭
         if (_orphanedDataBuffer.Count > 0)
         {
-            newRequest.entytidata = _orphanedDataBuffer.Dequeue();
+            newRequest.entityData = _orphanedDataBuffer.Dequeue();
             newRequest.state = ActionState.Ready;
-            Debug.Log($"[ActionLog] 데이터가 미리 존재함: {newRequest.entytidata.entityId}와 즉시 매칭되었습니다.");
         }
         else
         {
-            // 데이터가 아직 없다면 대기 상태로 설정
-            newRequest.entytidata = null;
+            newRequest.entityData = null;
             newRequest.state = ActionState.WaitingForData;
         }
 
-        // 리스트에 추가하고 부모를 연출용 오브젝트로 변경 (좌표계 동기화)
-        _actionList.Add(newRequest);
-        cardObj.transform.SetParent(centerShowPosition, true);
+        _internalList.Add(newRequest);
 
-        // 대기열 비주얼 갱신 (줄 세우기)
-        UpdateQueueVisuals();
-
-        // 연출 프로세스가 작동 중이 아니라면 시작
         if (!_isProcessing) StartCoroutine(ProcessQueueRoutine());
     }
 
     /// <summary>
-    /// [2단계: S_ActionResolution 수신 시 호출]
-    /// 서버로부터 받은 카드 데이터를 대기 중인 오브젝트와 매칭합니다.
+    /// 서버로부터 실제 카드 스펙 데이터가 도착했을 때 호출
     /// </summary>
-    /// <param name="data">서버에서 보내온 실제 카드 데이터</param>
     public void ResolvePlay(EntityData data)
     {
-        // 1. 현재 리스트에서 데이터를 기다리고 있는 가장 앞선 항목을 찾음
-        CardActionRequest pending = _actionList.Find(a => a.state == ActionState.WaitingForData);
+        CardActionRequest pending = _internalList.Find(a => a.state == ActionState.WaitingForData);
 
         if (pending != null)
         {
-            // 대기 중인 항목이 있다면 데이터 주입 및 상태 변경
-            pending.entytidata = data;
+            pending.entityData = data;
             pending.state = ActionState.Ready;
-            Debug.Log($"[ActionLog] {data.entityId} 데이터 매칭 완료. 연출 준비됨.");
         }
         else
         {
-            // 2. 만약 매칭할 오브젝트가 아직 없다면(메시지 역전 현상), 버퍼에 임시 보관
             _orphanedDataBuffer.Enqueue(data);
-            Debug.Log($"[ActionLog] {data.entityId} 데이터가 먼저 도착함. 버퍼에 보관합니다.");
         }
     }
 
-    /// <summary>
-    /// 큐를 순회하며 실제 연출(이동, 소환)을 실행하는 메인 루틴입니다.
-    /// </summary>
     private IEnumerator ProcessQueueRoutine()
     {
         _isProcessing = true;
 
-        while (_actionList.Count > 0)
+        while (_internalList.Count > 0)
         {
-            // 현재 처리할 가장 앞의 액션 참조
-            CardActionRequest current = _actionList[0];
+            CardActionRequest current = _internalList[0];
 
-            // [핵심] 데이터가 도착할 때까지 이 액션에서 멈춰 대기합니다.
+            // 데이터가 올 때까지 대기
             if (current.state == ActionState.WaitingForData)
             {
                 yield return new WaitForSeconds(0.05f);
-                continue; // 데이터가 올 때까지 다음 루프로 넘어가지 않음
+                continue;
             }
 
-            // --- 데이터와 오브젝트가 모두 준비된 상태 (Ready) ---
             GameObject currentCard = current.cardObject;
-            EntityData currentData = current.entytidata;
+            EntityData currentData = current.entityData;
 
-            // 1. 중앙 이동 및 확대 연출 (Card Motion)
-            currentCard.transform.DOKill();
-
-            // [수정됨] DOLocalMove -> DOMove로 변경! 
-            // 부모 공간(Vector3.zero)이 아닌, 실제 목표 오브젝트의 월드 좌표(position)로 직진합니다.
-            currentCard.transform.DOMove(centerShowPosition.position, moveDuration).SetEase(Ease.OutQuad);
-            currentCard.transform.DOScale(_baseScale * 1.4f, moveDuration).SetEase(Ease.OutQuad);
-
-            // [수정됨] 회전도 부모의 로컬이 아닌 월드 회전(DORotate)으로 맞춥니다.
+            // ==========================================================
+            // 1. 내 카드 처리 (연출 생략, 즉시 소환)
+            // ==========================================================
             if (!current.isOpponent)
             {
-                // 상대방 카드는 centerShowPosition의 회전값에 Z축 180도 추가
-                Vector3 targetRot = centerShowPosition.eulerAngles + new Vector3(0, 0, 180f);
-                currentCard.transform.DORotate(targetRot, moveDuration).SetEase(Ease.OutQuad);
+                // UI에서 보여줄 필요 없이 바로 필드 스폰 실행
+                if (GameEntityManager.Instance != null)
+                {
+                    GameEntityManager.Instance.SpawnCard(currentData);
+                }
+
+                // 내 카드는 드래그하던 손패 UI 오브젝트이므로 역할이 끝났으니 파괴
+                if (currentCard != null) HandCardControllManager.instance.RemoveCardFromHand(currentCard);
             }
+            // ==========================================================
+            // 2. 상대방 카드 처리 (중앙 단일 슬롯 연출)
+            // ==========================================================
             else
             {
-                // 내 카드는 centerShowPosition의 회전값과 동일하게 맞춤
-                currentCard.transform.DORotate(centerShowPosition.eulerAngles, moveDuration).SetEase(Ease.OutQuad);
+                // [핵심] 기존에 화면 중앙에 보여주고 있던 다른 상대방 카드가 있다면 즉시 파괴!
+                if (_currentShownCard != null)
+                {
+                    Destroy(_currentShownCard);
+                    if (_hideCardCoroutine != null) StopCoroutine(_hideCardCoroutine);
+                }
+
+                _currentShownCard = currentCard;
+                RectTransform cardRect = currentCard.GetComponent<RectTransform>();
+
+                // UI 부모 설정 및 렌더링 순서 맨 앞으로
+                cardRect.SetParent(centerShowAnchor, false); // 중앙 앵커 기준 0,0,0으로 시작
+                cardRect.SetAsLastSibling();
+
+                // DOTween UI 애니메이션 (DOAnchorPos)
+                cardRect.DOKill();
+                cardRect.DOAnchorPos(Vector2.zero, moveDuration).SetEase(Ease.OutQuad);
+                cardRect.DOLocalRotateQuaternion(Quaternion.identity, moveDuration).SetEase(Ease.OutQuad);
+
+                // 상대로부터 날아온 느낌을 주기 위해 살짝 큼직하게 띄움
+                cardRect.DOScale(Vector3.one * 1.3f, moveDuration).SetEase(Ease.OutQuad);
+
+                // 유저가 카드를 확인할 시간을 줌
+                yield return new WaitForSeconds(stayDuration);
+
+                // 실제 필드에 하수인 스폰
+                if (GameEntityManager.Instance != null)
+                {
+                    GameEntityManager.Instance.SpawnCard(currentData);
+                }
+
+                // 일정 시간이 지나면 보여줬던 카드를 자연스럽게 치우기 (도중에 새 카드가 오면 위에서 강제 파괴됨)
+                _hideCardCoroutine = StartCoroutine(HideShownCardRoutine(_currentShownCard));
             }
 
-            // 유저가 카드를 확인할 시간을 줌
-            yield return new WaitForSeconds(stayDuration);
+            // 리스트에서 처리 완료된 항목 제거
+            _internalList.RemoveAt(0);
 
-            // 2. 실제 필드에 하수인 스폰 (Spawn Logic)
-            // 여기서 서버에서 받은 데이터(currentData)와 소유주 정보(isOpponent)를 함께 사용합니다.
-            if (GameEntityManager.Instance != null)
-            {
-                GameEntityManager.Instance.SpawnCard(currentData);
-            }
-
-            // 3. 카드 사용 오브젝트 정리
-            _actionList.RemoveAt(0); // 처리 완료된 액션 제거
-            Destroy(currentCard);    // 연출용 카드 프리팹 파괴
-
-            // 뒤에 기다리던 카드들을 한 칸씩 앞으로 당김
-            UpdateQueueVisuals();
-
-            // 액션 사이의 짧은 간격
-            yield return new WaitForSeconds(0.2f);
+            // 대기열 연출이 없으므로 사이 간격을 매우 짧게 줍니다.
+            yield return new WaitForSeconds(0.1f);
         }
 
         _isProcessing = false;
     }
 
     /// <summary>
-    /// 대기열 리스트에 있는 모든 카드들의 위치를 로컬 좌표 기준으로 재정렬합니다.
+    /// 상대방 카드를 보여준 후 자연스럽게 축소하며 파괴하는 코루틴
     /// </summary>
-    private void UpdateQueueVisuals()
+    private IEnumerator HideShownCardRoutine(GameObject targetCard)
     {
-        // i = 0 (첫 번째 카드)는 어차피 ProcessQueueRoutine에서 바로 가져가서 
-        // Vector3.zero로 이동시킬 것이므로 대기열 이동 연출에서 제외합니다.
-        for (int i = 1; i < _actionList.Count; i++) // 0이 아니라 1부터 시작!
+        // 소환 완료 후 0.5초 정도 더 보여주다가 사라짐
+        yield return new WaitForSeconds(1.0f);
+
+        if (targetCard != null)
         {
-            GameObject card = _actionList[i].cardObject;
-            if (card == null) continue;
-
-            // 대기열 순서에 따른 목표 위치 (첫 번째 카드가 빠졌으므로 i 그대로 곱함)
-            Vector3 targetLocalPos = queueOffset * i;
-
-            // 부드러운 위치 및 크기 조절
-            card.transform.DOLocalMove(targetLocalPos, 0.4f).SetEase(Ease.OutQuad);
-            card.transform.DOScale(_baseScale * 0.9f, 0.4f).SetEase(Ease.OutQuad);
+            RectTransform rect = targetCard.GetComponent<RectTransform>();
+            rect.DOScale(Vector3.zero, 0.3f).SetEase(Ease.InBack).OnComplete(() => {
+                if (targetCard != null) Destroy(targetCard);
+            });
         }
     }
 }
