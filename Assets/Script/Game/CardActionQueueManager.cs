@@ -54,6 +54,7 @@ public class CardActionQueueManager : MonoBehaviour
 
     /// <summary>
     /// 카드 사용 오브젝트가 생성되었을 때 호출 (클라이언트 드래그 또는 서버 메시지)
+    /// CardDragManager의 OnServerSuccessResponse()함수애서 사용
     /// </summary>
     public void PreparePlay(GameObject cardObj, bool isOpponent)
     {

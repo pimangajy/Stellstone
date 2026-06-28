@@ -29,7 +29,6 @@ public class GameClient : MonoBehaviour
     public event Action<S_ActionResolution> OnActionResolutionEvent;
     public event Action<S_UpdateMana> OnUpdateManaEvent;
     public event Action<S_UpdateEntities> OnUpdateEntitiesEvent;
-    public event Action<List<S_ActionResolution>> OnEntitiesUpdatedEvent;
     public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;
     public event Action<string> OnErrorEvent;
     public event Action<string> OnPlayCardFailedEvent;
@@ -99,6 +98,26 @@ public class GameClient : MonoBehaviour
         }
     }
 
+    public void DebugCheckSubscribers()
+    {
+        if (OnActionResolutionEvent == null)
+        {
+            Debug.Log("<color=yellow> OnActionResolutionEvent 구독된 함수가 없습니다.</color>");
+            return;
+        }
+
+        // event 키워드가 있어도 클래스 내부에서는 GetInvocationList() 사용 가능!
+        Delegate[] subscribers = OnActionResolutionEvent.GetInvocationList();
+
+        Debug.Log($"<color=cyan>=== OnActionResolutionEvent 구독 목록 ({subscribers.Length}개) ===</color>");
+        foreach (Delegate d in subscribers)
+        {
+            // d.Target: 함수가 속한 스크립트/클래스의 인스턴스
+            // d.Method.Name: 구독된 실제 함수 이름
+            Debug.Log($"[오브젝트]: {d.Target} | [함수명]: {d.Method.Name}");
+        }
+    }
+
     async void OnDestroy()
     {
         if (_webSocket != null && _webSocket.State == WebSocketState.Open)
@@ -140,7 +159,6 @@ public class GameClient : MonoBehaviour
         try
         {
             idToken = await user.TokenAsync(true);
-            Debug.Log("[GameClient] Firebase 토큰 확보 성공!");
         }
         catch (Exception e)
         {
@@ -155,9 +173,7 @@ public class GameClient : MonoBehaviour
 
         try
         {
-            Debug.Log($"[GameClient] 서버 연결 시도: {fullUrl}");
             await _webSocket.ConnectAsync(new Uri(fullUrl), _cts.Token);
-            Debug.Log("[GameClient] 서버 연결 성공!");
 
             StartReceiveLoop();
         }
@@ -214,6 +230,7 @@ public class GameClient : MonoBehaviour
                         switch (baseAction.action)
                         {
                             case GameActionType.ACTION_RESOLUTION: parsedAction = JsonConvert.DeserializeObject<S_ActionResolution>(receivedJson); break;
+                            case GameActionType.REQUEST_CHOICE: parsedAction = JsonConvert.DeserializeObject<S_RequestChoice>(receivedJson); break;
                             case GameActionType.MULLIGAN_INFO: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
                             case GameActionType.OPPONENT_MULLIGAN_STATUS: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
                             case GameActionType.GAME_READY: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
@@ -367,6 +384,12 @@ public class GameClient : MonoBehaviour
                 OnActionResolution(actionInfo);
                 break;
 
+            case GameActionType.REQUEST_CHOICE:
+                var requestInfo = (S_RequestChoice)action;
+                OnReqeustChoice(requestInfo);
+                Debug.Log("S_RequestChoice Masege");
+                break;
+
             case GameActionType.UPDATE_MANA:
                 var updateManaInfo = (S_UpdateMana)action;
                 OnUpdateManaEvent?.Invoke(updateManaInfo);
@@ -434,7 +457,6 @@ public class GameClient : MonoBehaviour
 
     private void OnMulliganInfoReceived(S_MulliganInfo info)
     {
-        Debug.Log($"[GameClient] 멀리건 시작! 교체할 카드 {info.cardsToMulligan.Count}장 받음.");
         if (GameMulliganManager.instance != null)
             GameMulliganManager.instance.mulliganImg.SetActive(true);
 
@@ -446,8 +468,8 @@ public class GameClient : MonoBehaviour
 
     private void OnGameReady(S_GameReady info)
     {
-        Debug.Log($"[GameClient] 게임 시작! 내 손패: {info.finalHand.Count}장");
         StartCoroutine(SyncHandWithServer(info.finalHand));
+        GameEntityManager.Instance.SetReader(info);
     }
 
     // 멀리건 받은 카드를 뽑는 함수
@@ -518,7 +540,13 @@ public class GameClient : MonoBehaviour
 
     private void OnActionResolution(S_ActionResolution info)
     {
-        StartCoroutine(SyncActioninfo(info));
+        // GameClient에서 코루틴을 돌리지 않고 GameEntityManager로 패킷을 넘깁니다.
+        if (GameEntityManager.Instance != null)
+        {
+            GameEntityManager.Instance.ResolveActionSequence(info);
+        }
+
+        // StartCoroutine(SyncActioninfo(info));
     }
 
     private IEnumerator SyncActioninfo(S_ActionResolution info)
@@ -538,12 +566,39 @@ public class GameClient : MonoBehaviour
                     break;
 
                 case GameEventType.ATTACK:
+                    //GameEntityManager.Instance.HandleEntitiesUpdated(info);
                     Debug.Log($"{info.eventLog[0].sourceEntityId}이가 {info.eventLog[0].targetEntityId}에게 Card Attack!");
                     break;
             }
 
         }
         yield return new WaitForSeconds(1.0f);
+    }
+
+    public void OnReqeustChoice(S_RequestChoice info)
+    {
+        GameInputManager.Instance.StartChoiceMode(info.choiceType, info.sourceEntityId);
+    }
+
+    /// <summary>
+    /// 토큰 소환 위치나 대상을 선택하며 C_MakeChoice 패킷으로 만들어 서버에 전송합니다.
+    /// </summary>
+    public void SendMakeChoiceRequest(int position, string cardId, int entityId)
+    {
+        // (GameActionModels.cs에 C_MakeChoice가 정의되어 있다고 가정)
+        C_MakeChoice request = new C_MakeChoice
+        {
+            action = GameActionType.MAKE_CHOICE,
+            selectedPosition = position,
+            selectedCardId = cardId,
+            selectedEntityId = entityId
+        };
+
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.SendMessageAsync(request);
+            Debug.Log($"[GameInputManager] 선택 완료 전송 -> 위치: {position}, 타겟ID: {entityId}");
+        }
     }
 
     private void OnUpdateMana(S_UpdateMana info)

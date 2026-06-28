@@ -59,6 +59,11 @@ public class CardDragManager : MonoBehaviour
     {
         if (mainCamera == null) mainCamera = Camera.main;
 
+        if (targetingSourceTransform == null && handManager != null)
+        {
+            targetingSourceTransform = handManager.handAnchor;
+        }
+
         if (GameClient.Instance != null)
         {
             GameClient.Instance.OnPlayCardFailedEvent += OnServerFailResponse;
@@ -93,7 +98,6 @@ public class CardDragManager : MonoBehaviour
             var display = _waitingCard.GetComponent<GameCardDisplay>();
             if (display != null && display.InstanceId == instanceId)
             {
-                Debug.Log($"카드 [{instanceId}] 사용 승인됨. 손패에서 제거.");
                 handManager.SetDraggedCard(null);
 
                 // CardActionQueueManager 연출 실행
@@ -228,7 +232,7 @@ public class CardDragManager : MonoBehaviour
             FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
 
             // 테스트용 
-            if (slot != null && GameEntityManager.Instance.test)
+            if (slot != null && GameEntityManager.Instance.test && !slot.IsOccupied)
             {
                 GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
 
@@ -268,12 +272,13 @@ public class CardDragManager : MonoBehaviour
                 {
                     // 타겟팅이 필요 없는 카드면 즉시 소환 (기존 로직)
                     Debug.Log($"테스트 모드 슬롯 감지됨: {slot.slotIndex}");
+                    GameEntityManager.Instance.SpawnCard(cardDisplay.CurrentEntityData);
                 }
 
                 return;
             }
 
-            if (slot != null)
+            if (slot != null && !slot.IsOccupied)
             {
                 GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
 
@@ -285,16 +290,30 @@ public class CardDragManager : MonoBehaviour
 
                     IsWaitingForTarget = true;
                     _pendingSlotIndex = slot.slotIndex;
-                    _isDragging = false; // 드래그는 끝남
 
-                    // 카드를 회전 없이 똑바로 펴고, 카드에서부터 조준선 시작
-                    _currentCard.GetComponent<RectTransform>().DOLocalRotateQuaternion(Quaternion.identity, 0.2f);
-                    if (TargetingReticle.Instance != null)
-                        TargetingReticle.Instance.StartTargeting(_currentCard.transform);
+                    // 1. 드래그하던 2D UI 카드는 숨깁니다.
+                    _currentCard.SetActive(false);
+
+                    // 2. 슬롯 위치에 3D 임시 하수인(미리보기)을 생성합니다.
+                    if (GameEntityManager.Instance != null && GameEntityManager.Instance.minionPrefab != null)
+                    {
+                        Vector3 previewMinionPosition = new Vector3(0, 0.5f, 0);
+
+                        _previewMinion = Instantiate
+                            (previewMinion, slot.transform.position + previewMinionPosition, previewMinion.transform.rotation, slot.transform);
+
+                        // 클릭 방해를 막기 위해 임시 하수인의 콜라이더를 끕니다.
+                        Collider col = _previewMinion.GetComponent<Collider>();
+                        if (col != null) col.enabled = false;
+
+                        // 3. 조준선이 이 임시 하수인에서 시작하도록 설정합니다.
+                        if (TargetingReticle.Instance != null)
+                            TargetingReticle.Instance.StartTargeting(_previewMinion.transform);
+                    }
 
                     return; // 아직 서버로 전송하지 않고 함수 종료
                 }
-                else 
+                else
                 {
                     // 타겟팅이 필요 없는 카드면 즉시 소환 (기존 로직)
                     Debug.Log($"슬롯 감지됨: {slot.slotIndex}");
@@ -302,6 +321,7 @@ public class CardDragManager : MonoBehaviour
                     requestSent = true;
                 }
             }
+            else Debug.Log("FieldSlot이 비어있거나 하수인이 이미있음");
         }
 
         if (requestSent)

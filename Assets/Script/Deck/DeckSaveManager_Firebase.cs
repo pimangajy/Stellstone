@@ -52,7 +52,6 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
         // 로그인 상태가 바뀌는지 감시를 시작합니다.
         auth.StateChanged += HandleAuthStateChanged;
-        Debug.Log("DeckSaveManager가 인증 상태 감지를 시작합니다.");
     }
 
     private void OnDestroy()
@@ -80,7 +79,6 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             // 로그인 했고, 아직 데이터를 안 불러왔다면 -> 데이터 로드 시작
             if (currentUser.UserId != currentUserId || !isInitialized)
             {
-                Debug.Log($"로그인 감지: {currentUser.UserId}. 덱 로드를 시작합니다.");
                 await InitializeAsync(currentUser.UserId);
             }
         }
@@ -89,7 +87,6 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             // 로그아웃 했다면 -> 데이터 비우기
             if (isInitialized || !string.IsNullOrEmpty(currentUserId))
             {
-                Debug.Log("로그아웃 감지. 로컬 덱 캐시를 비웁니다.");
                 ClearDecks();
             }
         }
@@ -143,8 +140,6 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
         // 1. 보안 토큰(신분증)을 발급받습니다.
         string idToken = await auth.CurrentUser.TokenAsync(true);
-
-        Debug.Log(deckloadApiUrl + "메세지 보냄");
 
         // 3. UnityWebRequest: 유니티의 웹 브라우저 같은 역할
         // GET 방식: "데이터 조회" 요청

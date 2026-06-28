@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-001
   cardName: "\uAC15\uB3C4\uB2E8"
+  cardClass: 0
   cardType: 0
-  member: 0
   rarity: 0
   expansion: 0
   manaCost: 1
@@ -27,6 +27,8 @@ MonoBehaviour:
   keyward: []
   effects: []
   targetRule: 0
+  triggerVFXList:
+  - {fileID: 0}
   animationFrames:
   - {fileID: 21300000, guid: 945333ea6d4e2bc4caaec4b2555ba4a6, type: 3}
   cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
@@ -35,8 +37,7 @@ MonoBehaviour:
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
   projectilePrefab: {fileID: 3300439051078825739, guid: 7128603d714ada24090d8c6a938a8ebd, type: 3}
-  projectileSpeed: 15
-  projectileArcHeight: 1.5
+  effectProjectilePrefab: {fileID: 0}
   references:
     version: 2
     RefIds: []

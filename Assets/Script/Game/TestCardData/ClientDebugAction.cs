@@ -62,9 +62,7 @@ public class ClientDebugAction : MonoBehaviour
         foreach (CardInfo info in infoList)
         {
             GameObject newObj = Instantiate(infoPanel, deckInfoList);
-            newObj.GetComponent<DeckCardDisplay>().DeckInfo(info);
-
-            Debug.Log($"{info.cardId} 리스트 생성");
+            newObj.GetComponent<SpecificCardDraw>().DeckInfo(info);
         }
     }
 }

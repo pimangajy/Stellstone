@@ -40,7 +40,6 @@ public class ResourceManager : MonoBehaviour
                 Debug.LogWarning($"중복된 카드 ID 발견: {card.cardID}");
             }
         }
-        Debug.Log($"카드 데이터 로드 완료: {_cardDatabase.Count}장");
     }
 
     public CardData GetCardData(string cardId)

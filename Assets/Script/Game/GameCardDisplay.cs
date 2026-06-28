@@ -2,7 +2,9 @@ using UnityEngine;
 using TMPro;
 using DG.Tweening;
 using UnityEngine.UI;
-using System.Collections; // 애니메이션
+using System.Collections;
+using UnityEditor;
+using System.Collections.Generic; // 애니메이션
 
 /// <summary>
 /// 인게임(필드, 손패)에서 카드의 외형을 표시합니다.
@@ -30,6 +32,11 @@ public class GameCardDisplay : MonoBehaviour
     public TextMeshPro entityCostText;
     public TextMeshPro entityAttackText;
     public TextMeshPro entityHealthText;
+
+    [Header("리더용 UI")]
+    public TextMeshPro HP;
+    public MeshRenderer leaderMat;
+    public List<Material> materials;
 
     [Header("색상 설정")]
     public Color normalColor = Color.white;
@@ -125,6 +132,56 @@ public class GameCardDisplay : MonoBehaviour
 
         UpdateEntityStats(entityData);
         _cardData.spawnEffectData.PlaySpawnVFX(this.transform);
+    }
+
+    /// <summary>
+    /// 리더 UI를 갱신합니다.
+    /// </summary>
+    public void SetReader(S_GameReady info)
+    {
+        if(info.myLeader.ownerUid == GameClient.Instance.UserUid)
+        {
+            // 아군 리더이미지 적용
+            switch (info.myLeader.cardId)
+            {
+                case "LEADER_Gangzi":
+                    leaderMat.sharedMaterial = materials[0];
+                    break;
+                case "LEADER_Yuni":
+                    leaderMat.sharedMaterial = materials[1];
+                    break;
+                case "LEADER_Huya":
+                    leaderMat.sharedMaterial = materials[2];
+                    break;
+            }
+
+            // 리더 스탯 적용
+            this.EntityId = info.myLeader.entityId;
+            this.CurrentEntityData = info.myLeader;
+            HP.text = info.myLeader.health.ToString();
+
+        }
+        else
+        {
+            // 적 리더 이미지 적용
+            switch (info.enemyLeader.cardId)
+            {
+                case "LEADER_Gangzi":
+                    leaderMat.sharedMaterial = materials[0];
+                    break;
+                case "LEADER_Yuni":
+                    leaderMat.sharedMaterial = materials[1];
+                    break;
+                case "LEADER_Huya":
+                    leaderMat.sharedMaterial = materials[2];
+                    break;
+            }
+
+            // 적 리더 스탯 적용
+            this.EntityId = info.enemyLeader.entityId;
+            this.CurrentEntityData = info.enemyLeader;
+            HP.text = info.enemyLeader.health.ToString();
+        }
     }
 
     /// <summary>
@@ -237,12 +294,32 @@ public class GameCardDisplay : MonoBehaviour
     public IEnumerator HitUI(int damage)
     {
         damageIMG.SetActive(true);
-        damageIMG.GetComponent<Text>().text = damage.ToString();
+        damageIMG.GetComponent<TextMeshPro>().text = damage.ToString();
 
         yield return new WaitForSeconds(1.0f);
 
         damageIMG.SetActive(false);
 
+    }
+
+    public void PlayTriggerAnimation(EffectTriggerType triggerType)
+    {
+        // 카드가 가진 VFX 에셋 리스트 중에서 현재 트리거 타입과 일치하는 에셋을 찾음
+        CardVFXData vfxData = _cardData.triggerVFXList.Find(x => x.triggerType == triggerType);
+
+        if (vfxData != null && vfxData.vfxPrefab != null)
+        {
+            // 에셋에 등록된 이펙트 생성
+            Instantiate(vfxData.vfxPrefab, transform.position, Quaternion.identity);
+
+            // (선택) 사운드 재생 로직
+            // if (vfxData.soundEffect != null) AudioManager.Play(vfxData.soundEffect);
+        }
+        else
+        {
+            // 개별 이펙트가 없다면 시스템 기본 이펙트 재생 (이전 설명과 동일)
+            Debug.Log("기본 범용 연출 실행");
+        }
     }
 
     // 위치 재설정 (이동 후 호출)

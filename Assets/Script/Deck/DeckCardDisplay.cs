@@ -98,11 +98,4 @@ public class DeckCardDisplay : MonoBehaviour, ICardDataHolder
                 break;
         }
     }
-
-
-    // 디버그용 deckInfo
-    public void DeckInfo(CardInfo cardInfo)
-    {
-        nameText.text = cardInfo.cardId.ToString();
-    }
 }

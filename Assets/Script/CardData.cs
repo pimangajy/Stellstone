@@ -21,6 +21,7 @@ public class EffectInstance
     public EffectInstance elseEffect;
 }
 
+
 public enum CardClass
 {
     Gangzi,
@@ -65,7 +66,8 @@ public enum CardKeywords
     Poisonous = 5,    // 독성
     Stealth = 6,      // 은신
     Lifesteal = 7,    // 생흡
-    Windfury = 8      // 질풍
+    Windfury = 8,      // 질풍
+    Bind = 9,          // 속박
 }
 
 public enum TargetRule
@@ -142,6 +144,9 @@ public class CardData : ScriptableObject
     // 필요 시 사용하는 추가 필드들
     public TargetRule targetRule;
 
+    [Header("트리거별 고유 연출 (VFX Data)")]
+    public List<CardVFXData> triggerVFXList = new List<CardVFXData>();
+
     [Header("4. 리소스 (Art & Sound)")]
 
     // 움직이는 이미지를 위해 배열로 변경
@@ -160,13 +165,7 @@ public class CardData : ScriptableObject
     public GameObject spawnEffect;  // 소환 이펙트 프리팹
     public AudioClip attackSound;   // 공격 사운드
 
-    [Header("전투 연출 (원거리 공격용)")]
-    [Tooltip("비워두면 몸통 박치기를 합니다. (근접 공격)")]
+    [Header("전투 연출")]
+    [Tooltip("일반 공격용")]
     public GameObject projectilePrefab; // 날아갈 투사체 프리팹 (파이어볼, 화살 등)
-
-    [Tooltip("투사체가 날아가는 속도")]
-    public float projectileSpeed = 15f;
-
-    [Tooltip("투사체의 포물선 높이 (0이면 직선으로 날아감)")]
-    public float projectileArcHeight = 1.5f;
 }

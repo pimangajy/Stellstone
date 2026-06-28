@@ -37,7 +37,6 @@ public class SceneLoader : MonoBehaviour
     /// </summary>
     public void LoadSceneByName(string sceneName)
     {
-        Debug.Log($"{sceneName} 씬으로 이동합니다.");
         SceneManager.LoadScene(sceneName);
     }
 

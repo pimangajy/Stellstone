@@ -19,6 +19,8 @@ public class GameInputManager : MonoBehaviour
     public LayerMask minionEntityLayer;
     [Tooltip("필드 레이어 (하수인 다음으로 클릭 판정)")]
     public LayerMask fieldEntityLayer;
+    [Tooltip("슬롯 레이어")]
+    public LayerMask fieldSlotLayer;
 
     [Header("드래그 설정")]
     public float dragThreshold = 10f; // 이만큼 움직여야 드래그로 인정
@@ -29,7 +31,8 @@ public class GameInputManager : MonoBehaviour
         Idle,           // 아무것도 안 함 (호버링 중)
         ReadyToDrag,    // 마우스를 꾹 눌렀으나 아직 안 움직임
         DraggingHand,   // 손패 카드를 드래그 중
-        DraggingField   // 필드 하수인을 드래그 중 (공격 조준)
+        DraggingField,   // 필드 하수인을 드래그 중 (공격 조준)
+        WaitingForChoice, // 서버로부터 선택을 기다리는 상태
     }
 
     [Header("현재 상태 (디버그용)")]
@@ -44,6 +47,10 @@ public class GameInputManager : MonoBehaviour
     private GameCardDisplay _selectedHandCard; // 드래그하려고 잡은 손패 카드
     [SerializeField]
     private GameCardDisplay _selectedFieldEntity; // 공격하려고 잡은 필드 하수인
+
+    // 선택 모드 관련 내부 변수 ---
+    private string _currentChoiceType = "";
+    private int _choiceSourceEntityId = -1;
 
     private void Awake()
     {
@@ -60,7 +67,7 @@ public class GameInputManager : MonoBehaviour
         bool isFold = HandCardControllManager.instance.isFolded;
 
         // 상대 턴인데 마우스를 쥐고 있거나 드래그 상태라면 강제로 취소시킵니다 (Idle 상태로 복귀).
-        if (!isMyTurn && currentState != InputState.Idle)
+        if (!isMyTurn && currentState != InputState.Idle && currentState != InputState.WaitingForChoice)
         {
             ResetInput();
         }
@@ -80,6 +87,9 @@ public class GameInputManager : MonoBehaviour
                 break;
             case InputState.DraggingField:
                 if (isMyTurn) HandleDraggingField(); // 공격 조준도 내 턴에만
+                break;
+            case InputState.WaitingForChoice:
+                HandleWaitingForChoice();
                 break;
         }
     }
@@ -283,6 +293,58 @@ public class GameInputManager : MonoBehaviour
                 EntityAttackManager.Instance.TryCompleteAttack();
 
             ResetInput();
+        }
+    }
+
+    // =========================================================
+    // 5. 대상 선택 대기
+    // =========================================================
+
+    /// <summary>
+    /// 서버로부터 S_RequestChoice 패킷을 받았을 때 외부에서 호출합니다.
+    /// </summary>
+    public void StartChoiceMode(string choiceType, int sourceEntityId)
+    {
+        currentState = InputState.WaitingForChoice;
+        _currentChoiceType = choiceType;
+        _choiceSourceEntityId = sourceEntityId;
+
+        Debug.Log($"[GameInputManager] 선택 모드 진입: {_currentChoiceType} (요구 주체: {_choiceSourceEntityId})");
+    }
+
+    private void HandleWaitingForChoice()
+    {
+        // 좌클릭 시 대상 또는 위치 선택 확정
+        if (Input.GetMouseButtonDown(0))
+        {
+            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+
+            // 1. 토큰 소환 위치 선택일 경우 (FieldSlot 감지)
+            if (_currentChoiceType == "POSITION")
+            {
+                if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
+                {
+                    FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
+                    if (slot != null && !slot.IsOccupied) // 빈 자리일 때만 허용
+                    {
+                        GameClient.Instance.SendMakeChoiceRequest(slot.slotIndex, null, -1);
+                        ResetInput();
+                    }
+                }
+            }
+            // 2. 주문 등의 다중/단일 타겟 선택일 경우 (Entity 감지)
+            else if (_currentChoiceType == "TARGET")
+            {
+                if (Physics.Raycast(ray, out RaycastHit hit, 100f, minionEntityLayer))
+                {
+                    GameCardDisplay targetCard = hit.collider.GetComponentInParent<GameCardDisplay>();
+                    if (targetCard != null)
+                    {
+                        GameClient.Instance.SendMakeChoiceRequest(-1, null, targetCard.EntityId);
+                        ResetInput();
+                    }
+                }
+            }
         }
     }
 

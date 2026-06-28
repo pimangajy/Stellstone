@@ -12,6 +12,10 @@ public class ProjectileController : MonoBehaviour
     [Header("비행 궤적 추가 설정")]
     [Tooltip("좌우로 휘어지는 정도. 양수(+)면 오른쪽, 음수(-)면 왼쪽으로 휘어집니다.")]
     public float horizontalArc = 0f;
+    [Tooltip("투사체가 날아가는 속도")]
+    public float projectileSpeed = 15f;
+    [Tooltip("투사체의 포물선 높이 (0이면 직선으로 날아감)")]
+    public float projectileArcHeight = 1.5f;
 
     [Header("도착 연출")]
     [Tooltip("목표에 맞았을 때 터질 이펙트 (비워둬도 됨)")]
@@ -20,10 +24,10 @@ public class ProjectileController : MonoBehaviour
     [Tooltip("이펙트가 생성될 위치의 오프셋 (기본값: 위로 0.5, 카메라 쪽으로 -0.5)")]
     public Vector3 hitEffectOffset = new Vector3(0f, 0.5f, 0f);
 
-    public void Fire(Vector3 startPos, Vector3 targetPos, float speed, float arcHeight, Action onHitCallback)
+    public void Fire(Vector3 startPos, Vector3 targetPos, Action onHitCallback)
     {
         transform.position = startPos;
-        StartCoroutine(FlyRoutine(startPos, targetPos, speed, arcHeight, onHitCallback));
+        StartCoroutine(FlyRoutine(startPos, targetPos, projectileSpeed, projectileArcHeight, onHitCallback));
     }
 
     private IEnumerator FlyRoutine(Vector3 start, Vector3 target, float speed, float arcHeight, Action onHit)

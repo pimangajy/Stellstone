@@ -232,7 +232,6 @@ public class MatchingManager : MonoBehaviour
     /// </summary>
     private async void HandleDeckConfirmed(DeckData selectedDeck, bool saveToServer = true)
     {
-        Debug.Log($"매칭 매니저가 '{selectedDeck.deckName}' 덱을 받았습니다.");
         currentSelectedDeck = selectedDeck;
         selectedDeckNameText.text = selectedDeck.deckName;
 
@@ -478,7 +477,6 @@ public class MatchingManager : MonoBehaviour
     /// </summary>
     private void HandleMatchFound(string gameId, string opponentUid)
     {
-        Debug.Log($"UI: 매치 발견! 게임 ID: {gameId}. 대전 씬으로 이동합니다.");
         UIPanelToggler uIPanelToggler = searchingPanel.GetComponent<UIPanelToggler>();
         if (uIPanelToggler != null)
         {

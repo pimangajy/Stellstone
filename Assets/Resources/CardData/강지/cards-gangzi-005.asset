@@ -13,20 +13,31 @@ MonoBehaviour:
   m_Name: cards-gangzi-005
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-005
-  cardName: "\uAC00\uC544\uC559\uB3C4\uB2E8"
+  cardName: "\uAC00\uC544\uC544\uC559\uB3C4\uB2E8"
+  cardClass: 0
   cardType: 0
-  member: 0
   rarity: 0
   expansion: 0
   manaCost: 3
   attack: 4
   health: 4
   minionTribe: 1
-  description: 
+  description: "1/1 '\uAC15\uB3C4\uB2E8' \uD1A0\uD070\uC744 2\uAC1C \uC18C\uD658\uD569\uB2C8\uB2E4."
   additionalExplanation: 
   keyward: []
-  effects: []
-  targetRule: 0
+  effects:
+  - trigger: ON_PLAY
+    effectName: 
+    value1: 0
+    value2: 0
+    target: 
+    condition: 
+    conditionValue: 
+    count: 0
+    elseEffect:
+      rid: -2
+  targetRule: 16
+  triggerVFXList: []
   animationFrames:
   - {fileID: 21300000, guid: 6dc115d8801043446891cac677cfa779, type: 3}
   cardDissolveEffect: {fileID: 11400000, guid: 74110c85968d10446ae7ac309ddcf299, type: 2}
@@ -35,8 +46,8 @@ MonoBehaviour:
   spawnEffect: {fileID: 0}
   attackSound: {fileID: 0}
   projectilePrefab: {fileID: 976789555600343322, guid: 6f2b6067f6ad9b349af1ccb748554ba7, type: 3}
-  projectileSpeed: 15
-  projectileArcHeight: 1.5
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

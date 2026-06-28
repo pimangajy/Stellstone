@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -29,6 +30,14 @@ public class EntityAttackManager : MonoBehaviour
         else Destroy(gameObject);
 
         _mainCamera = Camera.main;
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            GameClient.Instance.DebugCheckSubscribers();
+        }
     }
 
     // --- 로직: 드래그 시작 (GameInputManager에서 호출) ---
@@ -104,8 +113,8 @@ public class EntityAttackManager : MonoBehaviour
                 GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
                 return;
             }
-            // 실제 전투
-            GameEntityManager.Instance.PerformAttack(attackerId, targetId);
+            // 실제 전투 GameEntityManager 에게 위임
+            // GameEntityManager.Instance.PerformAttack(attackerId, targetId);
 
             if (GameClient.Instance != null)
             {

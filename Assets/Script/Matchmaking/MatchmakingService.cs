@@ -174,7 +174,6 @@ public class MatchmakingService : MonoBehaviour
             DocumentReference myQueueDoc = db.Collection("MatchmakingQueue").Document(currentUserId);
             await myQueueDoc.SetAsync(myEntry); // 'myEntry' 객체로 내 문서 생성
 
-            Debug.Log("대기열 등록 완료. 상대방을 기다립니다.");
             OnMatchmakingStarted?.Invoke(); // UI에 "찾는 중..." 표시
             ListenForMatch(currentUserId); // 내 문서 구독 시작
 
