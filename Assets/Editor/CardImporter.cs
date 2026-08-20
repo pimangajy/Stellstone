@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
@@ -9,6 +9,7 @@ public class CardImporter : EditorWindow
     private string csvFolderPath = "Assets/Resources/CSV";
     private string cardAssetPath = "Assets/Resources/CardData";
 
+    // ìœ ë‹ˆí‹° ì—ë””í„° ìƒë‹¨ íˆ´ë°”ì— ë©”ë‰´ ì¶”ê°€
     [MenuItem("Tools/Import Card Data (CSV)")]
     public static void ShowWindow()
     {
@@ -29,15 +30,13 @@ public class CardImporter : EditorWindow
         {
             ImportCards();
         }
-
-        GUILayout.Label("CSV ±¸Á¶: ID, Class, Name, Cost, Atk, HP...", EditorStyles.miniLabel);
     }
 
     private void ImportCards()
     {
         if (!Directory.Exists(csvFolderPath))
         {
-            Debug.LogError($"CSV Æú´õ¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù: {csvFolderPath}");
+            Debug.LogError($"CSV í´ë”ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤: {csvFolderPath}");
             return;
         }
         if (!Directory.Exists(cardAssetPath))
@@ -48,7 +47,7 @@ public class CardImporter : EditorWindow
         string[] files = Directory.GetFiles(csvFolderPath, "*.csv");
         if (files.Length == 0)
         {
-            Debug.LogWarning("ÇØ´ç Æú´õ¿¡ CSV ÆÄÀÏÀÌ ¾ø½À´Ï´Ù.");
+            Debug.LogWarning("í•´ë‹¹ í´ë”ì— CSV íŒŒì¼ì´ ì—†ìŠµë‹ˆë‹¤.");
             return;
         }
 
@@ -60,43 +59,42 @@ public class CardImporter : EditorWindow
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"ÀÓÆ÷Æ® ¿Ï·á! ÃÑ {successCount}°³ÀÇ Ä«µå°¡ Ã³¸®µÇ¾ú½À´Ï´Ù.");
+        Debug.Log($"ì„í¬íŠ¸ ì™„ë£Œ! ì´ {successCount}ê°œì˜ ì¹´ë“œê°€ ì²˜ë¦¬ë˜ì—ˆìŠµë‹ˆë‹¤.");
     }
 
     private int ParseCSV(string filePath)
     {
         string[] lines = File.ReadAllLines(filePath);
-        if (lines.Length <= 1) return 0;
+        if (lines.Length <= 1) return 0; // í—¤ë”ë§Œ ìˆëŠ” ê²½ìš° ì œì™¸
 
         int count = 0;
 
-        // 1¹ø ÁÙºÎÅÍ µ¥ÀÌÅÍ ½ÃÀÛ (0¹øÀº Çì´õ)
+        // 0ë²ˆ ì¤„ì€ í—¤ë”ì´ë¯€ë¡œ 1ë²ˆ ì¤„ë¶€í„° ì‹œì‘
         for (int i = 1; i < lines.Length; i++)
         {
             string line = lines[i];
             if (string.IsNullOrWhiteSpace(line)) continue;
 
-            string[] values = SplitCsvLine(line);
+            // ì •ê·œì‹ì„ ì‚¬ìš©í•˜ì—¬ ë”°ì˜´í‘œ("") ì•ˆì˜ ì‰¼í‘œëŠ” ë¶„ë¦¬í•˜ì§€ ì•Šë„ë¡ ì²˜ë¦¬
+            string[] values = Regex.Split(line, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
-            // µ¥ÀÌÅÍ À¯È¿¼º °Ë»ç (ID°¡ ¾øÀ¸¸é ½ºÅµ)
-            if (values.Length < 1 || string.IsNullOrEmpty(values[0])) continue;
+            // ë°ì´í„° ìœ íš¨ì„± ê²€ì‚¬ (CardIDê°€ ë¹„ì–´ìˆìœ¼ë©´ ìŠ¤í‚µ)
+            if (values.Length < 11 || string.IsNullOrEmpty(values[0])) continue;
 
-            // --- 1. ±âº» Á¤º¸ ÆÄ½Ì ---
-            // ±¸Á¶: CardID(0), Class(1), Name(2), Cost(3), Atk(4), HP(5), Rarity(6), Type(7), Exp(8), Desc(9), Effects(10), Tribe(11), Add(12)
+            string id = values[0].Replace("\"", "").Trim();
+            string cardClass = values[1].Replace("\"", "").Trim();
+            CardClass memberType = ParseMemberType(cardClass);
 
-            string id = values[0].Trim();
-
-            // [¼öÁ¤µÊ] CSVÀÇ Class°ª(Gangzi µî)À» Enum(°­Áö)À¸·Î º¯È¯
-            CardClass memberType = ParseMemberType(values[1]);
-
-            // [¼öÁ¤µÊ] Á÷¾÷º° Æú´õ °æ·Î ¼³Á¤ (Enum ÀÌ¸§ÀÎ '°­Áö', 'À¯´Ï' Æú´õ·Î ÀúÀå)
+            // í´ë˜ìŠ¤ë³„ë¡œ í´ë”ë¥¼ ë‚˜ëˆ„ì–´ ì €ì¥
             string memberFolderPath = $"{cardAssetPath}/{memberType}";
+
+            // í•´ë‹¹ ì´ë¦„ì˜ í´ë”ê°€ ì¡´ì¬í•˜ì§€ ì•ŠëŠ”ë‹¤ë©´ ìƒˆë¡œ ìƒì„±
             if (!Directory.Exists(memberFolderPath))
             {
                 Directory.CreateDirectory(memberFolderPath);
             }
 
-            // ¿¡¼Â »ı¼º/·Îµå
+            // ì—ì…‹ ìƒì„± ê²½ë¡œë¥¼ í•´ë‹¹ í´ë˜ìŠ¤ í´ë” ë‚´ë¶€ë¡œ ì§€ì •
             string assetPath = $"{memberFolderPath}/{id}.asset";
             CardData card = AssetDatabase.LoadAssetAtPath<CardData>(assetPath);
 
@@ -106,200 +104,77 @@ public class CardImporter : EditorWindow
                 AssetDatabase.CreateAsset(card, assetPath);
             }
 
-            // --- 2. µ¥ÀÌÅÍ ¸ÅÇÎ (ÀÎµ¦½º ¼öÁ¤µÊ) ---
+            // --- ë°ì´í„° ë§¤í•‘ ---
+            // CSV í—¤ë” ê¸°ì¤€: CardID(0), Class(1), Name(2), Cost(3), Attack(4), Health(5), 
+            // Rarity(6), Type(7), Expansion(8), Tribe(9), Description(10), Targeting(11), Effects(12), Keywords(13)
+
             card.cardID = id;
-            card.cardClass = memberType;        // Index 1: cardClass
-            card.cardName = values[5];          // Index 2: Name
-            card.manaCost = ParseInt(values[2]);// Index 3: Cost
-            card.attack = ParseInt(values[6]);  // Index 4: Attack
-            card.health = ParseInt(values[9]);  // Index 5: Health
+            card.cardClass = memberType;
+            card.cardName = values[2].Replace("\"", "").Trim();
+
+            card.manaCost = ParseInt(values[3]);
+            card.attack = ParseInt(values[4]);
+            card.health = ParseInt(values[5]);
 
             card.rarity = ParseEnum<CardRarity>(values[6], CardRarity.common);
             card.cardType = ParseCardType(values[7]);
-            card.expansion = (values[8] == "±âº»") ? Expansion.±âº» : ParseEnum<Expansion>(values[8], Expansion.±âº»);
+            card.expansion = ParseEnum<Expansion>(values[8], Expansion.ê¸°ë³¸);
+            card.minionTribe = ParseEnum<CardTribe>(values[9], CardTribe.ë¬´ì†Œì†);
 
-            card.description = values[9].Replace("\"", "").Replace("\"\"", "\"");
+            // Descriptionì€ ë”°ì˜´í‘œ ì œê±° í›„ ë§¤í•‘
+            card.description = values[10].Replace("\"", "").Trim();
 
-            string rawEffects = values[10].Trim();
-            card.keyward = ExtractKeywords(ref rawEffects);
+            if (values.Length > 11 && !string.IsNullOrWhiteSpace(values[11]))
+            {
+                string rawValue = values[11].Replace("\"", "").Trim().ToLower();
+                card.targeting = (rawValue == "true" || rawValue == "1");
+            }
 
-            // È¿°ú
-            card.effects = ParseEffects(values[10]);
-            card.targetRule = DetermineTargetRule(card.effects);
+            // Effects(ì¸ë±ìŠ¤ 12)ëŠ” ë¬´ì‹œí•©ë‹ˆë‹¤.
 
-            card.minionTribe = ParseEnum<CardTribe>(values[11], CardTribe.¹«¼Ò¼Ó);
+            // Keywords(ì¸ë±ìŠ¤ 13)ê°€ ì¡´ì¬í•  ê²½ìš° ë§¤í•‘
+            if (values.Length > 13 && !string.IsNullOrWhiteSpace(values[13]))
+            {
+                // 1. ê´„í˜¸ ë° ë”°ì˜´í‘œ ì œê±°
+                string rawKeywords = values[13].Replace("[", "").Replace("]", "").Replace("\"", "");
 
-            // Ãß°¡ ¼³¸í
-            if (values.Length > 12)
-                card.additionalExplanation = values[12].Replace("\"", "");
+                // 2. Enum ë¦¬ìŠ¤íŠ¸ ì´ˆê¸°í™”
+                card.keyward = new List<CardKeywords>();
 
+                // 3. ë‚´ìš©ì´ ë¹„ì–´ìˆì§€ ì•Šì€ ê²½ìš°ì—ë§Œ ë¶„ë¦¬ ë° ë³€í™˜
+                if (!string.IsNullOrWhiteSpace(rawKeywords))
+                {
+                    string[] keywordStrings = rawKeywords.Split(',');
+
+                    foreach (string kw in keywordStrings)
+                    {
+                        // 4. ë¬¸ìì—´ì„ CardKeywords Enumìœ¼ë¡œ ë³€í™˜ (ëŒ€ì†Œë¬¸ì ë¬´ì‹œ: true)
+                        if (System.Enum.TryParse(kw.Trim(), true, out CardKeywords parsedKeyword))
+                        {
+                            card.keyward.Add(parsedKeyword);
+                        }
+                        else
+                        {
+                            // Enumì— ì •ì˜ë˜ì§€ ì•Šì€ í‚¤ì›Œë“œê°€ ë“¤ì–´ì˜¬ ê²½ìš°ë¥¼ ëŒ€ë¹„í•œ ì˜ˆì™¸ ì²˜ë¦¬
+                            Debug.LogWarning($"ì•Œ ìˆ˜ ì—†ëŠ” í‚¤ì›Œë“œì…ë‹ˆë‹¤: {kw.Trim()} (CardID: {id})");
+                        }
+                    }
+                }
+            }
+
+            // ìŠ¤í¬ë¦½í„°ë¸” ì˜¤ë¸Œì íŠ¸ ë³€ê²½ì‚¬í•­ ì €ì¥ ì˜ˆì•½
             EditorUtility.SetDirty(card);
             count++;
         }
         return count;
     }
 
-    // --- Enum ¸ÅÇÎ µµ¿ì¹Ì ---
+    // --- ìœ í‹¸ë¦¬í‹° ë©”ì„œë“œ ---
 
-    private List<string> ExtractKeywords(ref string effectString)
-    {
-        List<string> foundKeywords = new List<string>();
-
-        // Á¤±Ô½ÄÀ¸·Î [KEYWORDS:...] ÆĞÅÏ Ã£±â
-        Match match = Regex.Match(effectString, @"^\[KEYWORDS:(.*?)\]");
-
-        if (match.Success)
-        {
-            string keywordContent = match.Groups[1].Value;
-            if (!string.IsNullOrEmpty(keywordContent))
-            {
-                // ÄŞ¸¶·Î ±¸ºĞÇÏ¿© ¸®½ºÆ®¿¡ ÀúÀå
-                string[] splitKeywords = keywordContent.Split(',');
-                foreach (string k in splitKeywords)
-                {
-                    foundKeywords.Add(k.Trim());
-                }
-            }
-
-            // ¿øº» ¹®ÀÚ¿­¿¡¼­ [KEYWORDS:...] ºÎºĞÀ» Á¦°ÅÇÏ¿© È¿°ú ÆÄ½Ì¿¡ ¹æÇØ ¾È µÇ°Ô ÇÔ
-            effectString = effectString.Substring(match.Length).Trim();
-
-            // Á¦°Å ÈÄ ¸¸¾à ¸Ç ¾Õ¿¡ \nÀÌ ÀÖ´Ù¸é Ãß°¡ Á¦°Å
-            if (effectString.StartsWith("\n") || effectString.StartsWith("\r"))
-                effectString = effectString.TrimStart();
-        }
-
-        return foundKeywords;
-    }
-
-    // [½Å±Ô] CSVÀÇ ¿µ¹® Class(Gangzi)¸¦ ÇÑ±Û Enum(°­Áö)À¸·Î ¸ÅÇÎ
-    private CardClass ParseMemberType(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return CardClass.Gangzi;
-
-        // 1. Enum°ú Á¤È®È÷ ÀÏÄ¡ÇÏ´Â °æ¿ì (¿¹: "°­Áö")
-        if (System.Enum.TryParse(value, true, out CardClass result)) return result;
-
-        // 2. CSV°¡ ¿µ¹®(Gangzi)ÀÌ°í EnumÀÌ ÇÑ±Û(°­Áö)ÀÎ °æ¿ì ¸ÅÇÎ
-        switch (value.Trim().ToLower())
-        {
-            case "gangzi": return CardClass.Gangzi;
-            case "yuni": return CardClass.Yuni;
-            case "huya": return CardClass.Huya;
-            // ÇÊ¿äÇÑ °æ¿ì Ãß°¡
-            default:
-                Debug.LogWarning($"¾Ë ¼ö ¾ø´Â Á÷¾÷ Å¸ÀÔ: {value}. ±âº»°ª(°­Áö)À¸·Î ¼³Á¤µË´Ï´Ù.");
-                return CardClass.Gangzi;
-        }
-    }
-
-    // --- ±âÁ¸ È¿°ú ÆÄ½Ì ·ÎÁ÷ ---
-    private List<EffectInstance> ParseEffects(string rawEffects)
-    {
-        List<EffectInstance> effectList = new List<EffectInstance>();
-        if (string.IsNullOrWhiteSpace(rawEffects)) return effectList;
-
-        string[] bundles = rawEffects.Split('&');
-
-        foreach (string bundle in bundles)
-        {
-            EffectInstance effect = ParseSingleEffectRecursively(bundle.Trim());
-            if (effect != null)
-                effectList.Add(effect);
-        }
-
-        return effectList;
-    }
-
-    private EffectInstance ParseSingleEffectRecursively(string effectString)
-    {
-        string[] branches = effectString.Split('/');
-
-        EffectInstance rootEffect = ParseEffectSegment(branches[0].Trim());
-
-        if (branches.Length > 1 && rootEffect != null)
-        {
-            string remaining = string.Join("/", branches, 1, branches.Length - 1);
-            rootEffect.elseEffect = ParseSingleEffectRecursively(remaining);
-        }
-
-        return rootEffect;
-    }
-
-    private EffectInstance ParseEffectSegment(string segment)
-    {
-        if (string.IsNullOrWhiteSpace(segment)) return null;
-
-        EffectInstance instance = new EffectInstance();
-
-        string content = segment;
-        if (segment.Contains("|"))
-        {
-            string[] parts = segment.Split('|');
-            instance.trigger = parts[0].Trim();
-            if (parts.Length > 1) content = parts[1].Trim();
-        }
-        else
-        {
-            instance.trigger = "ON_PLAY";
-        }
-
-        string[] p = content.Split(':');
-
-        if (p.Length > 0) instance.effectName = p[0].Trim();
-        if (p.Length > 1) instance.value1 = ParseInt(p[1]);
-        if (p.Length > 2) instance.value2 = ParseInt(p[2]);
-        if (p.Length > 3) instance.target = p[3].Trim();
-        if (p.Length > 4) instance.condition = p[4].Trim();
-        if (p.Length > 5) instance.conditionValue = p[5].Trim();
-        if (p.Length > 6) instance.count = ParseInt(p[6]);
-
-        return instance;
-    }
-
-    // Á¦³Ê·¹ÀÌÅÍÀÇ ¹®ÀÚ¿­(Target)À» CardDataÀÇ TargetRule EnumÀ¸·Î º¯È¯
-    private TargetRule DetermineTargetRule(List<EffectInstance> effects)
-    {
-        // È¿°ú°¡ ¾øÀ¸¸é None ¹İÈ¯
-        if (effects == null || effects.Count == 0) return TargetRule.None;
-
-        // Ä«µå¸¦ ³¾ ¶§ÀÇ ±âÁØ Å¸°ÙÆÃÀº ÁÖ·Î Ã¹ ¹øÂ° È¿°ú(¸ŞÀÎ È¿°ú)¸¦ µû¸§
-        string primaryTarget = effects[0].target;
-
-        if (string.IsNullOrEmpty(primaryTarget)) return TargetRule.None;
-
-        switch (primaryTarget.ToUpper())
-        {
-            // 1. ´ÜÀÏ ÁöÁ¤ °è¿­ ¸ÅÇÎ
-            case "TARGET":
-            case "TARGET_CHARACTER": return TargetRule.Target_All;
-            case "TARGET_MINION": return TargetRule.Target_Minion;
-            case "TARGET_ENEMY_CHARACTER": return TargetRule.Target_Enemy_All;
-            case "TARGET_ENEMY_MINION": return TargetRule.Target_Enemy_Minion;
-            case "ENEMY_HERO": return TargetRule.Target_Enemy_Leader;
-            case "TARGET_FRIENDLY_CHARACTER": return TargetRule.Target_Friend_All;
-            case "TARGET_FRIENDLY_MINION": return TargetRule.Target_Friend_Minion;
-            case "FRIENDLY_HERO": return TargetRule.Target_Friend_Leader;
-
-            // 2. ±¤¿ª/ÀÚµ¿ ¹üÀ§ °è¿­ ¸ÅÇÎ
-            case "ALL_CHARACTERS": return TargetRule.All_Characters;
-            case "ALL_MINIONS": return TargetRule.All_Minions;
-            case "ALL_ENEMIES": return TargetRule.All_Enemies;
-            case "ALL_ENEMY_MINIONS": return TargetRule.All_Enemy_Minions;
-            case "ALL_FRIENDS": return TargetRule.All_Friends;
-            case "ALL_FRIENDLY_MINIONS": return TargetRule.All_Friendly_Minions;
-
-            case "SELF": return TargetRule.Self;
-
-            default: return TargetRule.None; // ¹«ÀÛÀ§(RANDOM_) µîÀÇ °æ¿ì None Ã³¸®
-        }
-    }
-
-    // --- À¯Æ¿¸®Æ¼ ---
     private int ParseInt(string value)
     {
         if (string.IsNullOrEmpty(value)) return 0;
-        value = value.Replace("(", "").Replace(")", "");
+        value = value.Replace("\"", "").Replace("(", "").Replace(")", "").Trim();
         if (int.TryParse(value, out int result)) return result;
         return 0;
     }
@@ -307,22 +182,34 @@ public class CardImporter : EditorWindow
     private T ParseEnum<T>(string value, T defaultValue) where T : struct
     {
         if (string.IsNullOrEmpty(value)) return defaultValue;
-        if (System.Enum.TryParse(value.Replace(" ", ""), true, out T result)) return result;
+        value = value.Replace("\"", "").Replace(" ", "").Trim();
+        if (System.Enum.TryParse(value, true, out T result)) return result;
         return defaultValue;
+    }
+
+    private CardClass ParseMemberType(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return CardClass.Gangzi;
+        if (System.Enum.TryParse(value, true, out CardClass result)) return result;
+
+        switch (value.Trim().ToLower())
+        {
+            case "Gangzi": return CardClass.Gangzi;
+            case "Yuni": return CardClass.Yuni;
+            case "Huya": return CardClass.Huya;
+            default:
+                Debug.LogWarning($"ì•Œ ìˆ˜ ì—†ëŠ” ì§ì—… íƒ€ì…: {value}. ê¸°ë³¸ê°’(Gangzi)ìœ¼ë¡œ ì„¤ì •ë©ë‹ˆë‹¤.");
+                return CardClass.Gangzi;
+        }
     }
 
     private CardType ParseCardType(string koreanType)
     {
-        if (string.IsNullOrEmpty(koreanType)) return CardType.ÇÏ¼öÀÎ;
-        if (koreanType.Contains("ÇÏ¼öÀÎ")) return CardType.ÇÏ¼öÀÎ;
-        if (koreanType.Contains("ÁÖ¹®")) return CardType.ÁÖ¹®;
-        if (koreanType.Contains("¹«±â")) return CardType.READER;
-        if (koreanType.Contains("¸â¹ö")) return CardType.¸â¹ö;
-        return CardType.ÇÏ¼öÀÎ;
-    }
-
-    private string[] SplitCsvLine(string line)
-    {
-        return Regex.Split(line, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+        if (string.IsNullOrEmpty(koreanType)) return CardType.í•˜ìˆ˜ì¸;
+        if (koreanType.Contains("í•˜ìˆ˜ì¸")) return CardType.í•˜ìˆ˜ì¸;
+        if (koreanType.Contains("ì£¼ë¬¸")) return CardType.ì£¼ë¬¸;
+        if (koreanType.Contains("ë¬´ê¸°")) return CardType.READER;
+        if (koreanType.Contains("ë©¤ë²„")) return CardType.ë©¤ë²„;
+        return CardType.í•˜ìˆ˜ì¸;
     }
 }

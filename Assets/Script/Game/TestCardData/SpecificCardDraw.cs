@@ -1,4 +1,4 @@
-using TMPro;
+ï»¿using TMPro;
 using UnityEngine;
 
 public class SpecificCardDraw : MonoBehaviour
@@ -21,7 +21,7 @@ public class SpecificCardDraw : MonoBehaviour
             targetCardId = cardInfo.cardId.ToString(),
         };
 
-        Debug.Log($"¼­¹ö¿¡ Æ¯Á¤Ä«µå {cardInfo.cardId.ToString()} µå·Î¿ì ¿äÃ»");
+        Debug.Log($"ì„œë²„ì— íŠ¹ì •ì¹´ë“œ {cardInfo.cardId.ToString()} ë“œë¡œìš° ìš”ì²­");
         GameClient.Instance.SendDebugMessageAsync(action);
     }
 }

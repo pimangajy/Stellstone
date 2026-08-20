@@ -1,66 +1,66 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ¼ÒÈ¯µÉ ¶§ÀÇ Ä«µå ÀÌµ¿ ¹°¸® ¿¬Ãâ Á¾·ùÀÔ´Ï´Ù.
+/// ì†Œí™˜ë  ë•Œì˜ ì¹´ë“œ ì´ë™ ë¬¼ë¦¬ ì—°ì¶œ ì¢…ë¥˜ì…ë‹ˆë‹¤.
 /// </summary>
 public enum SpawnMotionType
 {
-    Normal,     // ±âº» ÀÌµ¿ (ÆĞ¿¡¼­ ÇÊµå·Î)
-    SkyDrop,    // ÇÏ´Ã¿¡¼­ °­ÇÏ°Ô ³«ÇÏ (Äô!)
-    PopUp,      // ¹Ù´Ú¿¡¼­ ¼Ú¾Æ¿À¸§
-    FadeIn,     // ¾ËÆÄ°ªÀÌ º¯ÇÏ¸ç ½º¸£¸¤ ³ªÅ¸³²
-    Portal      // Æ÷Å» ÀÌÆåÆ®¿Í ÇÔ²² µîÀå
+    Normal,     // ê¸°ë³¸ ì´ë™ (íŒ¨ì—ì„œ í•„ë“œë¡œ)
+    SkyDrop,    // í•˜ëŠ˜ì—ì„œ ê°•í•˜ê²Œ ë‚™í•˜ (ì¿µ!)
+    PopUp,      // ë°”ë‹¥ì—ì„œ ì†Ÿì•„ì˜¤ë¦„
+    FadeIn,     // ì•ŒíŒŒê°’ì´ ë³€í•˜ë©° ìŠ¤ë¥´ë¥µ ë‚˜íƒ€ë‚¨
+    Portal      // í¬íƒˆ ì´í™íŠ¸ì™€ í•¨ê»˜ ë“±ì¥
 }
 
 /// <summary>
-/// Ä«µå°¡ ÇÊµå¿¡ ¼ÒÈ¯µÉ ¶§ÀÇ ½Ã°¢Àû(VFX), Ã»°¢Àû(SFX), ¹°¸®Àû(Motion) ¿¬ÃâÀ» Á¤ÀÇÇÏ´Â µ¥ÀÌÅÍ ¿¡¼ÂÀÔ´Ï´Ù.
+/// ì¹´ë“œê°€ í•„ë“œì— ì†Œí™˜ë  ë•Œì˜ ì‹œê°ì (VFX), ì²­ê°ì (SFX), ë¬¼ë¦¬ì (Motion) ì—°ì¶œì„ ì •ì˜í•˜ëŠ” ë°ì´í„° ì—ì…‹ì…ë‹ˆë‹¤.
 /// </summary>
 [CreateAssetMenu(fileName = "NewSpawnEffect", menuName = "CardGame/Spawn Effect Data")]
 public class SpawnEffectData : ScriptableObject
 {
-    [Header("1. ¾Ö´Ï¸ŞÀÌ¼Ç ¼³Á¤ (Motion)")]
-    [Tooltip("Ä«µå°¡ ÇÊµå¿¡ ¹èÄ¡µÉ ¶§ÀÇ ÀÌµ¿ ¹æ½ÄÀÔ´Ï´Ù.")]
+    [Header("1. ì• ë‹ˆë©”ì´ì…˜ ì„¤ì • (Motion)")]
+    [Tooltip("ì¹´ë“œê°€ í•„ë“œì— ë°°ì¹˜ë  ë•Œì˜ ì´ë™ ë°©ì‹ì…ë‹ˆë‹¤.")]
     public SpawnMotionType motionType = SpawnMotionType.Normal;
 
-    [Tooltip("ÀüÃ¼ ¼ÒÈ¯ ¿¬ÃâÀÌ ¿Ï·áµÇ±â±îÁöÀÇ ½Ã°£(ÃÊ)ÀÔ´Ï´Ù.")]
+    [Tooltip("ì „ì²´ ì†Œí™˜ ì—°ì¶œì´ ì™„ë£Œë˜ê¸°ê¹Œì§€ì˜ ì‹œê°„(ì´ˆ)ì…ë‹ˆë‹¤.")]
     public float duration = 1.0f;
 
-    [Header("2. ½Ã°¢ È¿°ú (VFX)")]
-    [Tooltip("¼ÒÈ¯ ½Ã »ı¼ºµÉ ÆÄÆ¼Å¬ ÀÌÆåÆ® ÇÁ¸®ÆÕÀÔ´Ï´Ù.")]
+    [Header("2. ì‹œê° íš¨ê³¼ (VFX)")]
+    [Tooltip("ì†Œí™˜ ì‹œ ìƒì„±ë  íŒŒí‹°í´ ì´í™íŠ¸ í”„ë¦¬íŒ¹ì…ë‹ˆë‹¤.")]
     public GameObject spawnVFXPrefab;
 
-    [Tooltip("¿ÀºêÁ§Æ® À§Ä¡ ±âÁØ ¹Ì¼¼ Á¶Á¤¿ë ¿ÀÇÁ¼ÂÀÔ´Ï´Ù.")]
+    [Tooltip("ì˜¤ë¸Œì íŠ¸ ìœ„ì¹˜ ê¸°ì¤€ ë¯¸ì„¸ ì¡°ì •ìš© ì˜¤í”„ì…‹ì…ë‹ˆë‹¤.")]
     public Vector3 vfxOffset = Vector3.zero;
 
-    [Tooltip("¼ÒÈ¯ ½ÃÀÛ ÈÄ ÀÌÆåÆ®°¡ ÅÍÁö´Â Å¸ÀÌ¹ÖÀÔ´Ï´Ù. (0ÀÌ¸é Áï½Ã)")]
+    [Tooltip("ì†Œí™˜ ì‹œì‘ í›„ ì´í™íŠ¸ê°€ í„°ì§€ëŠ” íƒ€ì´ë°ì…ë‹ˆë‹¤. (0ì´ë©´ ì¦‰ì‹œ)")]
     public float vfxDelay = 0.0f;
 
-    [Tooltip("ÀÌÆåÆ® ÀÎ½ºÅÏ½º°¡ ÆÄ±«µÇ±â±îÁöÀÇ ½Ã°£ÀÔ´Ï´Ù.")]
+    [Tooltip("ì´í™íŠ¸ ì¸ìŠ¤í„´ìŠ¤ê°€ íŒŒê´´ë˜ê¸°ê¹Œì§€ì˜ ì‹œê°„ì…ë‹ˆë‹¤.")]
     public float vfxDestroyTime = 3.0f;
 
-    [Header("3. »ç¿îµå È¿°ú (SFX)")]
-    [Tooltip("µîÀåÇÒ ¶§ Àç»ıÇÒ È¿°úÀ½ÀÔ´Ï´Ù.")]
+    [Header("3. ì‚¬ìš´ë“œ íš¨ê³¼ (SFX)")]
+    [Tooltip("ë“±ì¥í•  ë•Œ ì¬ìƒí•  íš¨ê³¼ìŒì…ë‹ˆë‹¤.")]
     public AudioClip spawnSound;
 
     [Range(0f, 1f)]
     public float soundVolume = 1.0f;
 
-    [Header("4. Ä«¸Ş¶ó ¿¬Ãâ (Impact)")]
-    [Tooltip("¼ÒÈ¯ ½Ã È­¸é Èçµé¸² °­µµÀÔ´Ï´Ù. (SkyDrop µî¿¡ »ç¿ë)")]
+    [Header("4. ì¹´ë©”ë¼ ì—°ì¶œ (Impact)")]
+    [Tooltip("ì†Œí™˜ ì‹œ í™”ë©´ í”ë“¤ë¦¼ ê°•ë„ì…ë‹ˆë‹¤. (SkyDrop ë“±ì— ì‚¬ìš©)")]
     public float cameraShakeStrength = 0.0f;
 
-    [Tooltip("È­¸é Èçµé¸² Áö¼Ó ½Ã°£ÀÔ´Ï´Ù.")]
+    [Tooltip("í™”ë©´ í”ë“¤ë¦¼ ì§€ì† ì‹œê°„ì…ë‹ˆë‹¤.")]
     public float shakeDuration = 0.2f;
 
     /// <summary>
-    /// ´ë»ó ¿ÀºêÁ§Æ®ÀÇ À§Ä¡¸¦ ±â¹İÀ¸·Î ÀÌÆåÆ®¸¦ »ı¼ºÇÕ´Ï´Ù.
+    /// ëŒ€ìƒ ì˜¤ë¸Œì íŠ¸ì˜ ìœ„ì¹˜ë¥¼ ê¸°ë°˜ìœ¼ë¡œ ì´í™íŠ¸ë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="target">ÀÌÆåÆ®°¡ »ı¼ºµÉ ±âÁØ ¿ÀºêÁ§Æ®</param>
+    /// <param name="target">ì´í™íŠ¸ê°€ ìƒì„±ë  ê¸°ì¤€ ì˜¤ë¸Œì íŠ¸</param>
     public void PlaySpawnVFX(Transform target)
     {
         if (spawnVFXPrefab == null || target == null) return;
 
-        // ´ë»óÀÇ ÇöÀç À§Ä¡¿¡ ¿ÀÇÁ¼Â¸¸ ´õÇØ »ı¼ºÇÕ´Ï´Ù.
+        // ëŒ€ìƒì˜ í˜„ì¬ ìœ„ì¹˜ì— ì˜¤í”„ì…‹ë§Œ ë”í•´ ìƒì„±í•©ë‹ˆë‹¤.
         Vector3 spawnPos = target.position + vfxOffset;
         GameObject vfx = Instantiate(spawnVFXPrefab, spawnPos, Quaternion.identity);
 
@@ -68,7 +68,7 @@ public class SpawnEffectData : ScriptableObject
     }
 
     /// <summary>
-    /// ÁöÁ¤µÈ AudioSource¸¦ ÅëÇØ ¼ÒÈ¯À½À» Àç»ıÇÕ´Ï´Ù.
+    /// ì§€ì •ëœ AudioSourceë¥¼ í†µí•´ ì†Œí™˜ìŒì„ ì¬ìƒí•©ë‹ˆë‹¤.
     /// </summary>
     public void PlaySpawnSound(AudioSource source)
     {

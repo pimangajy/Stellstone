@@ -1,62 +1,69 @@
 using System;
-using System.Collections.Concurrent; // (Áß¿ä) ¿©·¯ ½º·¹µå°¡ µ¿½Ã¿¡ Á¢±ÙÇØµµ ¾ÈÀüÇÑ Å¥(Queue)¸¦ ¾¹´Ï´Ù.
+using System.Collections;
+using System.Collections.Concurrent; // (ì¤‘ìš”) ì—¬ëŸ¬ ìŠ¤ë ˆë“œê°€ ë™ì‹œì— ì ‘ê·¼í•´ë„ ì•ˆì „í•œ í(Queue)ë¥¼ ì”ë‹ˆë‹¤.
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
-using Newtonsoft.Json; // JSON µ¥ÀÌÅÍ¸¦ ´Ù·ç±â À§ÇÑ µµ±¸
 using Firebase.Auth;
-using System.Collections.Generic;
-using System.Collections;
+using Newtonsoft.Json; // JSON ë°ì´í„°ë¥¼ ë‹¤ë£¨ê¸° ìœ„í•œ ë„êµ¬
+using Unity.VisualScripting;
+using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
-// ¼­¹ö¿Í ÁÖ°í¹ŞÀ» ¸Ş½ÃÁö ±Ô°İ(¸ğµ¨)À» °¡Á®¿É´Ï´Ù.
+// ì„œë²„ì™€ ì£¼ê³ ë°›ì„ ë©”ì‹œì§€ ê·œê²©(ëª¨ë¸)ì„ ê°€ì ¸ì˜µë‹ˆë‹¤.
 // using GameServer; 
 
 /// <summary>
-/// À¯´ÏÆ¼(Å¬¶óÀÌ¾ğÆ®)¿Í °ÔÀÓ ¼­¹ö °£ÀÇ ´ëÈ­¸¦ ´ã´çÇÏ´Â Åë¿ª»çÀÔ´Ï´Ù.
-/// "Ä«µå ³Â¾î", "°ø°İÇØ" °°Àº ¸Ş½ÃÁö¸¦ º¸³»°í, ¼­¹öÀÇ ÀÀ´äÀ» ¹Ş¾Æ¼­ °ÔÀÓ¿¡ ¹İ¿µÇÕ´Ï´Ù.
+/// ìœ ë‹ˆí‹°(í´ë¼ì´ì–¸íŠ¸)ì™€ ê²Œì„ ì„œë²„ ê°„ì˜ ëŒ€í™”ë¥¼ ë‹´ë‹¹í•˜ëŠ” í†µì—­ì‚¬ì…ë‹ˆë‹¤.
+/// "ì¹´ë“œ ëƒˆì–´", "ê³µê²©í•´" ê°™ì€ ë©”ì‹œì§€ë¥¼ ë³´ë‚´ê³ , ì„œë²„ì˜ ì‘ë‹µì„ ë°›ì•„ì„œ ê²Œì„ì— ë°˜ì˜í•©ë‹ˆë‹¤.
 /// </summary>
 public class GameClient : MonoBehaviour
 {
-    // ½Ì±ÛÅæ ÆĞÅÏ: ÀÌ Å¬·¡½º´Â °ÔÀÓ ³»¿¡ ´Ü ÇÏ³ª¸¸ Á¸ÀçÇØ¾ß ÇÕ´Ï´Ù.
+    // ì‹±ê¸€í†¤ íŒ¨í„´: ì´ í´ë˜ìŠ¤ëŠ” ê²Œì„ ë‚´ì— ë‹¨ í•˜ë‚˜ë§Œ ì¡´ì¬í•´ì•¼ í•©ë‹ˆë‹¤.
     public static GameClient Instance { get; private set; }
 
-    // --- ÀÌº¥Æ® Á¤ÀÇ (¹æ¼Û±¹) ---
-    public event Action<S_GameReady> OnGameReadyEvent;
-    public event Action<S_PhaseStart> OnPhaseStartEvent;
-    public event Action<string> OnPlayCardSuccessEvent;
-    public event Action<S_ActionResolution> OnActionResolutionEvent;
-    public event Action<S_UpdateMana> OnUpdateManaEvent;
-    public event Action<S_UpdateEntities> OnUpdateEntitiesEvent;
-    public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;
-    public event Action<string> OnErrorEvent;
-    public event Action<string> OnPlayCardFailedEvent;
+    // --- ì´ë²¤íŠ¸ ì •ì˜ (ë°©ì†¡êµ­) ---
+    public event Action<S_GameReady> OnGameReadyEvent;                                   // ê²Œì„ ì‹œì‘ íŒ¨í‚·
+    public event Action<S_PhaseStart> OnPhaseStartEvent;                                 // í˜ì´ì¦ˆ ì‹œì‘ íŒ¨í‚·
+    public event Action<string> OnPlayCardSuccessEvent;                                  // ì¹´ë“œ ì‚¬ìš© ì„±ê³µ íŒ¨í‚·
+    public event Action<S_ActionResolution> OnActionResolutionEvent;                     // ì¹´ë“œ ì‚¬ìš© íš¨ê³¼ íŒ¨í‚·
+    public event Action<S_UpdateMana> OnUpdateManaEvent;                                 // ë§ˆë‚˜ ì—†ë°ì´íŠ¸ íŒ¨í‚·
+    public event Action<S_UpdateHandCards> OnUpdateHandCardsEvent;                       // ì†íŒ¨ ì—…ë°ì´íŠ¸ íŒ¨í‚·
+    public event Action<S_ValidTargetResponse> validTargetResponse;                      // íš¨ê³¼ íƒ€ê²Ÿ íŒ¨í‚·
+    public event Action<S_ValidAttackTargetsResponse> validAttackTargetsResponse;        // ê³µê²© íƒ€ê²Ÿ íŒ¨í‚· 
+    public event Action<S_UpdateEntities> OnUpdateEntitiesEvent;                         // í•„ë“œ ìƒíƒœ íŒ¨í‚·
+    public event Action<S_OpponentPlayCard> OnOpponentPlayCardEvent;                     // ìƒëŒ€ ì¹´ë“œ í”Œë ˆì´ íŒ¨í‚·
+    public event Action<string> OnErrorEvent;                                            // ì—ëŸ¬ íŒ¨í‚·
+    public event Action<string> OnPlayCardFailedEvent;                                   // ì¹´ë“œ ì‚¬ìš© ì‹¤íŒ¨ íŒ¨í‚·
+    public event Action<S_GameOver> OnGameOverEvent;                                     // ê²Œì„ ì¢…ë£Œ íŒ¨í‚· (ìŠ¹ì/íŒ¨ë°°/í•­ë³µ)
 
     private ClientWebSocket _webSocket;
     private CancellationTokenSource _cts;
 
-    // Firebase ÀÎÁõ Á¤º¸
+    // Firebase ì¸ì¦ ì •ë³´
     public FirebaseAuth _auth;
     public string UserUid;
 
-    // ¡Ú [ÃÖÀûÈ­ ¿Ï·á] ¹®ÀÚ¿­(string) ´ë½Å, ÆÄ½ÌÀÌ ³¡³­ '°´Ã¼(BaseGameAction)'¸¦ ´ã½À´Ï´Ù.
+    // â˜… [ìµœì í™” ì™„ë£Œ] ë¬¸ìì—´(string) ëŒ€ì‹ , íŒŒì‹±ì´ ëë‚œ 'ê°ì²´(BaseGameAction)'ë¥¼ ë‹´ìŠµë‹ˆë‹¤.
     private ConcurrentQueue<BaseGameAction> _receivedActions = new ConcurrentQueue<BaseGameAction>();
-    // [µğ¹ö±×]
+    // [ë””ë²„ê·¸]
     private ConcurrentQueue<BaseDebugAction> _debugdActions = new ConcurrentQueue<BaseDebugAction>();
 
-    [Header("¼­¹ö ÁÖ¼Ò")]
+    [Header("ì„œë²„ ì£¼ì†Œ")]
     [SerializeField] private string serverIp = "175.125.250.226";
     [SerializeField] private string notebookserverIp = "192.168.0.36";
     [SerializeField] private string serverPort = "5123";
     [SerializeField] private bool useHttps = false;
     [SerializeField] private bool notebook = false;
 
-    [Header("¼­¹ö ÁÖ¼Ò")]
+    [Header("ì„œë²„ ì£¼ì†Œ")]
     public string BaseUrl => $"{(useHttps ? "https" : "http")}://{(notebook ? notebookserverIp : serverIp)}:{serverPort}";
 
     /// <summary>
-    /// API È£ÃâÀ» À§ÇÑ ±âº» °æ·Î
+    /// API í˜¸ì¶œì„ ìœ„í•œ ê¸°ë³¸ ê²½ë¡œ
     /// </summary>
     public string BaseApiUrl => $"{BaseUrl}/api";
     public string serverAddress => $"ws://{(notebook ? notebookserverIp : serverIp)}:5123/ws/game";
@@ -85,13 +92,13 @@ public class GameClient : MonoBehaviour
 
     void Update()
     {
-        // ¡Ú [ÃÖÀûÈ­ ¿Ï·á] ¸ŞÀÎ ½º·¹µå´Â JSON ÆÄ½ÌÀ» ÇÏÁö ¾Ê°í, ÀÌ¹Ì ¿Ï¼ºµÈ °´Ã¼¸¸ ²¨³»¼­ »ç¿ëÇÕ´Ï´Ù! (ÇÁ·¹ÀÓ µå¶ø ¹æÁö)
+        // â˜… [ìµœì í™” ì™„ë£Œ] ë©”ì¸ ìŠ¤ë ˆë“œëŠ” JSON íŒŒì‹±ì„ í•˜ì§€ ì•Šê³ , ì´ë¯¸ ì™„ì„±ëœ ê°ì²´ë§Œ êº¼ë‚´ì„œ ì‚¬ìš©í•©ë‹ˆë‹¤! (í”„ë ˆì„ ë“œë ë°©ì§€)
         while (_receivedActions.TryDequeue(out BaseGameAction action))
         {
             HandleServerAction(action);
         }
 
-        // [µğ¹ö±×]
+        // [ë””ë²„ê·¸]
         while (_debugdActions.TryDequeue(out BaseDebugAction action))
         {
             HandleDebugAction(action);
@@ -102,19 +109,19 @@ public class GameClient : MonoBehaviour
     {
         if (OnActionResolutionEvent == null)
         {
-            Debug.Log("<color=yellow> OnActionResolutionEvent ±¸µ¶µÈ ÇÔ¼ö°¡ ¾ø½À´Ï´Ù.</color>");
+            Debug.Log("<color=yellow> OnActionResolutionEvent êµ¬ë…ëœ í•¨ìˆ˜ê°€ ì—†ìŠµë‹ˆë‹¤.</color>");
             return;
         }
 
-        // event Å°¿öµå°¡ ÀÖ¾îµµ Å¬·¡½º ³»ºÎ¿¡¼­´Â GetInvocationList() »ç¿ë °¡´É!
+        // event í‚¤ì›Œë“œê°€ ìˆì–´ë„ í´ë˜ìŠ¤ ë‚´ë¶€ì—ì„œëŠ” GetInvocationList() ì‚¬ìš© ê°€ëŠ¥!
         Delegate[] subscribers = OnActionResolutionEvent.GetInvocationList();
 
-        Debug.Log($"<color=cyan>=== OnActionResolutionEvent ±¸µ¶ ¸ñ·Ï ({subscribers.Length}°³) ===</color>");
+        Debug.Log($"<color=cyan>=== OnActionResolutionEvent êµ¬ë… ëª©ë¡ ({subscribers.Length}ê°œ) ===</color>");
         foreach (Delegate d in subscribers)
         {
-            // d.Target: ÇÔ¼ö°¡ ¼ÓÇÑ ½ºÅ©¸³Æ®/Å¬·¡½ºÀÇ ÀÎ½ºÅÏ½º
-            // d.Method.Name: ±¸µ¶µÈ ½ÇÁ¦ ÇÔ¼ö ÀÌ¸§
-            Debug.Log($"[¿ÀºêÁ§Æ®]: {d.Target} | [ÇÔ¼ö¸í]: {d.Method.Name}");
+            // d.Target: í•¨ìˆ˜ê°€ ì†í•œ ìŠ¤í¬ë¦½íŠ¸/í´ë˜ìŠ¤ì˜ ì¸ìŠ¤í„´ìŠ¤
+            // d.Method.Name: êµ¬ë…ëœ ì‹¤ì œ í•¨ìˆ˜ ì´ë¦„
+            Debug.Log($"[ì˜¤ë¸Œì íŠ¸]: {d.Target} | [í•¨ìˆ˜ëª…]: {d.Method.Name}");
         }
     }
 
@@ -122,7 +129,7 @@ public class GameClient : MonoBehaviour
     {
         if (_webSocket != null && _webSocket.State == WebSocketState.Open)
         {
-            Debug.Log("[GameClient] ¿¬°á Á¾·á Áß...");
+            Debug.Log("[GameClient] ì—°ê²° ì¢…ë£Œ ì¤‘...");
             _cts.Cancel();
             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client shutting down", CancellationToken.None);
             _webSocket.Dispose();
@@ -130,12 +137,12 @@ public class GameClient : MonoBehaviour
     }
 
     /// <summary>
-    /// Æ¯Á¤ ¿£µåÆ÷ÀÎÆ®¿¡ ´ëÇÑ ÀüÃ¼ URLÀ» ¹İÈ¯ÇÕ´Ï´Ù.
+    /// íŠ¹ì • ì—”ë“œí¬ì¸íŠ¸ì— ëŒ€í•œ ì „ì²´ URLì„ ë°˜í™˜í•©ë‹ˆë‹¤.
     /// </summary>
     /// <param name="subPath">e.g., "auth/signup"</param>
     public string GetApiUrl(string subPath)
     {
-        // subPathÀÇ ½ÃÀÛ ºÎºĞ¿¡ '/'°¡ ÀÖÀ¸¸é Á¦°ÅÇÏ¿© Áßº¹ ¹æÁö
+        // subPathì˜ ì‹œì‘ ë¶€ë¶„ì— '/'ê°€ ìˆìœ¼ë©´ ì œê±°í•˜ì—¬ ì¤‘ë³µ ë°©ì§€
         string path = subPath.StartsWith("/") ? subPath.Substring(1) : subPath;
         return $"{BaseApiUrl}/{path}";
     }
@@ -144,16 +151,31 @@ public class GameClient : MonoBehaviour
     {
         if (_webSocket != null && _webSocket.State == WebSocketState.Open)
         {
-            Debug.LogWarning("[GameClient] ÀÌ¹Ì ¿¬°áµÇ¾î ÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[GameClient] ì´ë¯¸ ì„œë²„ì— ì—°ê²°ë˜ì–´ ìˆìŠµë‹ˆë‹¤.");
             return;
         }
 
-        FirebaseUser user = _auth.CurrentUser;
+        // ì´ì „ ì›¹ì†Œì¼“ ì •ë¦¬
+        try
+        {
+            _webSocket?.Dispose();
+            _webSocket = null;
+        }
+        catch { }
+
+        if (_auth == null)
+        {
+            _auth = FirebaseAuth.DefaultInstance;
+        }
+
+        FirebaseUser user = _auth?.CurrentUser;
         if (user == null)
         {
-            Debug.LogError("[GameClient] ¿¬°á ½ÇÆĞ: ·Î±×ÀÎ Á¤º¸°¡ ¾ø½À´Ï´Ù.");
+            Debug.LogError("[GameClient] âŒ ì—°ê²° ì‹¤íŒ¨: ë¡œê·¸ì¸ëœ Firebase ì‚¬ìš©ì ì •ë³´ê°€ ì—†ìŠµë‹ˆë‹¤.");
             return;
         }
+
+        UserUid = user.UserId;
 
         string idToken;
         try
@@ -162,11 +184,12 @@ public class GameClient : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"[GameClient] ÅäÅ« ¿À·ù: {e.Message}");
+            Debug.LogError($"[GameClient] âŒ í† í° íšë“ ì˜¤ë¥˜: {e.Message}");
             return;
         }
 
         string fullUrl = $"{serverAddress}?token={idToken}&gameId={GameId}";
+        Debug.Log($"[GameClient] ğŸŒ ì„œë²„ ì›¹ì†Œì¼“ ì—°ê²° ì‹œë„... (GameId: {GameId})\nURL: {fullUrl}");
 
         _webSocket = new ClientWebSocket();
         _cts = new CancellationTokenSource();
@@ -174,92 +197,128 @@ public class GameClient : MonoBehaviour
         try
         {
             await _webSocket.ConnectAsync(new Uri(fullUrl), _cts.Token);
-
+            Debug.Log("[GameClient] âœ… ì„œë²„ ì›¹ì†Œì¼“ ì—°ê²° ì„±ê³µ! ê²Œì„ ë©”ì‹œì§€ ìˆ˜ì‹ ì„ ì‹œì‘í•©ë‹ˆë‹¤.");
             StartReceiveLoop();
         }
         catch (Exception e)
         {
-            Debug.LogError($"[GameClient] ¿¬°á ½ÇÆĞ: {e.Message}");
+            Debug.LogError($"[GameClient] âŒ ì›¹ì†Œì¼“ ì—°ê²° ì‹¤íŒ¨ ({fullUrl}): {e.Message}");
             _webSocket?.Dispose();
+            _webSocket = null;
         }
     }
 
     private async void StartReceiveLoop()
     {
-        var buffer = new byte[1024 * 4];
+        var buffer = new byte[1024 * 4]; // 4KB ì²­í¬ ë²„í¼
 
         try
         {
             while (_webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
             {
-                var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
-
-                if (result.MessageType == WebSocketMessageType.Close) break;
-
-                string receivedJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-                // ¡Ú [ÃÖÀûÈ­ ¿Ï·á] ¹«°Å¿î JSON ÆÄ½Ì ÀÛ¾÷À» ¸ŞÀÎ È­¸é(Update)ÀÌ ¾Æ´Ñ ¹é±×¶ó¿îµå ½º·¹µå¿¡¼­ Ã³¸®ÇÕ´Ï´Ù.
-                try
+                // ë™ì  ë©”ëª¨ë¦¬ ìŠ¤íŠ¸ë¦¼ì„ ìƒì„±í•˜ì—¬ ì¡°ê°ë‚œ íŒ¨í‚·ë“¤ì„ í•œë° ëª¨ìë‹ˆë‹¤.
+                using (var ms = new System.IO.MemoryStream())
                 {
-                    // 1. JSON ¹®ÀÚ¿­¿¡ "debugAction" Å°°¡ ÀÖ´Ù¸é µğ¹ö±×¿ë ¾×¼ÇÀ¸·Î Ã³¸®ÇÕ´Ï´Ù.
-                    if (receivedJson.Contains("\"debugAction\""))
+                    WebSocketReceiveResult result;
+                    do
                     {
-                        var baseDebugAction = JsonConvert.DeserializeObject<BaseDebugAction>(receivedJson);
-                        BaseDebugAction parsedDebugAction = null;
+                        result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
-                        switch (baseDebugAction.debugAction)
+                        if (result.MessageType == WebSocketMessageType.Close)
                         {
-                            case DebugAction.ResponseDeckInfo:
-                                parsedDebugAction = JsonConvert.DeserializeObject<S_DebugResponseDeckInfo>(receivedJson);
-                                break;
-                                // ÇÊ¿ä¿¡ µû¶ó ´Ù¸¥ DebugAction ÄÉÀÌ½º¸¦ ÀÌ°÷¿¡ Ãß°¡ÇÏ¼¼¿ä.
+                            break;
                         }
 
-                        if (parsedDebugAction != null)
+                        // ë²„í¼ì— ë‹´ê¸´ ì¡°ê° ë°ì´í„°ë¥¼ ë©”ëª¨ë¦¬ ìŠ¤íŠ¸ë¦¼ì— ê³„ì† ì”ë‹ˆë‹¤.
+                        ms.Write(buffer, 0, result.Count);
+
+                    } while (!result.EndOfMessage); // â˜… í•˜ë‚˜ì˜ ë©”ì‹œì§€ê°€ ëë‚  ë•Œê¹Œì§€ ë°˜ë³µí•´ì„œ ìˆ˜ì‹ í•©ë‹ˆë‹¤!
+
+                    if (result.MessageType == WebSocketMessageType.Close) break;
+
+                    // ëª¨ì¸ ì „ì²´ ë°”ì´íŠ¸ ë°°ì—´ì„ í•˜ë‚˜ì˜ ì™„ë²½í•œ JSON ë¬¸ìì—´ë¡œ ë³€í™˜í•©ë‹ˆë‹¤.
+                    string receivedJson = Encoding.UTF8.GetString(ms.ToArray());
+
+                    // ì´ì œ ì˜ë¦¼ ì—†ì´ ì˜¨ì „í•˜ê²Œ í•©ì³ì§„ JSON ì „ì²´ ë°ì´í„°ê°€ í™•ë³´ë˜ì—ˆìŠµë‹ˆë‹¤!
+                    try
+                    {
+                        // 1. ë””ë²„ê·¸ ì•¡ì…˜ ì²˜ë¦¬
+                        if (receivedJson.Contains("\"debugAction\""))
                         {
-                            // »õ·Î ¸¸µå½Å µğ¹ö±× Àü¿ë Å¥¿¡ ³Ö½À´Ï´Ù.
-                            _debugdActions.Enqueue(parsedDebugAction);
+                            // ì ‘ë‘ì‚¬('d' ë“±)ê°€ ë¶™ì–´ìˆì„ ë•Œë¥¼ ëŒ€ë¹„í•œ ì•ˆì „ ì¥ì¹˜
+                            int jsonStartIndex = receivedJson.IndexOfAny(new char[] { '{', '[' });
+                            string cleanJson = (jsonStartIndex >= 0) ? receivedJson.Substring(jsonStartIndex) : receivedJson;
+
+                            var baseDebugAction = JsonConvert.DeserializeObject<BaseDebugAction>(cleanJson);
+                            BaseDebugAction parsedDebugAction = null;
+
+                            switch (baseDebugAction.debugAction)
+                            {
+                                case DebugAction.ResponseDeckInfo:
+                                    parsedDebugAction = JsonConvert.DeserializeObject<S_DebugResponseDeckInfo>(cleanJson);
+                                    break;
+                            }
+
+                            if (parsedDebugAction != null)
+                            {
+                                _debugdActions.Enqueue(parsedDebugAction);
+                            }
+                        }
+                        // 2. ì¼ë°˜ ê²Œì„ ì•¡ì…˜ ì²˜ë¦¬
+                        else if (receivedJson.Contains("\"action\""))
+                        {
+                            var baseAction = JsonConvert.DeserializeObject<BaseGameAction>(receivedJson);
+                            BaseGameAction parsedAction = null;
+
+                            switch (baseAction.action)
+                            {
+                                case GameActionType.ACTION_RESOLUTION: parsedAction = JsonConvert.DeserializeObject<S_ActionResolution>(receivedJson); break;
+                                case GameActionType.REQUEST_CHOICE: parsedAction = JsonConvert.DeserializeObject<S_RequestChoice>(receivedJson); break;
+                                case GameActionType.MULLIGAN_INFO: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
+                                case GameActionType.OPPONENT_MULLIGAN_STATUS: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
+                                case GameActionType.GAME_READY: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
+                                case GameActionType.PHASE_START: parsedAction = JsonConvert.DeserializeObject<S_PhaseStart>(receivedJson); break;
+                                case GameActionType.DRAW_CARD: parsedAction = JsonConvert.DeserializeObject<S_DrawCard>(receivedJson); break;
+                                case GameActionType.UPDATE_HAND_CARDS: parsedAction = JsonConvert.DeserializeObject<S_UpdateHandCards>(receivedJson); break;
+                                case GameActionType.UPDATE_MANA: parsedAction = JsonConvert.DeserializeObject<S_UpdateMana>(receivedJson); break;
+                                case GameActionType.UPDATE_ENTITIES: parsedAction = JsonConvert.DeserializeObject<S_UpdateEntities>(receivedJson); break;
+                                case GameActionType.OPPONENT_PLAY_CARD: parsedAction = JsonConvert.DeserializeObject<S_OpponentPlayCard>(receivedJson); break;
+                                case GameActionType.VALID_TARGETS_RESPONSE: parsedAction = JsonConvert.DeserializeObject<S_ValidTargetResponse>(receivedJson); break;
+                                case GameActionType.REQUEST_TARGET_FOR_PLAY: parsedAction = JsonConvert.DeserializeObject<S_RequestTargetForPlay>(receivedJson); break;
+                                case GameActionType.VALID_ATTACK_TARGETS_RESPONSE: parsedAction = JsonConvert.DeserializeObject<S_ValidAttackTargetsResponse>(receivedJson); break;
+                                case GameActionType.PLAY_CARD_SUCCESS: parsedAction = JsonConvert.DeserializeObject<S_PlayCardSuccess>(receivedJson); break;
+                                case GameActionType.PLAY_CARD_FAIL: parsedAction = JsonConvert.DeserializeObject<S_PlayCardFail>(receivedJson); break;
+                                case GameActionType.GAME_OVER: parsedAction = JsonConvert.DeserializeObject<S_GameOver>(receivedJson); break;
+                                case GameActionType.ERROR: parsedAction = JsonConvert.DeserializeObject<S_Error>(receivedJson); break;
+                            }
+
+                            if (parsedAction != null)
+                            {
+                                _receivedActions.Enqueue(parsedAction);
+                            }
                         }
                     }
-                    // 2. "action" Å°°¡ ÀÖ´Ù¸é ±âÁ¸ÀÇ ÀÏ¹İ °ÔÀÓ ¾×¼ÇÀ¸·Î Ã³¸®ÇÕ´Ï´Ù.
-                    else if (receivedJson.Contains("\"action\""))
+                    catch (Exception parseEx)
                     {
-                        var baseAction = JsonConvert.DeserializeObject<BaseGameAction>(receivedJson);
-                        BaseGameAction parsedAction = null;
-
-                        switch (baseAction.action)
-                        {
-                            case GameActionType.ACTION_RESOLUTION: parsedAction = JsonConvert.DeserializeObject<S_ActionResolution>(receivedJson); break;
-                            case GameActionType.REQUEST_CHOICE: parsedAction = JsonConvert.DeserializeObject<S_RequestChoice>(receivedJson); break;
-                            case GameActionType.MULLIGAN_INFO: parsedAction = JsonConvert.DeserializeObject<S_MulliganInfo>(receivedJson); break;
-                            case GameActionType.OPPONENT_MULLIGAN_STATUS: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
-                            case GameActionType.GAME_READY: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
-                            case GameActionType.PHASE_START: parsedAction = JsonConvert.DeserializeObject<S_PhaseStart>(receivedJson); break;
-                            case GameActionType.UPDATE_MANA: parsedAction = JsonConvert.DeserializeObject<S_UpdateMana>(receivedJson); break;
-                            case GameActionType.UPDATE_ENTITIES: parsedAction = JsonConvert.DeserializeObject<S_UpdateEntities>(receivedJson); break;
-                            case GameActionType.OPPONENT_PLAY_CARD: parsedAction = JsonConvert.DeserializeObject<S_OpponentPlayCard>(receivedJson); break;
-                            case GameActionType.PLAY_CARD_SUCCESS: parsedAction = JsonConvert.DeserializeObject<S_PlayCardSuccess>(receivedJson); break;
-                            case GameActionType.PLAY_CARD_FAIL: parsedAction = JsonConvert.DeserializeObject<S_PlayCardFail>(receivedJson); break;
-                            case GameActionType.GAME_OVER: parsedAction = JsonConvert.DeserializeObject<S_GameOver>(receivedJson); break;
-                            case GameActionType.ERROR: parsedAction = JsonConvert.DeserializeObject<S_Error>(receivedJson); break;
-                        }
-
-                        if (parsedAction != null)
-                        {
-                            // ÆÄ½ÌÀÌ ³¡³­ ±ú²ıÇÑ °´Ã¼¸¦ ±âÁ¸ °ÔÀÓ ¾×¼Ç Å¥¿¡ ³Ö½À´Ï´Ù.
-                            _receivedActions.Enqueue(parsedAction);
-                        }
+                        Debug.LogError($"[GameClient] íŒŒì‹± ì—ëŸ¬: {parseEx.Message}\nì—ëŸ¬ ë°œìƒ ì›ë³¸ ë¬¸ìì—´: {receivedJson}");
                     }
-                }
-                catch (Exception parseEx)
-                {
-                    Debug.LogError($"[GameClient] ÆÄ½Ì ¿¡·¯: {parseEx.Message}");
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            Debug.Log("[GameClient] ì›¹ì†Œì¼“ ìˆ˜ì‹  ë£¨í”„ê°€ ì •ìƒ ì¢…ë£Œë˜ì—ˆìŠµë‹ˆë‹¤.");
+        }
         catch (Exception e)
         {
-            Debug.LogError($"[GameClient] ¼ö½Å ¿À·ù: {e.Message}");
+            if (_cts != null && _cts.IsCancellationRequested)
+            {
+                Debug.Log("[GameClient] ê²Œì„ ì¢…ë£Œë¡œ ì¸í•´ ì›¹ì†Œì¼“ ìˆ˜ì‹ ì´ ì•ˆì „í•˜ê²Œ ì¤‘ë‹¨ë˜ì—ˆìŠµë‹ˆë‹¤.");
+            }
+            else
+            {
+                Debug.LogError($"[GameClient] ìˆ˜ì‹  ì˜¤ë¥˜: {e.Message}");
+            }
         }
         finally
         {
@@ -267,7 +326,7 @@ public class GameClient : MonoBehaviour
         }
     }
 
-    // µğ¹ö±× Àü¼Û
+    // ë””ë²„ê·¸ ì „ì†¡
     public void SendDebugRequest(int userId, int cardId)
     {
         C_Attack action = new C_Attack
@@ -279,7 +338,7 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
-    // Ä«µå ÇÃ·¹ÀÌ
+    // ì¹´ë“œ í”Œë ˆì´
     public void SendPlayCardRequest(string cardInstanceId, int slotIndex, int targetEntityId = 0)
     {
         C_PlayCard action = new C_PlayCard
@@ -292,10 +351,36 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
+    // íƒ€ê²Ÿ ëª©ë¡ ìš”ì²­
+    public void SendValidTargetResponse(string cardInstanceId)
+    {
+        C_ValidTargetRequest action = new C_ValidTargetRequest
+        {
+            action = GameActionType.VALID_TARGETS_REQUEST,
+            CardEntityId = cardInstanceId,
+        };
+        SendMessageAsync(action);
+    }
 
-    // °ø°İ Àü¼Û
+    // ì¶”ê°€ íƒ€ê²Ÿ ìš”ì²­
+    public void SendTargetReauest(string cardInstanceId, int targetEntityid)
+    {
+        Debug.Log($"{cardInstanceId}ì¹´ë“œ ì‚¬ìš©ì„ ìœ„í•´ {targetEntityid}ì„ ëŒ€ìƒìœ¼ë¡œ ê³ ë¦„");
+
+        C_SelectTargetForPlay action = new C_SelectTargetForPlay
+        {
+            action = GameActionType.SELECT_TARGET_FOR_PLAY,
+            CardEntityId = cardInstanceId,
+            selectedEntityId = targetEntityid,
+        };
+        SendMessageAsync(action);
+    }
+
+
+    // ê³µê²© ì „ì†¡
     public void SendAttackRequest(int attackerId, int defenderId)
     {
+        Debug.Log($"{attackerId}ì´ê°€ {defenderId}ì„ ê³µê²©í•¨");
         C_Attack action = new C_Attack
         {
             action = GameActionType.ATTACK,
@@ -305,7 +390,19 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
-    // ÅÏ¿£µå Àü¼Û
+    // ê³µê²©ê°€ëŠ¥í•œ ëŒ€ìƒ ìš”ì²­
+    public void SendValidAttackTargetsRequest(int attackerId)
+    {
+        Debug.Log("ê³µê²© ê°€ëŠ¥í•œ ëŒ€ìƒ ìš”ì²­");
+        C_ValidAttackTargetsRequest action = new C_ValidAttackTargetsRequest
+        {
+            action = GameActionType.VALID_ATTACK_TARGETS_REQUEST,
+            attackerEntityId = attackerId,
+        };
+        SendMessageAsync(action);
+    }
+
+    // í„´ì—”ë“œ ì „ì†¡
     public void RequestEndTurn()
     {
         C_EndTurn action = new C_EndTurn
@@ -315,7 +412,20 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
-    // ¼­¹ö¿¡ ¸Ş¼¼Áö¸¦ º¸³»´Â ÇÔ¼ö
+    /// <summary>
+    /// ì„œë²„ì— í•­ë³µ ìš”ì²­(CONCEDE)ì„ ì „ì†¡í•©ë‹ˆë‹¤. (ì¸ê²Œì„ í•­ë³µ ë²„íŠ¼ OnClickì— ì§ì ‘ ì—°ê²° ê°€ëŠ¥)
+    /// </summary>
+    public void SendConcedeRequest()
+    {
+        Debug.Log("[GameClient] í•­ë³µ ìš”ì²­(CONCEDE) ì „ì†¡");
+        C_Concede action = new C_Concede
+        {
+            action = GameActionType.CONCEDE
+        };
+        SendMessageAsync(action);
+    }
+
+    // ì„œë²„ì— ë©”ì„¸ì§€ë¥¼ ë³´ë‚´ëŠ” í•¨ìˆ˜
     public async void SendMessageAsync(BaseGameAction actionMessage)
     {
         if (_webSocket == null || _webSocket.State != WebSocketState.Open) return;
@@ -329,11 +439,11 @@ public class GameClient : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"[GameClient] Àü¼Û ½ÇÆĞ: {e.Message}");
+            Debug.LogError($"[GameClient] ì „ì†¡ ì‹¤íŒ¨: {e.Message}");
         }
     }
 
-    // ¼­¹ö¿¡ µğ¹ö±× ¸Ş¼¼Áö¸¦ º¸³»´Â ÇÔ¼ö
+    // ì„œë²„ì— ë””ë²„ê·¸ ë©”ì„¸ì§€ë¥¼ ë³´ë‚´ëŠ” í•¨ìˆ˜
     public async void SendDebugMessageAsync(BaseDebugAction actionMessage)
     {
         if (_webSocket == null || _webSocket.State != WebSocketState.Open) return;
@@ -347,12 +457,12 @@ public class GameClient : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"[GameClient] Àü¼Û ½ÇÆĞ: {e.Message}");
+            Debug.LogError($"[GameClient] ì „ì†¡ ì‹¤íŒ¨: {e.Message}");
         }
     }
 
     /// <summary>
-    /// [Ã³¸®ÇÏ±â] Å¥¿¡¼­ ²¨³½ ¿Ï¼ºµÈ °´Ã¼¸¦ °ÔÀÓ¿¡ ¹İ¿µÇÕ´Ï´Ù. (Å¸ÀÔ Ä³½ºÆÃ¸¸ ¼öÇà)
+    /// [ì²˜ë¦¬í•˜ê¸°] íì—ì„œ êº¼ë‚¸ ì™„ì„±ëœ ê°ì²´ë¥¼ ê²Œì„ì— ë°˜ì˜í•©ë‹ˆë‹¤. (íƒ€ì… ìºìŠ¤íŒ…ë§Œ ìˆ˜í–‰)
     /// </summary>
     private void HandleServerAction(BaseGameAction action)
     {
@@ -387,7 +497,25 @@ public class GameClient : MonoBehaviour
             case GameActionType.REQUEST_CHOICE:
                 var requestInfo = (S_RequestChoice)action;
                 OnReqeustChoice(requestInfo);
-                Debug.Log("S_RequestChoice Masege");
+                break;
+
+            case GameActionType.REQUEST_TARGET_FOR_PLAY:
+                var select_Target_For_Play = (S_RequestTargetForPlay)action;
+                GameInputManager.Instance.HandleRequestTargetForPlay(select_Target_For_Play);
+                break;
+
+            case GameActionType.DRAW_CARD:
+                var draw_Card = (S_DrawCard)action;
+                SendDrawCard(draw_Card);
+                break;
+
+            case GameActionType.UPDATE_HAND_CARDS:
+                var updateHandCards = (S_UpdateHandCards)action;
+                OnUpdateHandCardsEvent?.Invoke(updateHandCards);
+                if (HandCardControllManager.instance != null)
+                {
+                    HandCardControllManager.instance.UpdateHandCards(updateHandCards.updatedCards);
+                }
                 break;
 
             case GameActionType.UPDATE_MANA:
@@ -407,6 +535,16 @@ public class GameClient : MonoBehaviour
                 OnOpponentPlayCard(opponentPlayCardInfo);
                 break;
 
+            case GameActionType.VALID_TARGETS_RESPONSE:
+                var targetList = (S_ValidTargetResponse)action;
+                validTargetResponse?.Invoke(targetList);
+                break;
+
+            case GameActionType.VALID_ATTACK_TARGETS_RESPONSE:
+                var attackTargetList = (S_ValidAttackTargetsResponse)action;
+                validAttackTargetsResponse.Invoke(attackTargetList);
+                break;
+
             case GameActionType.PLAY_CARD_SUCCESS:
                 var successInfo = (S_PlayCardSuccess)action;
                 OnPlayCardSuccessEvent?.Invoke(successInfo.serverInstanceId);
@@ -415,6 +553,7 @@ public class GameClient : MonoBehaviour
             case GameActionType.PLAY_CARD_FAIL:
                 var playCardFailInfo = (S_PlayCardFail)action;
                 OnPlayCardFailedEvent?.Invoke(playCardFailInfo.reason);
+                Debug.Log($"{playCardFailInfo.reason}");
                 OnPlayCardFail(playCardFailInfo);
                 break;
 
@@ -423,16 +562,16 @@ public class GameClient : MonoBehaviour
                 break;
 
             case GameActionType.ERROR:
-                Debug.Log("ERROR ¹ß»ı");
+                Debug.Log("ERROR ë°œìƒ");
                 var errorInfo = (S_Error)action;
                 OnErrorEvent?.Invoke(errorInfo.message);
-                Debug.LogError($"[GameClient] ¼­¹ö ¿À·ù: {errorInfo.message}");
+                Debug.LogError($"[GameClient] ì„œë²„ ì˜¤ë¥˜: {errorInfo.message}");
                 break;
         }
     }
 
     /// <summary>
-    /// [Ã³¸®ÇÏ±â] Å¥¿¡¼­ ²¨³½ ¿Ï¼ºµÈ °´Ã¼¸¦ °ÔÀÓ¿¡ ¹İ¿µÇÕ´Ï´Ù. (Å¸ÀÔ Ä³½ºÆÃ¸¸ ¼öÇà)
+    /// [ì²˜ë¦¬í•˜ê¸°] íì—ì„œ êº¼ë‚¸ ì™„ì„±ëœ ê°ì²´ë¥¼ ê²Œì„ì— ë°˜ì˜í•©ë‹ˆë‹¤. (íƒ€ì… ìºìŠ¤íŒ…ë§Œ ìˆ˜í–‰)
     /// </summary>
     private void HandleDebugAction(BaseDebugAction action)
     {
@@ -450,7 +589,7 @@ public class GameClient : MonoBehaviour
             
 
             case DebugAction.NONE:
-                Debug.Log("ERROR ¹ß»ı");
+                Debug.Log("ERROR ë°œìƒ");
                 break;
         }
     }
@@ -472,7 +611,7 @@ public class GameClient : MonoBehaviour
         GameEntityManager.Instance.SetReader(info);
     }
 
-    // ¸Ö¸®°Ç ¹ŞÀº Ä«µå¸¦ »Ì´Â ÇÔ¼ö
+    // ë©€ë¦¬ê±´ ë°›ì€ ì¹´ë“œë¥¼ ë½‘ëŠ” í•¨ìˆ˜
     private IEnumerator SyncHandWithServer(List<CardInfo> finalHand)
     {
         var handManager = HandCardControllManager.instance;
@@ -499,18 +638,21 @@ public class GameClient : MonoBehaviour
             }
         }
 
-        // ¸Ö¸®°Ç Ä«µå¸¦ ÀüºÎ »ÌÀº ÈÄ isMulliganPhase¸¦ º¯°æÇÏ¿© ¼ÕÆĞ°¢µµ Á¤»óÈ­
+        // ë©€ë¦¬ê±´ ì¹´ë“œë¥¼ ì „ë¶€ ë½‘ì€ í›„ isMulliganPhaseë¥¼ ë³€ê²½í•˜ì—¬ ì†íŒ¨ê°ë„ ì •ìƒí™”
         HandCardControllManager.instance.isMulliganPhase = false;
         HandCardControllManager.instance.isMulligan = false;
     }
 
-    // »ó´ë ¸Ö¸®°Ç µ¹¾Æ°¡´Â ÇÔ¼ö
+    // ìƒëŒ€ ë©€ë¦¬ê±´ ëŒì•„ê°€ëŠ” í•¨ìˆ˜ ìˆ˜ì •
     private IEnumerator OnMulliganInfoReceivedenemy(S_OpponentMulliganStatus info)
     {
         Debug.Log($"enamy mulligan : {info.replacedCount}");
         int m = 0;
 
-        foreach (var mulligan in info.replacedIndices)
+        // êµì²´í•  ì¸ë±ìŠ¤ ëª©ë¡ì„ í° ìˆ«ìë¶€í„° ì—­ìˆœ(ë‚´ë¦¼ì°¨ìˆœ)ìœ¼ë¡œ ì •ë ¬í•©ë‹ˆë‹¤!
+        var sortedIndices = info.replacedIndices.OrderByDescending(x => x).ToList();
+
+        foreach (var mulligan in sortedIndices)
         {
             OpponentHandVisualizer.Instance.ReturnCardToDeck(mulligan);
             m++;
@@ -523,7 +665,7 @@ public class GameClient : MonoBehaviour
         Debug.Log($"mulligan Count : {m} info.replacedCount : {info.replacedCount}");
     }
 
-    // »ó´ë ¸Ö¸®°ÇÀ» »É´Â ÇÔ¼ö
+    // ìƒëŒ€ ë©€ë¦¬ê±´ì„ ë½„ëŠ” í•¨ìˆ˜
     private IEnumerator SyncHandWithServerenemy(int count)
     {
         for(int i = 0; i < count; i++) 
@@ -540,7 +682,7 @@ public class GameClient : MonoBehaviour
 
     private void OnActionResolution(S_ActionResolution info)
     {
-        // GameClient¿¡¼­ ÄÚ·çÆ¾À» µ¹¸®Áö ¾Ê°í GameEntityManager·Î ÆĞÅ¶À» ³Ñ±é´Ï´Ù.
+        // GameClientì—ì„œ ì½”ë£¨í‹´ì„ ëŒë¦¬ì§€ ì•Šê³  GameEntityManagerë¡œ íŒ¨í‚·ì„ ë„˜ê¹ë‹ˆë‹¤.
         if (GameEntityManager.Instance != null)
         {
             GameEntityManager.Instance.ResolveActionSequence(info);
@@ -567,7 +709,7 @@ public class GameClient : MonoBehaviour
 
                 case GameEventType.ATTACK:
                     //GameEntityManager.Instance.HandleEntitiesUpdated(info);
-                    Debug.Log($"{info.eventLog[0].sourceEntityId}ÀÌ°¡ {info.eventLog[0].targetEntityId}¿¡°Ô Card Attack!");
+                    Debug.Log($"{info.eventLog[0].sourceEntityId}ì´ê°€ {info.eventLog[0].targetEntityId}ì—ê²Œ Card Attack!");
                     break;
             }
 
@@ -581,11 +723,11 @@ public class GameClient : MonoBehaviour
     }
 
     /// <summary>
-    /// ÅäÅ« ¼ÒÈ¯ À§Ä¡³ª ´ë»óÀ» ¼±ÅÃÇÏ¸ç C_MakeChoice ÆĞÅ¶À¸·Î ¸¸µé¾î ¼­¹ö¿¡ Àü¼ÛÇÕ´Ï´Ù.
+    /// í† í° ì†Œí™˜ ìœ„ì¹˜ë‚˜ ëŒ€ìƒì„ ì„ íƒí•˜ë©° C_MakeChoice íŒ¨í‚·ìœ¼ë¡œ ë§Œë“¤ì–´ ì„œë²„ì— ì „ì†¡í•©ë‹ˆë‹¤.
     /// </summary>
     public void SendMakeChoiceRequest(int position, string cardId, int entityId)
     {
-        // (GameActionModels.cs¿¡ C_MakeChoice°¡ Á¤ÀÇµÇ¾î ÀÖ´Ù°í °¡Á¤)
+        // (GameActionModels.csì— C_MakeChoiceê°€ ì •ì˜ë˜ì–´ ìˆë‹¤ê³  ê°€ì •)
         C_MakeChoice request = new C_MakeChoice
         {
             action = GameActionType.MAKE_CHOICE,
@@ -597,7 +739,20 @@ public class GameClient : MonoBehaviour
         if (GameClient.Instance != null)
         {
             GameClient.Instance.SendMessageAsync(request);
-            Debug.Log($"[GameInputManager] ¼±ÅÃ ¿Ï·á Àü¼Û -> À§Ä¡: {position}, Å¸°ÙID: {entityId}");
+        }
+    }
+
+    /// <summary>
+    /// ë±ì—ì„œ ì¹´ë“œë¥¼ ë½‘ìŠµë‹ˆë‹¤.
+    /// </summary>
+    public void SendDrawCard(S_DrawCard draw_Card)
+    {
+        if(draw_Card.playerUid == UserUid)
+        {
+            CardDrawManager.Instance.PerformDrawAnimation(draw_Card.drawnCard);
+        }else
+        {
+            OpponentHandVisualizer.Instance.DrawCard();
         }
     }
 
@@ -608,7 +763,7 @@ public class GameClient : MonoBehaviour
 
     private void OnOpponentPlayCard(S_OpponentPlayCard info)
     {
-        Debug.Log($"[GameClient] »ó´ë¹æÀÌ Ä«µå »ç¿ë: {info.cardPlayed.cardId}");
+
     }
 
     private void OnPlayCardFail(S_PlayCardFail info)
@@ -618,7 +773,8 @@ public class GameClient : MonoBehaviour
 
     private void OnGameOver(S_GameOver info)
     {
-
-        _cts.Cancel();
+        Debug.Log($"[GameClient] ğŸ† ê²Œì„ ì¢…ë£Œ ìˆ˜ì‹ ! ìŠ¹ì: {info.winnerUid} (ì¢…ë£Œ ì‚¬ìœ : {info.reason})");
+        OnGameOverEvent?.Invoke(info);
+        _cts?.Cancel();
     }
 }

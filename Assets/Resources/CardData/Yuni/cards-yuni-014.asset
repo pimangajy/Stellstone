@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-yuni-014
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardID: cards-yuni-014
+  cardName: "\uD53C\uB9AC \uBD80\uB294 \uC18C\uB144"
+  cardClass: 1
+  cardType: 1
+  rarity: 0
+  expansion: 0
+  manaCost: 2
+  attack: 1
+  health: 1
+  minionTribe: 2
+  description: "\uB4F1\uC7A5: 1/1 \uCAC4\uB530\uAD6C \uAC15\uB3C4\uB2E8\uC744 \uC18C\uD658\uD569\uB2C8\uB2E4."
+  additionalExplanation: 
+  keyward: 
+  targeting: 0
+  triggerVFXList: []
+  animationFrames:
+  - {fileID: 21300000, guid: 8b1996b7e65287d41baacac8324d3463, type: 3}
+  cardDissolveEffect: {fileID: 0}
+  spawnEffectData: {fileID: 11400000, guid: 731cd3f5b236bf84eb92df42f9045823, type: 2}
+  memberIcon: {fileID: 0}
+  spawnEffect: {fileID: 0}
+  attackSound: {fileID: 0}
+  projectilePrefab: {fileID: 976789555600343322, guid: 4b0e5d08ac3fd0d4ea83172b9ecd05df, type: 3}

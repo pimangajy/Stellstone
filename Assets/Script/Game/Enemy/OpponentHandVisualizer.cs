@@ -1,72 +1,72 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
 
 /// <summary>
-/// 2D UI ±â¹İ: »ó´ë¹æÀÇ ¼ÕÆĞ¸¦ °¡·Î ÀÏÀÚ(Linear) ÇüÅÂ·Î Á¤·ÄÇÏ°í, µå·Î¿ì ¹× Ä«µå »ç¿ë ¿¬ÃâÀ» °ü¸®ÇÕ´Ï´Ù.
-/// »ó´ë¹æ Ä«µå´Â ³» Ä«µå¿Í ´Ş¸® µÚÁıÇô ÀÖÀ¸¸ç, Ä«µå°¡ ¸¹¾ÆÁú¼ö·Ï ÀÚµ¿À¸·Î °£°İÀÌ Á¼¾ÆÁö´Â ±â´ÉÀÌ Æ÷ÇÔµÇ¾î ÀÖ½À´Ï´Ù.
+/// 2D UI ê¸°ë°˜: ìƒëŒ€ë°©ì˜ ì†íŒ¨ë¥¼ ê°€ë¡œ ì¼ì(Linear) í˜•íƒœë¡œ ì •ë ¬í•˜ê³ , ë“œë¡œìš° ë° ì¹´ë“œ ì‚¬ìš© ì—°ì¶œì„ ê´€ë¦¬í•©ë‹ˆë‹¤.
+/// ìƒëŒ€ë°© ì¹´ë“œëŠ” ë‚´ ì¹´ë“œì™€ ë‹¬ë¦¬ ë’¤ì§‘í˜€ ìˆìœ¼ë©°, ì¹´ë“œê°€ ë§ì•„ì§ˆìˆ˜ë¡ ìë™ìœ¼ë¡œ ê°„ê²©ì´ ì¢ì•„ì§€ëŠ” ê¸°ëŠ¥ì´ í¬í•¨ë˜ì–´ ìˆìŠµë‹ˆë‹¤.
 /// </summary>
 public class OpponentHandVisualizer : MonoBehaviour
 {
     public static OpponentHandVisualizer Instance;
 
-    [Header("ÇÁ¸®ÆÕ ¹× À§Ä¡ (2D UI)")]
-    [Tooltip("»ó´ë¹æÀÇ µ¦¿¡¼­ »ÌÇô³ª¿Ã 'Ä«µå µŞ¸é' ÇÁ¸®ÆÕ")]
+    [Header("í”„ë¦¬íŒ¹ ë° ìœ„ì¹˜ (2D UI)")]
+    [Tooltip("ìƒëŒ€ë°©ì˜ ë±ì—ì„œ ë½‘í˜€ë‚˜ì˜¬ 'ì¹´ë“œ ë’·ë©´' í”„ë¦¬íŒ¹")]
     public GameObject cardBackPrefab;
 
-    [Tooltip("»ó´ë¹æ ¼ÕÆĞ°¡ ³ª¿­µÉ È­¸é »ó´ÜÀÇ 2D UI ¾ŞÄ¿ (RectTransform)")]
+    [Tooltip("ìƒëŒ€ë°© ì†íŒ¨ê°€ ë‚˜ì—´ë  í™”ë©´ ìƒë‹¨ì˜ 2D UI ì•µì»¤ (RectTransform)")]
     public RectTransform opponentHandAnchor;
 
-    [Tooltip("Ä«µå°¡ »ı¼ºµÇ°í µÇµ¹¾Æ°¥ »ó´ë¹æÀÇ µ¦ 2D UI À§Ä¡")]
+    [Tooltip("ì¹´ë“œê°€ ìƒì„±ë˜ê³  ë˜ëŒì•„ê°ˆ ìƒëŒ€ë°©ì˜ ë± 2D UI ìœ„ì¹˜")]
     public RectTransform opponentDeckTransform;
 
-    [Header("¼ÕÆĞ ·¹ÀÌ¾Æ¿ô ¼³Á¤ (°¡·Î Á¤·Ä)")]
-    [Tooltip("»ó´ë Ä«µå°¡ ±âº»ÀûÀ¸·Î 180µµ µÚÁıÇô º¸ÀÌµµ·Ï ¼³Á¤ÇÏ´Â È¸Àü°ª")]
+    [Header("ì†íŒ¨ ë ˆì´ì•„ì›ƒ ì„¤ì • (ê°€ë¡œ ì •ë ¬)")]
+    [Tooltip("ìƒëŒ€ ì¹´ë“œê°€ ê¸°ë³¸ì ìœ¼ë¡œ 180ë„ ë’¤ì§‘í˜€ ë³´ì´ë„ë¡ ì„¤ì •í•˜ëŠ” íšŒì „ê°’")]
     public Vector3 handRotation = new Vector3(0, 0, 180f);
 
-    [Tooltip("Ä«µå »çÀÌÀÇ ±âº» °¡·Î ÇÈ¼¿ °£°İ (UI ÇÈ¼¿ ´ÜÀ§ÀÌ¹Ç·Î 100~150 ±ÇÀå)")]
+    [Tooltip("ì¹´ë“œ ì‚¬ì´ì˜ ê¸°ë³¸ ê°€ë¡œ í”½ì…€ ê°„ê²© (UI í”½ì…€ ë‹¨ìœ„ì´ë¯€ë¡œ 100~150 ê¶Œì¥)")]
     public float cardSpacing = 120f;
 
-    [Tooltip("Ä«µå°¡ °ãÄ¥ ¶§ ¾à°£ÀÇ YÃà ¿ÀÇÁ¼ÂÀ» ÁÖ¾î ÀÔÃ¼°¨À» »ì¸®´Â º¯¼ö")]
+    [Tooltip("ì¹´ë“œê°€ ê²¹ì¹  ë•Œ ì•½ê°„ì˜ Yì¶• ì˜¤í”„ì…‹ì„ ì£¼ì–´ ì…ì²´ê°ì„ ì‚´ë¦¬ëŠ” ë³€ìˆ˜")]
     public float cardDepthOffset = 0f;
 
-    [Tooltip("¼ÕÆĞ°¡ Á¤·ÄµÉ ¶§ °É¸®´Â ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£")]
+    [Tooltip("ì†íŒ¨ê°€ ì •ë ¬ë  ë•Œ ê±¸ë¦¬ëŠ” ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„")]
     public float alignDuration = 0.3f;
 
-    [Tooltip("»ó´ë¹æ ¼ÕÆĞ Ä«µåÀÇ Å©±â ºñÀ²")]
+    [Tooltip("ìƒëŒ€ë°© ì†íŒ¨ ì¹´ë“œì˜ í¬ê¸° ë¹„ìœ¨")]
     public float cardSize = 0.7f;
 
-    [Tooltip("Ä«µå¸¦ ÇÑ Àå »ÌÀ» ¶§¸¶´Ù ÁÙ¾îµé°í, »ç¿ëÇÒ ¶§¸¶´Ù ´Ã¾î³¯ °£°İ º¯È­·®")]
+    [Tooltip("ì¹´ë“œë¥¼ í•œ ì¥ ë½‘ì„ ë•Œë§ˆë‹¤ ì¤„ì–´ë“¤ê³ , ì‚¬ìš©í•  ë•Œë§ˆë‹¤ ëŠ˜ì–´ë‚  ê°„ê²© ë³€í™”ëŸ‰")]
     public float cardSpacingSize = 5f;
 
-    [Header("µå·Î¿ì ¾Ö´Ï¸ŞÀÌ¼Ç ¼³Á¤")]
+    [Header("ë“œë¡œìš° ì• ë‹ˆë©”ì´ì…˜ ì„¤ì •")]
     public float drawMoveDuration = 0.5f;
     public float batchDrawInterval = 0.2f;
 
-    [Header("µ¦ ±ÍÈ¯(Return) ¿¬Ãâ ¼³Á¤")]
+    [Header("ë± ê·€í™˜(Return) ì—°ì¶œ ì„¤ì •")]
     public float returnDuration = 0.5f;
     public Ease returnEase = Ease.InQuad;
 
-    // --- ³»ºÎ º¯¼ö ---
-    private List<GameObject> opponentCards = new List<GameObject>(); // »ó´ë¹æ ¼ÕÆĞ ¸®½ºÆ®
+    // --- ë‚´ë¶€ ë³€ìˆ˜ ---
+    private List<GameObject> opponentCards = new List<GameObject>(); // ìƒëŒ€ë°© ì†íŒ¨ ë¦¬ìŠ¤íŠ¸
     private Vector3 _originalCardScale = Vector3.one;
     private bool _isScaleSet = false;
 
-    // ÀÎ½ºÆåÅÍ Ã¢¿¡¼­ ½Ç½Ã°£À¸·Î ¼öÄ¡¸¦ Á¶ÀıÇÒ ¶§¸¦ °¨ÁöÇÏ±â À§ÇÑ ¹é¾÷ º¯¼ö
+    // ì¸ìŠ¤í™í„° ì°½ì—ì„œ ì‹¤ì‹œê°„ìœ¼ë¡œ ìˆ˜ì¹˜ë¥¼ ì¡°ì ˆí•  ë•Œë¥¼ ê°ì§€í•˜ê¸° ìœ„í•œ ë°±ì—… ë³€ìˆ˜
     private float _lastSpacing;
     private float _lastDepthOffset;
 
     private void Awake()
     {
-        // ½Ì±ÛÅæ ÃÊ±âÈ­
+        // ì‹±ê¸€í†¤ ì´ˆê¸°í™”
         if (Instance != null && Instance != this) Destroy(this.gameObject);
         else Instance = this;
     }
 
     private void Start()
     {
-        // °ÔÀÓ Å¬¶óÀÌ¾ğÆ® ¼­¹ö ÀÌº¥Æ® ¿¬µ¿: »ó´ë°¡ Ä«µå¸¦ ³Â´Ù´Â ½ÅÈ£°¡ ¿À¸é PlayUseCardAnimation ½ÇÇà
+        // ê²Œì„ í´ë¼ì´ì–¸íŠ¸ ì„œë²„ ì´ë²¤íŠ¸ ì—°ë™: ìƒëŒ€ê°€ ì¹´ë“œë¥¼ ëƒˆë‹¤ëŠ” ì‹ í˜¸ê°€ ì˜¤ë©´ PlayUseCardAnimation ì‹¤í–‰
         if (GameClient.Instance != null)
         {
             GameClient.Instance.OnOpponentPlayCardEvent += PlayUseCardAnimation;
@@ -77,47 +77,47 @@ public class OpponentHandVisualizer : MonoBehaviour
     }
 
     /// <summary>
-    /// »ó´ë¹æÀÌ Ä«µå¸¦ ÇÑ Àå µå·Î¿ì(µ¦¿¡¼­ »ÌÀ½)ÇÕ´Ï´Ù.
+    /// ìƒëŒ€ë°©ì´ ì¹´ë“œë¥¼ í•œ ì¥ ë“œë¡œìš°(ë±ì—ì„œ ë½‘ìŒ)í•©ë‹ˆë‹¤.
     /// </summary>
     public void DrawCard()
     {
         if (cardBackPrefab == null || opponentDeckTransform == null || opponentHandAnchor == null) return;
 
-        // 1. µ¦ À§Ä¡¿¡ Ä«µå¸¦ »ı¼ºÇÕ´Ï´Ù. (UI °èÃşÀÌ ²¿ÀÌÁö ¾Ê°Ô ºÎ¸ğ¸¦ µ¦ÀÇ ºÎ¸ğ·Î È®½ÇÈ÷ ÁöÁ¤)
+        // 1. ë± ìœ„ì¹˜ì— ì¹´ë“œë¥¼ ìƒì„±í•©ë‹ˆë‹¤. (UI ê³„ì¸µì´ ê¼¬ì´ì§€ ì•Šê²Œ ë¶€ëª¨ë¥¼ ë±ì˜ ë¶€ëª¨ë¡œ í™•ì‹¤íˆ ì§€ì •)
         GameObject newCard = Instantiate(cardBackPrefab, opponentDeckTransform.position, opponentDeckTransform.rotation, opponentDeckTransform.parent);
 
-        // 2. ±âÁØ ½ºÄÉÀÏ ÀúÀå
+        // 2. ê¸°ì¤€ ìŠ¤ì¼€ì¼ ì €ì¥
         if (!_isScaleSet)
         {
             _originalCardScale = newCard.transform.localScale;
             _isScaleSet = true;
         }
 
-        // 3. Ä«µåÀÇ ¼Ò¼ÓÀ» ¼ÕÆĞ ¾ŞÄ¿·Î ¿Å±é´Ï´Ù. (true¸¦ ÁÖ¾î µ¦ À§Ä¡¿¡ ±×´ë·Î ¸ØÃçÀÖ´Â ½Ã°¢Àû È¿°ú À¯Áö)
+        // 3. ì¹´ë“œì˜ ì†Œì†ì„ ì†íŒ¨ ì•µì»¤ë¡œ ì˜®ê¹ë‹ˆë‹¤. (trueë¥¼ ì£¼ì–´ ë± ìœ„ì¹˜ì— ê·¸ëŒ€ë¡œ ë©ˆì¶°ìˆëŠ” ì‹œê°ì  íš¨ê³¼ ìœ ì§€)
         newCard.transform.SetParent(opponentHandAnchor, true);
         opponentCards.Add(newCard);
 
         // ==========================================================
-        // [Áß¿ä] ´ÙÀÌ³ª¹Í °£°İ Á¶Àı ¹× ¹ö±× ¹æÁö
-        // Ä«µå°¡ Ãß°¡µÇ¾úÀ¸¹Ç·Î ÀüÃ¼ Ä«µå °£°İÀ» ÁÙ¿©Áİ´Ï´Ù (cardSpacingSize ¸¸Å­).
-        // Update() ÇÔ¼ö°¡ ÀÌ º¯È­¸¦ '¿¡µğÅÍ Á¶ÀÛ'À¸·Î Âø°¢ÇØ ¼ø°£ÀÌµ¿½ÃÅ°Áö ¸øÇÏµµ·Ï _lastSpacingÀ» Áï½Ã µ¿±âÈ­ÇÕ´Ï´Ù.
+        // [ì¤‘ìš”] ë‹¤ì´ë‚˜ë¯¹ ê°„ê²© ì¡°ì ˆ ë° ë²„ê·¸ ë°©ì§€
+        // ì¹´ë“œê°€ ì¶”ê°€ë˜ì—ˆìœ¼ë¯€ë¡œ ì „ì²´ ì¹´ë“œ ê°„ê²©ì„ ì¤„ì—¬ì¤ë‹ˆë‹¤ (cardSpacingSize ë§Œí¼).
+        // Update() í•¨ìˆ˜ê°€ ì´ ë³€í™”ë¥¼ 'ì—ë””í„° ì¡°ì‘'ìœ¼ë¡œ ì°©ê°í•´ ìˆœê°„ì´ë™ì‹œí‚¤ì§€ ëª»í•˜ë„ë¡ _lastSpacingì„ ì¦‰ì‹œ ë™ê¸°í™”í•©ë‹ˆë‹¤.
         // ==========================================================
         cardSpacing -= cardSpacingSize;
         _lastSpacing = cardSpacing;
 
-        // 4. °£°İÀÌ ¼öÁ¤µÈ »óÅÂ¿¡¼­ ºÎµå·¯¿î ¾Ö´Ï¸ŞÀÌ¼Ç ½ÇÇà
+        // 4. ê°„ê²©ì´ ìˆ˜ì •ëœ ìƒíƒœì—ì„œ ë¶€ë“œëŸ¬ìš´ ì• ë‹ˆë©”ì´ì…˜ ì‹¤í–‰
         UpdateHandLayout(newCard);
     }
 
     /// <summary>
-    /// »ó´ë¹æ ¼ÕÆĞÀÇ ¸ğµç Ä«µå¸¦ 2D UI °¡·Î ÇüÅÂ·Î ÀçÁ¤·ÄÇÕ´Ï´Ù.
+    /// ìƒëŒ€ë°© ì†íŒ¨ì˜ ëª¨ë“  ì¹´ë“œë¥¼ 2D UI ê°€ë¡œ í˜•íƒœë¡œ ì¬ì •ë ¬í•©ë‹ˆë‹¤.
     /// </summary>
     public void UpdateHandLayout(GameObject newCard = null, bool instant = false)
     {
         int cardCount = opponentCards.Count;
         if (cardCount == 0) return;
 
-        // ÀüÃ¼ Ä«µå°¡ Â÷ÁöÇÒ °¡·Î ±æÀÌ¸¦ ±¸ÇÏ°í, Áß¾Ó Á¤·ÄÀ» À§ÇÑ ½ÃÀÛÁ¡(startX)À» °è»êÇÕ´Ï´Ù.
+        // ì „ì²´ ì¹´ë“œê°€ ì°¨ì§€í•  ê°€ë¡œ ê¸¸ì´ë¥¼ êµ¬í•˜ê³ , ì¤‘ì•™ ì •ë ¬ì„ ìœ„í•œ ì‹œì‘ì (startX)ì„ ê³„ì‚°í•©ë‹ˆë‹¤.
         float totalWidth = (cardCount - 1) * cardSpacing;
         float startX = -totalWidth / 2.0f;
 
@@ -126,32 +126,32 @@ public class OpponentHandVisualizer : MonoBehaviour
             GameObject card = opponentCards[i];
             RectTransform cardRect = card.GetComponent<RectTransform>();
 
-            // Ä«µåÀÇ ¸ñÇ¥ UI ·ÎÄÃ ÁÂÇ¥ °è»ê
+            // ì¹´ë“œì˜ ëª©í‘œ UI ë¡œì»¬ ì¢Œí‘œ ê³„ì‚°
             float targetX = startX + (i * cardSpacing);
             float targetY = i * cardDepthOffset;
             Vector2 targetPos = new Vector2(targetX, targetY);
             Quaternion targetLocalRot = Quaternion.Euler(handRotation);
 
-            // Z-Order(°èÃş ¼ø¼­): ³ªÁß¿¡ µé¾î¿Â(¿À¸¥ÂÊ) Ä«µå°¡ È­¸é ¸Ç ¾ÕÀ¸·Î ¿Àµµ·Ï °ãÄ§ ¼ø¼­¸¦ Á¤µ·ÇÕ´Ï´Ù.
+            // Z-Order(ê³„ì¸µ ìˆœì„œ): ë‚˜ì¤‘ì— ë“¤ì–´ì˜¨(ì˜¤ë¥¸ìª½) ì¹´ë“œê°€ í™”ë©´ ë§¨ ì•ìœ¼ë¡œ ì˜¤ë„ë¡ ê²¹ì¹¨ ìˆœì„œë¥¼ ì •ëˆí•©ë‹ˆë‹¤.
             cardRect.SetSiblingIndex(i);
 
-            // ÁøÇà ÁßÀÌ´ø ±âÁ¸ ÀÌµ¿ ¾Ö´Ï¸ŞÀÌ¼ÇÀ» Á¤Áö½ÃÄÑ ¾Ö´Ï¸ŞÀÌ¼Ç ²¿ÀÓÀ» ¹æÁöÇÕ´Ï´Ù.
+            // ì§„í–‰ ì¤‘ì´ë˜ ê¸°ì¡´ ì´ë™ ì• ë‹ˆë©”ì´ì…˜ì„ ì •ì§€ì‹œì¼œ ì• ë‹ˆë©”ì´ì…˜ ê¼¬ì„ì„ ë°©ì§€í•©ë‹ˆë‹¤.
             cardRect.DOKill();
 
             if (instant)
             {
-                // Áï½Ã ÀÌµ¿ (ÁÖ·Î ÀÎ½ºÆåÅÍ ¼öÄ¡ º¯°æ Å×½ºÆ®¿ë)
+                // ì¦‰ì‹œ ì´ë™ (ì£¼ë¡œ ì¸ìŠ¤í™í„° ìˆ˜ì¹˜ ë³€ê²½ í…ŒìŠ¤íŠ¸ìš©)
                 cardRect.anchoredPosition = targetPos;
                 cardRect.localRotation = targetLocalRot;
                 cardRect.localScale = _originalCardScale;
             }
             else
             {
-                // »õ·Î »ÌÈù Ä«µå´Â Á» ´õ ÃµÃµÈ÷ ³¯¾Æ¿À°í, ±âÁ¸¿¡ ÀÖ´ø Ä«µå´Â ºü¸£°Ô ÀÚ¸®¸¦ ºñÄÑÁİ´Ï´Ù.
+                // ìƒˆë¡œ ë½‘íŒ ì¹´ë“œëŠ” ì¢€ ë” ì²œì²œíˆ ë‚ ì•„ì˜¤ê³ , ê¸°ì¡´ì— ìˆë˜ ì¹´ë“œëŠ” ë¹ ë¥´ê²Œ ìë¦¬ë¥¼ ë¹„ì¼œì¤ë‹ˆë‹¤.
                 float duration = (card == newCard) ? drawMoveDuration : alignDuration;
                 Ease easeType = (card == newCard) ? Ease.OutCubic : Ease.OutQuad;
 
-                // 2D UI È¯°æ¿¡ ¸Â°Ô DOAnchorPos¸¦ »ç¿ëÇÏ¿© ºÎµå·´°Ô ¸ñÇ¥ ÇÈ¼¿ ÁÂÇ¥·Î ÀÌµ¿½ÃÅµ´Ï´Ù.
+                // 2D UI í™˜ê²½ì— ë§ê²Œ DOAnchorPosë¥¼ ì‚¬ìš©í•˜ì—¬ ë¶€ë“œëŸ½ê²Œ ëª©í‘œ í”½ì…€ ì¢Œí‘œë¡œ ì´ë™ì‹œí‚µë‹ˆë‹¤.
                 cardRect.DOAnchorPos(targetPos, duration).SetEase(easeType);
                 cardRect.DOLocalRotateQuaternion(targetLocalRot, duration).SetEase(easeType);
                 cardRect.DOScale(_originalCardScale * cardSize, duration).SetEase(easeType);
@@ -160,19 +160,19 @@ public class OpponentHandVisualizer : MonoBehaviour
     }
 
     /// <summary>
-    /// »ó´ë°¡ Ä«µå¸¦ »ç¿ëÇßÀ» ¶§ È£ÃâµË´Ï´Ù.
-    /// ¼ÕÆĞ¿¡¼­ Ä«µå¸¦ »©°í, ¿¬Ãâ ¸Å´ÏÀú(CardActionQueueManager)·Î ³Ñ°Ü Áß¾Ó È­¸é¿¡ ¶ç¿öÁİ´Ï´Ù.
+    /// ìƒëŒ€ê°€ ì¹´ë“œë¥¼ ì‚¬ìš©í–ˆì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
+    /// ì†íŒ¨ì—ì„œ ì¹´ë“œë¥¼ ë¹¼ê³ , ì—°ì¶œ ë§¤ë‹ˆì €(CardActionQueueManager)ë¡œ ë„˜ê²¨ ì¤‘ì•™ í™”ë©´ì— ë„ì›Œì¤ë‹ˆë‹¤.
     /// </summary>
     public void PlayUseCardAnimation(S_OpponentPlayCard cardIndex)
     {
-        // À¯È¿¼º °Ë»ç
+        // ìœ íš¨ì„± ê²€ì‚¬
         if (cardIndex.handNum < 0 || cardIndex.handNum >= opponentCards.Count) return;
 
-        // 1. ¼ÕÆĞ ¸®½ºÆ®¿¡¼­ Ä«µå¸¦ ¸ÕÀú »®´Ï´Ù. (³ª¸ÓÁö Ä«µå°¡ Áï½Ã ºóÀÚ¸®¸¦ ¸Ş¿ì°Ô ÇÏ±â À§ÇÔ)
+        // 1. ì†íŒ¨ ë¦¬ìŠ¤íŠ¸ì—ì„œ ì¹´ë“œë¥¼ ë¨¼ì € ëºë‹ˆë‹¤. (ë‚˜ë¨¸ì§€ ì¹´ë“œê°€ ì¦‰ì‹œ ë¹ˆìë¦¬ë¥¼ ë©”ìš°ê²Œ í•˜ê¸° ìœ„í•¨)
         GameObject card = opponentCards[cardIndex.handNum];
         opponentCards.RemoveAt(cardIndex.handNum);
 
-        // 2. ¼­¹ö¿¡¼­ ¹ŞÀº Ä«µå µ¥ÀÌÅÍ¸¦ ½Ã°¢Àû UI(GameCardDisplay)¿¡ ÀÔÇôÁİ´Ï´Ù.
+        // 2. ì„œë²„ì—ì„œ ë°›ì€ ì¹´ë“œ ë°ì´í„°ë¥¼ ì‹œê°ì  UI(GameCardDisplay)ì— ì…í˜€ì¤ë‹ˆë‹¤.
         CardInfo cardInfo = cardIndex.cardPlayed;
         CardData cardData = null;
         if (CardDrawManager.Instance != null)
@@ -186,27 +186,27 @@ public class OpponentHandVisualizer : MonoBehaviour
             if (display != null) display.Setup(cardData, cardInfo);
         }
 
-        // 3. CardActionQueueManager·Î ³Ñ°Ü, È­¸é Áß¾Ó¿¡ Å©°Ô ¶ç¿öÁÖ´Â ¿¬ÃâÀ» ¸Ã±é´Ï´Ù.
-        // (¿¬Ãâ ÈÄ ÀÚµ¿À¸·Î ÆÄ±«µË´Ï´Ù)
+        // 3. CardActionQueueManagerë¡œ ë„˜ê²¨, í™”ë©´ ì¤‘ì•™ì— í¬ê²Œ ë„ì›Œì£¼ëŠ” ì—°ì¶œì„ ë§¡ê¹ë‹ˆë‹¤.
+        // (ì—°ì¶œ í›„ ìë™ìœ¼ë¡œ íŒŒê´´ë©ë‹ˆë‹¤)
         if (CardActionQueueManager.Instance != null)
         {
             CardActionQueueManager.Instance.PreparePlay(card, true);
         }
 
         // ==========================================================
-        // [Áß¿ä] ´ÙÀÌ³ª¹Í °£°İ Á¶Àı º¹±¸
-        // Ä«µå¸¦ »ç¿ëÇØ¼­ ¼ÕÆĞ°¡ ÁÙ¾úÀ¸¹Ç·Î ÀüÃ¼ °£°İÀ» ´Ù½Ã ³ĞÇôÁİ´Ï´Ù.
-        // ¸¶Âù°¡Áö·Î Update()ÀÇ °­Á¦ ¼ø°£ÀÌµ¿À» ¸·±â À§ÇØ _lastSpacingÀ» Áï½Ã µ¿±âÈ­ÇÕ´Ï´Ù.
+        // [ì¤‘ìš”] ë‹¤ì´ë‚˜ë¯¹ ê°„ê²© ì¡°ì ˆ ë³µêµ¬
+        // ì¹´ë“œë¥¼ ì‚¬ìš©í•´ì„œ ì†íŒ¨ê°€ ì¤„ì—ˆìœ¼ë¯€ë¡œ ì „ì²´ ê°„ê²©ì„ ë‹¤ì‹œ ë„“í˜€ì¤ë‹ˆë‹¤.
+        // ë§ˆì°¬ê°€ì§€ë¡œ Update()ì˜ ê°•ì œ ìˆœê°„ì´ë™ì„ ë§‰ê¸° ìœ„í•´ _lastSpacingì„ ì¦‰ì‹œ ë™ê¸°í™”í•©ë‹ˆë‹¤.
         // ==========================================================
         cardSpacing += cardSpacingSize;
         _lastSpacing = cardSpacing;
 
-        // 4. °£°İÀÌ ¼öÁ¤µÈ »óÅÂ¿¡¼­ ¼ÕÆĞ¸¦ ÀçÁ¤·ÄÇÕ´Ï´Ù.
+        // 4. ê°„ê²©ì´ ìˆ˜ì •ëœ ìƒíƒœì—ì„œ ì†íŒ¨ë¥¼ ì¬ì •ë ¬í•©ë‹ˆë‹¤.
         UpdateHandLayout();
     }
 
     /// <summary>
-    /// Ä«µå¸¦ »ó´ë¹æ µ¦À¸·Î µÇµ¹¸®´Â ¿¬ÃâÀÔ´Ï´Ù.
+    /// ì¹´ë“œë¥¼ ìƒëŒ€ë°© ë±ìœ¼ë¡œ ë˜ëŒë¦¬ëŠ” ì—°ì¶œì…ë‹ˆë‹¤.
     /// </summary>
     public void ReturnCardToDeck(int cardIndex)
     {
@@ -216,7 +216,7 @@ public class OpponentHandVisualizer : MonoBehaviour
 
     private IEnumerator ReturnToDeckRoutine(GameObject card)
     {
-        // 1. ¼ÕÆĞ ¸®½ºÆ®¿¡¼­ Áö¿ì°í Áï½Ã Á¤·Ä
+        // 1. ì†íŒ¨ ë¦¬ìŠ¤íŠ¸ì—ì„œ ì§€ìš°ê³  ì¦‰ì‹œ ì •ë ¬
         opponentCards.Remove(card);
         UpdateHandLayout();
 
@@ -225,26 +225,26 @@ public class OpponentHandVisualizer : MonoBehaviour
 
         Sequence returnSeq = DOTween.Sequence();
 
-        // 2. µ¦À¸·Î µ¹¾Æ°¥ ¶§´Â ·ÎÄÃ ÁÂÇ¥°¡ ¾Æ´Ñ Àı´ë È­¸é À§Ä¡(DOMove)¸¦ ÇâÇØ ³¯¾Æ°©´Ï´Ù.
-        // »ìÂ¦ È­¸é À§ÂÊÀ¸·Î µé·È´Ù°¡(Vector3.up * 50f) µ¦ ¾ÈÀ¸·Î »¡·Á µé¾î°¡´Â ±ËÀûÀ» ¸¸µì´Ï´Ù.
+        // 2. ë±ìœ¼ë¡œ ëŒì•„ê°ˆ ë•ŒëŠ” ë¡œì»¬ ì¢Œí‘œê°€ ì•„ë‹Œ ì ˆëŒ€ í™”ë©´ ìœ„ì¹˜(DOMove)ë¥¼ í–¥í•´ ë‚ ì•„ê°‘ë‹ˆë‹¤.
+        // ì‚´ì§ í™”ë©´ ìœ„ìª½ìœ¼ë¡œ ë“¤ë ¸ë‹¤ê°€(Vector3.up * 50f) ë± ì•ˆìœ¼ë¡œ ë¹¨ë ¤ ë“¤ì–´ê°€ëŠ” ê¶¤ì ì„ ë§Œë“­ë‹ˆë‹¤.
         returnSeq.Append(cardRect.DOMove(cardRect.position + Vector3.up * 50f, 0.15f).SetEase(Ease.OutQuad));
         returnSeq.Append(cardRect.DOMove(opponentDeckTransform.position, returnDuration).SetEase(returnEase));
         returnSeq.Join(cardRect.DORotateQuaternion(opponentDeckTransform.rotation, returnDuration).SetEase(returnEase));
 
-        // µ¦ ¾ÈÀ¸·Î µé¾î°¥ ¶§ Å©±â¸¦ 0À¸·Î ÁÙ¿© ÀÚ¿¬½º·´°Ô »ç¶óÁö´Â ¿¬ÃâÀ» ´õÇÕ´Ï´Ù.
+        // ë± ì•ˆìœ¼ë¡œ ë“¤ì–´ê°ˆ ë•Œ í¬ê¸°ë¥¼ 0ìœ¼ë¡œ ì¤„ì—¬ ìì—°ìŠ¤ëŸ½ê²Œ ì‚¬ë¼ì§€ëŠ” ì—°ì¶œì„ ë”í•©ë‹ˆë‹¤.
         returnSeq.Join(cardRect.DOScale(Vector3.zero, returnDuration).SetEase(Ease.InExpo));
 
-        // ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ¿ÏÀüÈ÷ ³¡³¯ ¶§±îÁö ´ë±â
+        // ì• ë‹ˆë©”ì´ì…˜ì´ ì™„ì „íˆ ëë‚  ë•Œê¹Œì§€ ëŒ€ê¸°
         yield return returnSeq.WaitForCompletion();
 
-        // 3. ¸Ş¸ğ¸®¿¡¼­ ¿ÏÀü »èÁ¦
+        // 3. ë©”ëª¨ë¦¬ì—ì„œ ì™„ì „ ì‚­ì œ
         Destroy(card);
     }
 
     private void Update()
     {
-        // À¯´ÏÆ¼ ¿¡µğÅÍ ÀÎ½ºÆåÅÍ Ã¢¿¡¼­ °³¹ßÀÚ°¡ ¼öÄ¡¸¦ º¯°æÇÏ¸é,
-        // °ÔÀÓÀ» ²°´Ù ÄÑÁö ¾Ê¾Æµµ Ä«µå°¡ Áï½Ã ¿òÁ÷ÀÌ¸ç ½Ç½Ã°£À¸·Î È®ÀÎµÇµµ·Ï ÇÏ´Â ÆíÀÇ ±â´ÉÀÔ´Ï´Ù.
+        // ìœ ë‹ˆí‹° ì—ë””í„° ì¸ìŠ¤í™í„° ì°½ì—ì„œ ê°œë°œìê°€ ìˆ˜ì¹˜ë¥¼ ë³€ê²½í•˜ë©´,
+        // ê²Œì„ì„ ê»ë‹¤ ì¼œì§€ ì•Šì•„ë„ ì¹´ë“œê°€ ì¦‰ì‹œ ì›€ì§ì´ë©° ì‹¤ì‹œê°„ìœ¼ë¡œ í™•ì¸ë˜ë„ë¡ í•˜ëŠ” í¸ì˜ ê¸°ëŠ¥ì…ë‹ˆë‹¤.
         if (!Mathf.Approximately(_lastSpacing, cardSpacing) ||
             !Mathf.Approximately(_lastDepthOffset, cardDepthOffset))
         {
@@ -253,7 +253,7 @@ public class OpponentHandVisualizer : MonoBehaviour
             _lastDepthOffset = cardDepthOffset;
         }
 
-        // --- Å×½ºÆ® ÀÔ·Â ---
+        // --- í…ŒìŠ¤íŠ¸ ì…ë ¥ ---
         if (Input.GetKeyDown(KeyCode.O)) DrawCard();
 
         if (Input.GetKeyDown(KeyCode.K) && opponentCards.Count > 0)
@@ -265,7 +265,7 @@ public class OpponentHandVisualizer : MonoBehaviour
     }
 
     /// <summary>
-    /// ¿©·¯ ÀåÀ» ÀÏÁ¤ÇÑ °£°İÀ» µÎ°í Â÷·Ê´ë·Î »Ì´Â ¿¬ÃâÀÔ´Ï´Ù.
+    /// ì—¬ëŸ¬ ì¥ì„ ì¼ì •í•œ ê°„ê²©ì„ ë‘ê³  ì°¨ë¡€ëŒ€ë¡œ ë½‘ëŠ” ì—°ì¶œì…ë‹ˆë‹¤.
     /// </summary>
     public void PerformBatchDraw(int count)
     {
@@ -299,41 +299,41 @@ using DG.Tweening;
 using System.Collections;
 
 /// <summary>
-/// »ó´ë¹æÀÇ ¼ÕÆĞ¸¦ °¡·Î ÀÏÀÚ(Linear) ÇüÅÂ·Î Á¤·ÄÇÏ°í, µå·Î¿ì ¹× Ä«µå »ç¿ë ¿¬ÃâÀ» °ü¸®ÇÕ´Ï´Ù.
-/// ÀÎ½ºÆåÅÍ ¼öÄ¡ º¯°æ ½Ã ½Ç½Ã°£ ¹İ¿µ ¹× Ä«µå »ç¿ë ½ÃÀÇ ÆäÀÌµå ¾Æ¿ô ¿¬ÃâÀÌ Æ÷ÇÔµÇ¾î ÀÖ½À´Ï´Ù.
+/// ìƒëŒ€ë°©ì˜ ì†íŒ¨ë¥¼ ê°€ë¡œ ì¼ì(Linear) í˜•íƒœë¡œ ì •ë ¬í•˜ê³ , ë“œë¡œìš° ë° ì¹´ë“œ ì‚¬ìš© ì—°ì¶œì„ ê´€ë¦¬í•©ë‹ˆë‹¤.
+/// ì¸ìŠ¤í™í„° ìˆ˜ì¹˜ ë³€ê²½ ì‹œ ì‹¤ì‹œê°„ ë°˜ì˜ ë° ì¹´ë“œ ì‚¬ìš© ì‹œì˜ í˜ì´ë“œ ì•„ì›ƒ ì—°ì¶œì´ í¬í•¨ë˜ì–´ ìˆìŠµë‹ˆë‹¤.
 /// </summary>
 public class OpponentHandVisualizer : MonoBehaviour
 {
     public static OpponentHandVisualizer Instance;
 
-    [Header("ÇÁ¸®ÆÕ ¹× À§Ä¡")]
-    public GameObject cardBackPrefab;      // »ó´ë¹æ Ä«µå µŞ¸é ÇÁ¸®ÆÕ
-    public Transform opponentHandAnchor;  // »ó´ë¹æ ¼ÕÆĞ ±âÁØÁ¡ (È­¸é »ó´Ü)
-    public Transform opponentDeckTransform; // »ó´ë¹æ µ¦ À§Ä¡
+    [Header("í”„ë¦¬íŒ¹ ë° ìœ„ì¹˜")]
+    public GameObject cardBackPrefab;      // ìƒëŒ€ë°© ì¹´ë“œ ë’·ë©´ í”„ë¦¬íŒ¹
+    public Transform opponentHandAnchor;  // ìƒëŒ€ë°© ì†íŒ¨ ê¸°ì¤€ì  (í™”ë©´ ìƒë‹¨)
+    public Transform opponentDeckTransform; // ìƒëŒ€ë°© ë± ìœ„ì¹˜
 
-    [Header("¼ÕÆĞ ·¹ÀÌ¾Æ¿ô ¼³Á¤ (°¡·Î Á¤·Ä)")]
-    [Tooltip("¼ÕÆĞ Á¤·Ä È¸Àü°¢µµ")]
+    [Header("ì†íŒ¨ ë ˆì´ì•„ì›ƒ ì„¤ì • (ê°€ë¡œ ì •ë ¬)")]
+    [Tooltip("ì†íŒ¨ ì •ë ¬ íšŒì „ê°ë„")]
     public Vector3 handRotation = new Vector3(0,0,0);
-    [Tooltip("Ä«µå »çÀÌÀÇ °¡·Î °£°İÀÔ´Ï´Ù.")]
+    [Tooltip("ì¹´ë“œ ì‚¬ì´ì˜ ê°€ë¡œ ê°„ê²©ì…ë‹ˆë‹¤.")]
     public float cardSpacing = 1.2f;
-    [Tooltip("Ä«µå °£ÀÇ °ãÄ§ ¼ø¼­¸¦ À§ÇÑ YÃà ¿ÀÇÁ¼ÂÀÔ´Ï´Ù.")]
+    [Tooltip("ì¹´ë“œ ê°„ì˜ ê²¹ì¹¨ ìˆœì„œë¥¼ ìœ„í•œ Yì¶• ì˜¤í”„ì…‹ì…ë‹ˆë‹¤.")]
     public float cardDepthOffset = 0.02f;
-    [Tooltip("ÀÏ¹İ Á¤·Ä ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£ÀÔ´Ï´Ù.")]
+    [Tooltip("ì¼ë°˜ ì •ë ¬ ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„ì…ë‹ˆë‹¤.")]
     public float alignDuration = 0.3f;
 
-    [Header("µå·Î¿ì ¾Ö´Ï¸ŞÀÌ¼Ç ¼³Á¤")]
+    [Header("ë“œë¡œìš° ì• ë‹ˆë©”ì´ì…˜ ì„¤ì •")]
     public float drawMoveDuration = 0.5f;
-    [Tooltip("¿¬¼ÓÀ¸·Î »ÌÀ»½Ã µô·¹ÀÌ ½Ã°£.")]
+    [Tooltip("ì—°ì†ìœ¼ë¡œ ë½‘ì„ì‹œ ë”œë ˆì´ ì‹œê°„.")]
     public float batchDrawInterval = 0.2f;
 
-    [Header("Ä«µå »ç¿ë(Use) ¿¬Ãâ ¼³Á¤")]
-    [Tooltip("Ä«µå¸¦ ³¾ ¶§ ¾ÕÀ¸·Î ÀÌµ¿ÇÏ´Â ¹æÇâ°ú °Å¸®ÀÔ´Ï´Ù.")]
+    [Header("ì¹´ë“œ ì‚¬ìš©(Use) ì—°ì¶œ ì„¤ì •")]
+    [Tooltip("ì¹´ë“œë¥¼ ë‚¼ ë•Œ ì•ìœ¼ë¡œ ì´ë™í•˜ëŠ” ë°©í–¥ê³¼ ê±°ë¦¬ì…ë‹ˆë‹¤.")]
     public Vector3 useMoveOffset = new Vector3(0, -1.5f, 0);
     public float useSize = 0.8f;
     public float useDuration = 0.6f;
     public float fadeOutDelay = 0.2f;
 
-    [Header("µ¦ ±ÍÈ¯(Return) ¿¬Ãâ ¼³Á¤")]
+    [Header("ë± ê·€í™˜(Return) ì—°ì¶œ ì„¤ì •")]
     public float returnDuration = 0.5f;
     public Ease returnEase = Ease.InQuad;
 
@@ -341,7 +341,7 @@ public class OpponentHandVisualizer : MonoBehaviour
     private Vector3 _originalCardScale = Vector3.one;
     private bool _isScaleSet = false;
 
-    // ½Ç½Ã°£ º¯°æ °¨Áö¿ë º¯¼ö
+    // ì‹¤ì‹œê°„ ë³€ê²½ ê°ì§€ìš© ë³€ìˆ˜
     private float _lastSpacing;
     private float _lastDepthOffset;
 
@@ -363,7 +363,7 @@ public class OpponentHandVisualizer : MonoBehaviour
     }
 
     /// <summary>
-    /// Ä«µå¸¦ µå·Î¿ìÇÕ´Ï´Ù.
+    /// ì¹´ë“œë¥¼ ë“œë¡œìš°í•©ë‹ˆë‹¤.
     /// </summary>
     public void DrawCard()
     {
@@ -386,7 +386,7 @@ public class OpponentHandVisualizer : MonoBehaviour
     }
 
     /// <summary>
-    /// ¼ÕÆĞÀÇ ¸ğµç Ä«µå¸¦ °¡·Î·Î ÀçÁ¤·ÄÇÕ´Ï´Ù. (YÃà ·¹ÀÌ¾î¸µ Àû¿ë)
+    /// ì†íŒ¨ì˜ ëª¨ë“  ì¹´ë“œë¥¼ ê°€ë¡œë¡œ ì¬ì •ë ¬í•©ë‹ˆë‹¤. (Yì¶• ë ˆì´ì–´ë§ ì ìš©)
     /// </summary>
     public void UpdateHandLayout(GameObject newCard = null, bool instant = false)
     {
@@ -400,9 +400,9 @@ public class OpponentHandVisualizer : MonoBehaviour
         {
             GameObject card = opponentCards[i];
 
-            // À§Ä¡ °è»ê: X´Â °£°İ´ë·Î, Y´Â °ãÄ§ ¹æÁö¸¦ À§ÇØ Á¶Á¤
+            // ìœ„ì¹˜ ê³„ì‚°: XëŠ” ê°„ê²©ëŒ€ë¡œ, YëŠ” ê²¹ì¹¨ ë°©ì§€ë¥¼ ìœ„í•´ ì¡°ì •
             float targetX = startX + (i * cardSpacing);
-            float targetY = i * cardDepthOffset; // À¯Àú ¿äÃ»¿¡ µû¶ó Z°¡ ¾Æ´Ñ YÃàÀ¸·Î º¯°æ
+            float targetY = i * cardDepthOffset; // ìœ ì € ìš”ì²­ì— ë”°ë¼ Zê°€ ì•„ë‹Œ Yì¶•ìœ¼ë¡œ ë³€ê²½
 
             Vector3 targetLocalPos = new Vector3(targetX, targetY, 0);
             Quaternion targetLocalRot = Quaternion.Euler(handRotation);
@@ -429,15 +429,15 @@ public class OpponentHandVisualizer : MonoBehaviour
 
 
     /// <summary>
-    /// [ÇÙ½É] Ä«µå¸¦ ÇÊµå ÂÊÀ¸·Î ³»´Â ¿¬ÃâÀ» ½ÇÇàÇÏ°í ÆÄ±«ÇÕ´Ï´Ù.
+    /// [í•µì‹¬] ì¹´ë“œë¥¼ í•„ë“œ ìª½ìœ¼ë¡œ ë‚´ëŠ” ì—°ì¶œì„ ì‹¤í–‰í•˜ê³  íŒŒê´´í•©ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="cardIndex">»ç¿ëÇÒ Ä«µåÀÇ ÀÎµ¦½º</param>
+    /// <param name="cardIndex">ì‚¬ìš©í•  ì¹´ë“œì˜ ì¸ë±ìŠ¤</param>
     public void PlayUseCardAnimation(S_OpponentPlayCard cardIndex)
     {
         if (cardIndex.handNum < 0 || cardIndex.handNum >= opponentCards.Count) return;
 
         GameObject card = opponentCards[cardIndex.handNum];
-        opponentCards.RemoveAt(cardIndex.handNum); // ¸®½ºÆ®¿¡¼­ ¸ÕÀú Á¦°ÅÇÏ¿© ´Ù¸¥ Ä«µåµéÀÌ Áï½Ã Á¤·ÄµÇ°Ô ÇÔ
+        opponentCards.RemoveAt(cardIndex.handNum); // ë¦¬ìŠ¤íŠ¸ì—ì„œ ë¨¼ì € ì œê±°í•˜ì—¬ ë‹¤ë¥¸ ì¹´ë“œë“¤ì´ ì¦‰ì‹œ ì •ë ¬ë˜ê²Œ í•¨
 
         CardInfo cardInfo = cardIndex.cardPlayed;
         CardData cardData = CardDrawManager.Instance.GetCardDataById(cardIndex.cardPlayed.cardId);
@@ -447,14 +447,14 @@ public class OpponentHandVisualizer : MonoBehaviour
         {
             card.GetComponent<GameCardDisplay>().Setup(cardData, cardInfo);
         }
-        else Debug.Log("»ó´ë°¡ Ä«µå¸¦ »ç¿ëÇßÁö¸¸ Ä«µåµ¥ÀÌÅÍ & Ä«µåÀÎÆ÷ ¾øÀ½");
+        else Debug.Log("ìƒëŒ€ê°€ ì¹´ë“œë¥¼ ì‚¬ìš©í–ˆì§€ë§Œ ì¹´ë“œë°ì´í„° & ì¹´ë“œì¸í¬ ì—†ìŒ");
 
         CardActionQueueManager.Instance.PreparePlay(card, true);
         // CardActionQueueManager.Instance.AddToQueue(card, true);
     }
 
     /// <summary>
-    /// Æ¯Á¤ ÀÎµ¦½ºÀÇ Ä«µå¸¦ µ¦À¸·Î µÇµ¹¸®´Â ¾Ö´Ï¸ŞÀÌ¼ÇÀ» ½ÇÇàÇÕ´Ï´Ù.
+    /// íŠ¹ì • ì¸ë±ìŠ¤ì˜ ì¹´ë“œë¥¼ ë±ìœ¼ë¡œ ë˜ëŒë¦¬ëŠ” ì• ë‹ˆë©”ì´ì…˜ì„ ì‹¤í–‰í•©ë‹ˆë‹¤.
     /// </summary>
     public void ReturnCardToDeck(int cardIndex)
     {
@@ -463,18 +463,18 @@ public class OpponentHandVisualizer : MonoBehaviour
     }
     private IEnumerator ReturnToDeckRoutine(GameObject card)
     {
-        // 1. ¸®½ºÆ®¿¡¼­ Á¦°Å ¹× Áï½Ã Á¤·Ä
+        // 1. ë¦¬ìŠ¤íŠ¸ì—ì„œ ì œê±° ë° ì¦‰ì‹œ ì •ë ¬
         opponentCards.Remove(card);
         UpdateHandLayout();
 
-        // 2. µ¦À¸·Î ³¯¾Æ°¡´Â ¿¬Ãâ
+        // 2. ë±ìœ¼ë¡œ ë‚ ì•„ê°€ëŠ” ì—°ì¶œ
         card.transform.DOKill();
 
-        // ¿ùµå ÁÂÇ¥ ±âÁØÀ¸·Î µ¦ À§Ä¡·Î ÀÌµ¿ÇØ¾ß ÇÏ¹Ç·Î ºÎ¸ğ ÇØÁ¦ È¤Àº ¿ùµå Æ®À© »ç¿ë
-        // ¿©±â¼­´Â ±ò²ûÇÏ°Ô ¿ùµå ÁÂÇ¥ ÀÌµ¿À» »ç¿ëÇÕ´Ï´Ù.
+        // ì›”ë“œ ì¢Œí‘œ ê¸°ì¤€ìœ¼ë¡œ ë± ìœ„ì¹˜ë¡œ ì´ë™í•´ì•¼ í•˜ë¯€ë¡œ ë¶€ëª¨ í•´ì œ í˜¹ì€ ì›”ë“œ íŠ¸ìœˆ ì‚¬ìš©
+        // ì—¬ê¸°ì„œëŠ” ê¹”ë”í•˜ê²Œ ì›”ë“œ ì¢Œí‘œ ì´ë™ì„ ì‚¬ìš©í•©ë‹ˆë‹¤.
         Sequence returnSeq = DOTween.Sequence();
 
-        // »ìÂ¦ À§·Î µé·È´Ù°¡ µ¦À¸·Î µé¾î°¡´Â ´À³¦
+        // ì‚´ì§ ìœ„ë¡œ ë“¤ë ¸ë‹¤ê°€ ë±ìœ¼ë¡œ ë“¤ì–´ê°€ëŠ” ëŠë‚Œ
         returnSeq.Append(card.transform.DOMove(card.transform.position + Vector3.up * 0.5f, 0.15f).SetEase(Ease.OutQuad));
         returnSeq.Append(card.transform.DOMove(opponentDeckTransform.position, returnDuration).SetEase(returnEase));
         returnSeq.Join(card.transform.DORotateQuaternion(opponentDeckTransform.rotation, returnDuration).SetEase(returnEase));
@@ -487,7 +487,7 @@ public class OpponentHandVisualizer : MonoBehaviour
 
     private void Update()
     {
-        // ½Ç½Ã°£ ¼öÄ¡ º¯°æ °¨Áö
+        // ì‹¤ì‹œê°„ ìˆ˜ì¹˜ ë³€ê²½ ê°ì§€
         if (!Mathf.Approximately(_lastSpacing, cardSpacing) ||
             !Mathf.Approximately(_lastDepthOffset, cardDepthOffset))
         {
@@ -496,13 +496,13 @@ public class OpponentHandVisualizer : MonoBehaviour
             _lastDepthOffset = cardDepthOffset;
         }
 
-        // --- Å×½ºÆ® ÀÔ·Â ---
+        // --- í…ŒìŠ¤íŠ¸ ì…ë ¥ ---
         if (Input.GetKeyDown(KeyCode.O))
         {
             DrawCard();
         }
 
-        // KÅ°¸¦ ´©¸£¸é ¸Ç ¾ÕÀÇ Ä«µå(0¹ø)¸¦ »ç¿ëÇÏ´Â ¿¬Ãâ ½ÇÇà
+        // Kí‚¤ë¥¼ ëˆ„ë¥´ë©´ ë§¨ ì•ì˜ ì¹´ë“œ(0ë²ˆ)ë¥¼ ì‚¬ìš©í•˜ëŠ” ì—°ì¶œ ì‹¤í–‰
         if (Input.GetKeyDown(KeyCode.K) && opponentCards.Count > 0)
         {
             var testCardData = new CardInfo
@@ -521,7 +521,7 @@ public class OpponentHandVisualizer : MonoBehaviour
         }
     }
 
-    // ¿©·¯Àå –j´Â ÇÔ¼ö
+    // ì—¬ëŸ¬ì¥ ë»¡ëŠ” í•¨ìˆ˜
     public void PerformBatchDraw(int count)
     {
         StartCoroutine(BatchDrawRoutine(count));

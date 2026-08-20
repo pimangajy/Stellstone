@@ -2,93 +2,102 @@ using System;
 using System.Collections.Generic;
 
 // ==================================================================
-// 0. ¿­°ÅÇü(Enum) Á¤ÀÇ (¼­¹ö¿Í ¿Ïº®ÇÏ°Ô ¼ıÀÚ¸¦ ÀÏÄ¡½ÃÅ´)
+// 0. ì—´ê±°í˜•(Enum) ì •ì˜ (ì„œë²„ì™€ ì™„ë²½í•˜ê²Œ ìˆ«ìë¥¼ ì¼ì¹˜ì‹œí‚´)
 // ==================================================================
 
 /// <summary>
-///  µğ¹ö±×¿ë ¾×¼Ç
+///  ë””ë²„ê·¸ìš© ì•¡ì…˜
 /// </summary>
 public enum DebugAction
 {
-    NONE = 0,            // ±âº»°ª(¾ÈÀüÀåÄ¡)
-    SpecificCardDraw,    // Æ¯Á¤ Ä«µå µå·Î¿ì
-    RequestDeckInfo,     // [½Å±Ô] Å¬¶óÀÌ¾ğÆ® -> ¼­¹ö: ³» µ¦ Á¤º¸ ¿äÃ»
-    ResponseDeckInfo     // [½Å±Ô] ¼­¹ö -> Å¬¶óÀÌ¾ğÆ®: µ¦ Á¤º¸ ÀÀ´ä
+    NONE = 0,            // ê¸°ë³¸ê°’(ì•ˆì „ì¥ì¹˜)
+    SpecificCardDraw,    // íŠ¹ì • ì¹´ë“œ ë“œë¡œìš°
+    RequestDeckInfo,     // [ì‹ ê·œ] í´ë¼ì´ì–¸íŠ¸ -> ì„œë²„: ë‚´ ë± ì •ë³´ ìš”ì²­
+    ResponseDeckInfo     // [ì‹ ê·œ] ì„œë²„ -> í´ë¼ì´ì–¸íŠ¸: ë± ì •ë³´ ì‘ë‹µ
 }
 
 /// <summary>
-/// Å¬¶óÀÌ¾ğÆ®¿Í ¼­¹ö°¡ ÁÖ°í¹Ş´Â ¸ğµç ¸Ş½ÃÁö(¾×¼Ç)ÀÇ Á¾·ù¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+/// í´ë¼ì´ì–¸íŠ¸ì™€ ì„œë²„ê°€ ì£¼ê³ ë°›ëŠ” ëª¨ë“  ë©”ì‹œì§€(ì•¡ì…˜)ì˜ ì¢…ë¥˜ë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
 /// </summary>
 public enum GameActionType
 {
     NONE = 0,
 
     // ==========================================
-    // Å¬¶óÀÌ¾ğÆ® -> ¼­¹ö (C -> S) ¸Ş½ÃÁö
+    // í´ë¼ì´ì–¸íŠ¸ -> ì„œë²„ (C -> S) ë©”ì‹œì§€
     // ==========================================
-    MULLIGAN_DECISION,   // ¸Ö¸®°Ç °áÁ¤
-    END_TURN,            // ÅÏ Á¾·á
-    PLAY_CARD,           // Ä«µå »ç¿ë
-    ATTACK,              // °ø°İ ¸í·É
-    USE_MEMBER_ABILITY,  // ¸â¹ö Æ¯¼ö ´É·Â »ç¿ë
-    CONCEDE,             // Ç×º¹
-    MAKE_CHOICE,         // Å¬¶óÀÌ¾ğÆ®°¡ ¼±ÅÃ °á°ú¸¦ º¸³¿
+    MULLIGAN_DECISION,   // ë©€ë¦¬ê±´ ê²°ì •
+    END_TURN,            // í„´ ì¢…ë£Œ
+    PLAY_CARD,           // ì¹´ë“œ ì‚¬ìš©
+    SELECT_TARGET_FOR_PLAY,    // í´ë¼ì´ì–¸íŠ¸ê°€ ìµœì¢… ì„ íƒí•œ íƒ€ê²Ÿ ì „ë‹¬ (ë˜ëŠ” ì·¨ì†Œ)
+    VALID_TARGETS_REQUEST,// íƒ€ê²Ÿ í™•ì¸
+    VALID_ATTACK_TARGETS_REQUEST, // ê³µê²©ê°€ëŠ¥í•œ ëŒ€ìƒ ìš”ì²­
+    ATTACK,              // ê³µê²© ëª…ë ¹
+    USE_MEMBER_ABILITY,  // ë©¤ë²„ íŠ¹ìˆ˜ ëŠ¥ë ¥ ì‚¬ìš©
+    CONCEDE,             // í•­ë³µ
+    MAKE_CHOICE,         // í´ë¼ì´ì–¸íŠ¸ê°€ ì„ íƒ ê²°ê³¼ë¥¼ ë³´ëƒ„
 
     // ==========================================
-    // ¼­¹ö -> Å¬¶óÀÌ¾ğÆ® (S -> C) ¸Ş½ÃÁö
+    // ì„œë²„ -> í´ë¼ì´ì–¸íŠ¸ (S -> C) ë©”ì‹œì§€
     // ==========================================
-    ACTION_RESOLUTION,         // ¾Ö´Ï¸ŞÀÌ¼Ç ¹× ÃÖÁ¾ »óÅÂ ÀÏ°ı Ã³¸®
-    MULLIGAN_INFO,             // ¸Ö¸®°Ç ÇÒ Ä«µå Á¤º¸
-    OPPONENT_MULLIGAN_STATUS,  // »ó´ë¹æ ¸Ö¸®°Ç ¿Ï·á »óÅÂ
-    GAME_READY,                // °ÔÀÓ ½ÃÀÛ
-    PHASE_START,               // ÆäÀÌÁî ½ÃÀÛ (Standby, Draw, Main, End)
-    UPDATE_MANA,               // ¸¶³ª °»½Å
-    UPDATE_ENTITIES,           // °³Ã¼(ÇÊµå, Ã¼·Â µî) »óÅÂ °»½Å
-    OPPONENT_PLAY_CARD,        // »ó´ë¹æÀÌ Ä«µå¸¦ ³¿
-    PLAY_CARD_SUCCESS,         // Ä«µå »ç¿ë ¼º°ø
-    PLAY_CARD_FAIL,            // Ä«µå »ç¿ë ½ÇÆĞ
-    UPDATE_HAND_CARDS,         // ¼ÕÆĞ Ä«µå »óÅÂ(ºñ¿ë, ½ºÅÈ µî) °»½Å
-    REQUEST_CHOICE,            // ¼­¹ö°¡ Å¬¶óÀÌ¾ğÆ®¿¡°Ô ¼±ÅÃÀ» ¿äÃ»ÇÔ
-    GAME_OVER,                 // °ÔÀÓ Á¾·á
-    ERROR                      // ¼­¹ö ¿¡·¯
+    ACTION_RESOLUTION,         // ì• ë‹ˆë©”ì´ì…˜ ë° ìµœì¢… ìƒíƒœ ì¼ê´„ ì²˜ë¦¬
+    MULLIGAN_INFO,             // ë©€ë¦¬ê±´ í•  ì¹´ë“œ ì •ë³´
+    OPPONENT_MULLIGAN_STATUS,  // ìƒëŒ€ë°© ë©€ë¦¬ê±´ ì™„ë£Œ ìƒíƒœ
+    GAME_READY,                // ê²Œì„ ì‹œì‘
+    PHASE_START,               // í˜ì´ì¦ˆ ì‹œì‘ (Standby, Draw, Main, End)
+    DRAW_CARD,                 // ì¹´ë“œë¥¼ ë½‘ìŒ
+    UPDATE_MANA,               // ë§ˆë‚˜ ê°±ì‹ 
+    UPDATE_ENTITIES,           // ê°œì²´(í•„ë“œ, ì²´ë ¥ ë“±) ìƒíƒœ ê°±ì‹ 
+    OPPONENT_PLAY_CARD,        // ìƒëŒ€ë°©ì´ ì¹´ë“œë¥¼ ëƒ„
+    REQUEST_TARGET_FOR_PLAY,   // ì„œë²„ê°€ í´ë¼ì´ì–¸íŠ¸ì—ê²Œ "íƒ€ê²Ÿ ì°ì–´ì¤˜"ë¼ê³  ìš”ì²­
+    PLAY_CARD_SUCCESS,         // ì¹´ë“œ ì‚¬ìš© ì„±ê³µ
+    PLAY_CARD_FAIL,            // ì¹´ë“œ ì‚¬ìš© ì‹¤íŒ¨
+    VALID_TARGETS_RESPONSE,    // íƒ€ê²Ÿ ê°€ëŠ¥í•œ ê°ì²´ ì „ì†¡
+    VALID_ATTACK_TARGETS_RESPONSE,  // ê³µê²© ê°€ëŠ¥í•œ ëŒ€ìƒ ì „ì†¡
+    UPDATE_HAND_CARDS,         // ì†íŒ¨ ì¹´ë“œ ìƒíƒœ(ë¹„ìš©, ìŠ¤íƒ¯ ë“±) ê°±ì‹ 
+    REQUEST_CHOICE,            // ì„œë²„ê°€ í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ì„ íƒì„ ìš”ì²­í•¨
+    GAME_OVER,                 // ê²Œì„ ì¢…ë£Œ
+    ERROR                      // ì„œë²„ ì—ëŸ¬
 }
 
 /// <summary>
-/// °ÔÀÓ ³»¿¡¼­ ¹ß»ıÇÏ´Â »ç°Ç(ÀÌº¥Æ®)ÀÇ Á¾·ù¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+/// ê²Œì„ ë‚´ì—ì„œ ë°œìƒí•˜ëŠ” ì‚¬ê±´(ì´ë²¤íŠ¸)ì˜ ì¢…ë¥˜ë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
 /// </summary>
 public enum GameEventType
 {
     NONE = 0,
-    ATTACK,           // °ø°İ ¼±¾ğ
-    DAMAGE,           // µ¥¹ÌÁö ¹ß»ı
-    HEAL,             // Ã¼·Â È¸º¹
-    BUFF,             // ½ºÅÈ ¹öÇÁ
-    DEATH,            // °³Ã¼ »ç¸Á
-    EFFECT_TRIGGER,   // Æ¯¼ö È¿°ú ¹ßµ¿ ¿¬Ãâ (ÀüÅõÀÇ ÇÔ¼º, Á×À½ÀÇ ¸Ş¾Æ¸® µî)
-    SUMMON,           // ÇÏ¼öÀÎ ¼ÒÈ¯
-    DRAW,              // Ä«µå¸¦ »ÌÀ½
-    BIND,             // ¼Ó¹Ú (ºù°á ´ëÃ¼)
-    SILENCE,          // Ä§¹¬
-    FORCE_ATTACK,     // °­Á¦ °ø°İ
-    GRANT_KEYWORD,    // Å°¿öµå ºÎ¿©
-    MANA_MOD          // ¸¶³ª Á¶ÀÛ
+    ATTACK,           // ê³µê²© ì„ ì–¸
+    DAMAGE,           // ë°ë¯¸ì§€ ë°œìƒ
+    HEAL,             // ì²´ë ¥ íšŒë³µ
+    BUFF,             // ìŠ¤íƒ¯ ë²„í”„
+    BUFF_HAND,
+    BUFF_DECK,
+    DEATH,            // ê°œì²´ ì‚¬ë§
+    EFFECT_TRIGGER,   // íŠ¹ìˆ˜ íš¨ê³¼ ë°œë™ ì—°ì¶œ (ì „íˆ¬ì˜ í•¨ì„±, ì£½ìŒì˜ ë©”ì•„ë¦¬ ë“±)
+    SUMMON,           // í•˜ìˆ˜ì¸ ì†Œí™˜
+    DRAW,              // ì¹´ë“œë¥¼ ë½‘ìŒ
+    BIND,             // ì†ë°• (ë¹™ê²° ëŒ€ì²´)
+    SILENCE,          // ì¹¨ë¬µ
+    FORCE_ATTACK,     // ê°•ì œ ê³µê²©
+    GRANT_KEYWORD,    // í‚¤ì›Œë“œ ë¶€ì—¬
+    MANA_MOD          // ë§ˆë‚˜ ì¡°ì‘
 }
 
 /// <summary>
-/// È¿°ú°¡ ¹ßµ¿ÇÏ´Â ½ÃÁ¡(Æ®¸®°Å)ÀÇ Á¾·ù¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+/// íš¨ê³¼ê°€ ë°œë™í•˜ëŠ” ì‹œì (íŠ¸ë¦¬ê±°)ì˜ ì¢…ë¥˜ë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
 /// </summary>
 public enum EffectTriggerType
 {
     NONE = 0,
-    ON_PLAY,          // Ä«µå¸¦ ³¾ ¶§ ¹ßµ¿ (ÀüÅõÀÇ ÇÔ¼º)
-    ON_DEATH,          // »ç¸Á ½Ã ¹ßµ¿ (Á×À½ÀÇ ¸Ş¾Æ¸®)
-    ON_TURN_START,     // ÅÏ ½ÃÀÛ ½Ã
-    ON_TURN_END,       // ÅÏ Á¾·á ½Ã
-    ON_ATTACK,        // °ø°İ ½ÃÀÛ ½Ã
-    ON_DAMAGE,        // µ¥¹ÌÁö¸¦ ÀÔ¾úÀ»‹š
-    ON_HEAL,          // È¸º¹ÇßÀ»‹š
-    ON_DRAW,          // µå·Î¿ì ÇßÀ»¶§
-    ON_SUMMON,        // ¼ÒÈ¯ÇÒ¶§
+    ON_PLAY,          // ì¹´ë“œë¥¼ ë‚¼ ë•Œ ë°œë™ (ì „íˆ¬ì˜ í•¨ì„±)
+    ON_DEATH,          // ì‚¬ë§ ì‹œ ë°œë™ (ì£½ìŒì˜ ë©”ì•„ë¦¬)
+    ON_TURN_START,     // í„´ ì‹œì‘ ì‹œ
+    ON_TURN_END,       // í„´ ì¢…ë£Œ ì‹œ
+    ON_ATTACK,        // ê³µê²© ì‹œì‘ ì‹œ
+    ON_DAMAGE,        // ë°ë¯¸ì§€ë¥¼ ì…ì—ˆì„ë–„
+    ON_HEAL,          // íšŒë³µí–ˆì„ë–„
+    ON_DRAW,          // ë“œë¡œìš° í–ˆì„ë•Œ
+    ON_SUMMON,        // ì†Œí™˜í• ë•Œ
 }
 
 public enum GamePhase
@@ -100,54 +109,54 @@ public enum GamePhase
 }
 
 // ==================================================================
-// 1. ±âº» ¾×¼Ç Å¬·¡½º (JSON ÆÄ½Ì¿ë)
+// 1. ê¸°ë³¸ ì•¡ì…˜ í´ë˜ìŠ¤ (JSON íŒŒì‹±ìš©)
 // ==================================================================
 
 /// <summary>
-/// Å¬¶óÀÌ¾ğÆ® -> ¼­¹ö / ¼­¹ö -> Å¬¶óÀÌ¾ğÆ® ¸ğµç ¸Ş½ÃÁöÀÇ ±â¹İÀÌ µÇ´Â Å¬·¡½ºÀÔ´Ï´Ù.
+/// í´ë¼ì´ì–¸íŠ¸ -> ì„œë²„ / ì„œë²„ -> í´ë¼ì´ì–¸íŠ¸ ëª¨ë“  ë©”ì‹œì§€ì˜ ê¸°ë°˜ì´ ë˜ëŠ” í´ë˜ìŠ¤ì…ë‹ˆë‹¤.
 /// </summary>
 [Serializable]
 public class BaseGameAction
 {
-    // (¼öÁ¤) ±âÁ¸ string action ¿¡¼­ enumÀ¸·Î º¯°æ
+    // (ìˆ˜ì •) ê¸°ì¡´ string action ì—ì„œ enumìœ¼ë¡œ ë³€ê²½
     public GameActionType action;
 }
 
 // ==================================================================
-// [½Å±Ô] µğ¹ö±×¿ë ¾×¼Ç Å¬·¡½º
+// [ì‹ ê·œ] ë””ë²„ê·¸ìš© ì•¡ì…˜ í´ë˜ìŠ¤
 // ==================================================================
 [Serializable]
 public class BaseDebugAction
 {
-    public DebugAction debugAction; // ¼­¹öÀÇ Enum ÀÌ¸§°ú ¶È°°Àº ¹®ÀÚ¿­ÀÌ µé¾î°©´Ï´Ù.
+    public DebugAction debugAction;// ì„œë²„ì˜ Enum ì´ë¦„ê³¼ ë˜‘ê°™ì€ ë¬¸ìì—´ì´ ë“¤ì–´ê°‘ë‹ˆë‹¤.
 }
 
 /// <summary>
-/// [µğ¹ö±×] Æ¯Á¤ Ä«µå µå·Î¿ì ¿äÃ» µ¥ÀÌÅÍ
+/// [ë””ë²„ê·¸] íŠ¹ì • ì¹´ë“œ ë“œë¡œìš° ìš”ì²­ ë°ì´í„°
 /// </summary>
 public class C_DebugSpecificCardDraw : BaseDebugAction
 {
     public string targetCardId;
 }
 
-// [µğ¹ö±×] µ¦ Á¤º¸ ÀÀ´ä (C -> S)
+// [ë””ë²„ê·¸] ë± ì •ë³´ ì‘ë‹µ (C -> S)
 public class C_DebugRequestDeckInfo : BaseDebugAction
 {
-    // ÇÊµå ºÒÇÊ¿ä (debugAction °ª¸¸À¸·Î ÃæºĞ)
+    // í•„ë“œ ë¶ˆí•„ìš” (debugAction ê°’ë§Œìœ¼ë¡œ ì¶©ë¶„)
 }
 
-// [µğ¹ö±×] µ¦ Á¤º¸ ÀÀ´ä (S -> C)
+// [ë””ë²„ê·¸] ë± ì •ë³´ ì‘ë‹µ (S -> C)
 public class S_DebugResponseDeckInfo : BaseDebugAction
 {
-    public List<CardInfo> deckCards; // ÇöÀç µ¦¿¡ ³²Àº Ä«µå ¸®½ºÆ®
+    public List<CardInfo> deckCards; // í˜„ì¬ ë±ì— ë‚¨ì€ ì¹´ë“œ ë¦¬ìŠ¤íŠ¸
 }
 
 // ==================================================================
-// 2. °ø¿ë µ¥ÀÌÅÍ ¸ğµ¨ (°ÔÀÓ »óÅÂ¸¦ Ç¥Çö)
+// 2. ê³µìš© ë°ì´í„° ëª¨ë¸ (ê²Œì„ ìƒíƒœë¥¼ í‘œí˜„)
 // ==================================================================
 
 /// <summary>
-/// Ä«µå¸¦ ½Äº°ÇÏ´Â ±âº» µ¥ÀÌÅÍÀÔ´Ï´Ù.
+/// ì¹´ë“œë¥¼ ì‹ë³„í•˜ëŠ” ê¸°ë³¸ ë°ì´í„°ì…ë‹ˆë‹¤.
 /// </summary>
 [Serializable]
 public class CardInfo
@@ -161,7 +170,7 @@ public class CardInfo
 }
 
 /// <summary>
-/// ÇÊµå, ¼Õ, µ¦¿¡ ÀÖ´Â ¸ğµç '°³Ã¼'¸¦ ³ªÅ¸³À´Ï´Ù.
+/// í•„ë“œ, ì†, ë±ì— ìˆëŠ” ëª¨ë“  'ê°œì²´'ë¥¼ ë‚˜íƒ€ëƒ…ë‹ˆë‹¤.
 /// </summary>
 [Serializable]
 public class EntityData
@@ -176,7 +185,7 @@ public class EntityData
     public bool canAttack;
     public bool hasAttacked;
 
-    // (¼öÁ¤) List<string> ¿¡¼­ List<CardKeywords> enumÀ¸·Î º¯°æ
+    // (ìˆ˜ì •) List<string> ì—ì„œ List<CardKeywords> enumìœ¼ë¡œ ë³€ê²½
     public List<CardKeywords> keywords;
 
     public int position;
@@ -185,7 +194,7 @@ public class EntityData
 }
 
 /// <summary>
-/// °ÔÀÓ ³»¿¡¼­ ¹ß»ıÇÏ´Â ÇÏ³ªÀÇ '»ç°Ç'À» Á¤ÀÇÇÕ´Ï´Ù.
+/// ê²Œì„ ë‚´ì—ì„œ ë°œìƒí•˜ëŠ” í•˜ë‚˜ì˜ 'ì‚¬ê±´'ì„ ì •ì˜í•©ë‹ˆë‹¤.
 /// </summary>
 [Serializable]
 public class GameEvent
@@ -201,7 +210,7 @@ public class GameEvent
 
 
 // ==================================================================
-// 3. Å¬¶óÀÌ¾ğÆ® -> ¼­¹ö (C -> S) ¸Ş½ÃÁö
+// 3. í´ë¼ì´ì–¸íŠ¸ -> ì„œë²„ (C -> S) ë©”ì‹œì§€
 // ==================================================================
 
 public class C_MulliganDecision : BaseGameAction
@@ -220,20 +229,41 @@ public class C_PlayCard : BaseGameAction
     public int position;
 }
 
+// ==========================================
+// (C->S) (íƒ€ê²Ÿ ì„ íƒ ì™„ë£Œ ë˜ëŠ” ì·¨ì†Œ)
+// ==========================================
+public class C_SelectTargetForPlay : BaseGameAction
+{
+    // action = GameActionType.SELECT_TARGET_FOR_PLAY
+    public string CardEntityId { get; set; }     // ëŒ€ìƒì„ ì§€ì •í•œ ì¹´ë“œì˜ InstanceId
+    public int selectedEntityId { get; set; }     // ì„ íƒí•œ ëŒ€ìƒì˜ EntityId (ì·¨ì†Œí–ˆë‹¤ë©´ -1 ë˜ëŠ” 0 ì „ì†¡)
+}
+
 /// <summary>
-/// (C->S) Å¬¶óÀÌ¾ğÆ®°¡ ¼­¹öÀÇ ¼±ÅÃ ¿ä±¸(REQUEST_CHOICE)¿¡ ÀÀ´äÇÒ ¶§ »ç¿ëÇÕ´Ï´Ù.
+/// (C->S) íƒ€ê²ŸíŒ…ì´ í•„ìš”í•œ ì¹´ë“œì‚¬ìš©ì‹œ íƒ€ê²Ÿìš”ì²­
+/// </summary>
+public class C_ValidTargetRequest : BaseGameAction
+{
+    // action = "VALID_TARGETS_RESULT"
+
+    // ì–´ë–¤ ì¹´ë“œì— ëŒ€í•œ íƒ€ê²Ÿ ê²°ê³¼ì¸ì§€ í´ë¼ì´ì–¸íŠ¸ê°€ ë§¤ì¹­í•  ìˆ˜ ìˆë„ë¡ ê·¸ëŒ€ë¡œ ëŒë ¤ì¤Œ
+    public string CardEntityId { get; set; }
+}
+
+/// <summary>
+/// (C->S) í´ë¼ì´ì–¸íŠ¸ê°€ ì„œë²„ì˜ ì„ íƒ ìš”êµ¬(REQUEST_CHOICE)ì— ì‘ë‹µí•  ë•Œ ì‚¬ìš©í•©ë‹ˆë‹¤.
 /// </summary>
 public class C_MakeChoice : BaseGameAction
 {
     // action = GameActionType.MAKE_CHOICE
 
-    // 1. ÅäÅ« ¼ÒÈ¯ À§Ä¡ µîÀ» ¼±ÅÃÇßÀ» °æ¿ìÀÇ °ª (-1ÀÌ¸é ¼±ÅÃ¾ÈÇÔ)
+    // 1. í† í° ì†Œí™˜ ìœ„ì¹˜ ë“±ì„ ì„ íƒí–ˆì„ ê²½ìš°ì˜ ê°’ (-1ì´ë©´ ì„ íƒì•ˆí•¨)
     public int selectedPosition { get; set; } = -1;
 
-    // 2. ¹ß°ß(Discover) µî Æ¯Á¤ Ä«µå¸¦ ¼±ÅÃÇßÀ» °æ¿ìÀÇ °ª
-    public string? selectedCardId { get; set; }
+    // 2. ë°œê²¬(Discover) ë“± íŠ¹ì • ì¹´ë“œë¥¼ ì„ íƒí–ˆì„ ê²½ìš°ì˜ ê°’
+    public string selectedCardId { get; set; }
 
-    // 3. Æ¯Á¤ ÇÏ¼öÀÎ(Å¸°Ù)À» ¼±ÅÃÇßÀ» °æ¿ìÀÇ °ª (-1ÀÌ¸é ¼±ÅÃ¾ÈÇÔ)
+    // 3. íŠ¹ì • í•˜ìˆ˜ì¸(íƒ€ê²Ÿ)ì„ ì„ íƒí–ˆì„ ê²½ìš°ì˜ ê°’ (-1ì´ë©´ ì„ íƒì•ˆí•¨)
     public int selectedEntityId { get; set; } = -1;
 }
 
@@ -243,6 +273,17 @@ public class C_Attack : BaseGameAction
     public int defenderEntityId;
 }
 
+/// <summary>
+/// (C->S) í”Œë ˆì´ì–´ê°€ íŠ¹ì • í•˜ìˆ˜ì¸ìœ¼ë¡œ ê³µê²©ì„ ì‹œë„í•˜ë ¤ê³  ë“œë˜ê·¸í•  ë•Œ, ê³µê²© ê°€ëŠ¥í•œ íƒ€ê²Ÿ ëª©ë¡ì„ ìš”ì²­í•©ë‹ˆë‹¤.
+/// </summary>
+public class C_ValidAttackTargetsRequest : BaseGameAction
+{
+
+    // action = GameActionType.VALID_ATTACK_TARGETS_REQUEST;
+
+    public int attackerEntityId { get; set; } // ê³µê²©ì„ ì‹œì‘í•˜ë ¤ëŠ” ë‚´ í•˜ìˆ˜ì¸ì˜ ê³ ìœ  ID
+}
+
 public class C_UseMemberAbility : BaseGameAction
 {
     public int memberEntityId;
@@ -250,12 +291,26 @@ public class C_UseMemberAbility : BaseGameAction
     public int targetEntityId;
 }
 
+/// <summary>
+/// (C->S) í”Œë ˆì´ì–´ê°€ í•­ë³µí•©ë‹ˆë‹¤.
+/// </summary>
 public class C_Concede : BaseGameAction
 {
+    // action = GameActionType.CONCEDE
+}
+
+// íƒ€ê²ŸíŒ… ê°€ëŠ¥í•œ ê°ì²´ë¥¼ ë‹¬ë¼ê³  ìš”ì²­
+public class ValidTargetRequest
+{
+    // ì„œë²„ê°€ ì–´ë–¤ ìš”ì²­ì¸ì§€ ì‹ë³„í•˜ê¸° ìœ„í•œ íƒ€ì…
+    public string Type { get; set; } = "GetValidTargets";
+
+    // ìœ ì €ê°€ ë“œë˜ê·¸ë¥¼ ì‹œì‘í•œ ì¹´ë“œì˜ ê³ ìœ  ì‹ë³„ì(EntityId)
+    public int CardEntityId { get; set; }
 }
 
 // ==================================================================
-// 4. ¼­¹ö -> Å¬¶óÀÌ¾ğÆ® (S -> C) ¸Ş½ÃÁö
+// 4. ì„œë²„ -> í´ë¼ì´ì–¸íŠ¸ (S -> C) ë©”ì‹œì§€
 // ==================================================================
 
 public class S_ActionResolution : BaseGameAction
@@ -290,7 +345,7 @@ public class S_GameReady : BaseGameAction
 public class S_PhaseStart : BaseGameAction
 {
     public string TurnPlayerUid;
-    // (¼öÁ¤) ±âÁ¸ string phase¿¡¼­ enumÀ¸·Î º¯°æ
+    // (ìˆ˜ì •) ê¸°ì¡´ string phaseì—ì„œ enumìœ¼ë¡œ ë³€ê²½
     public GamePhase phase;
     public CardInfo drawnCard;
     public long turnEndTime;
@@ -303,38 +358,85 @@ public class S_UpdateMana : BaseGameAction
     public int maxMana;
 }
 
+/// <summary>
+/// (S->C) í”Œë ˆì´ì–´ê°€ ì¹´ë“œë¥¼ ë“œë¡œìš°í–ˆìŒì„ ì•Œë¦½ë‹ˆë‹¤. (í˜ì´ì¦ˆ ì „í™˜ ì—†ì´ ìˆœìˆ˜ ë“œë¡œìš°ë§Œ ì²˜ë¦¬)
+/// </summary>
+public class S_DrawCard : BaseGameAction
+{
+    // action = GameActionType.DRAW_CARD
+    public string playerUid;   // ì¹´ë“œë¥¼ ë½‘ì€ í”Œë ˆì´ì–´ì˜ UID
+    public CardInfo drawnCard; // ë½‘ì€ ì¹´ë“œ ì •ë³´ (ìƒëŒ€ë°©ì—ê²Œ ë³´ë‚¼ ë•ŒëŠ” Fog of Warë¥¼ ìœ„í•´ null ì²˜ë¦¬)
+}
+
 public class S_UpdateEntities : BaseGameAction
 {
     public List<EntityData> updatedEntities;
 }
 
 /// <summary>
-/// (S->C) °ÔÀÓ ÁøÇà Áß(È¿°ú ¹ßµ¿ Áß) ÇÃ·¹ÀÌ¾îÀÇ °³ÀÔÀÌ ÇÊ¿äÇÒ ¶§ ¼­¹ö°¡ Àü¼ÛÇÕ´Ï´Ù.
+/// (S->C) ê²Œì„ ì§„í–‰ ì¤‘(íš¨ê³¼ ë°œë™ ì¤‘) í”Œë ˆì´ì–´ì˜ ê°œì…ì´ í•„ìš”í•  ë•Œ ì„œë²„ê°€ ì „ì†¡í•©ë‹ˆë‹¤.
 /// </summary>
 public class S_RequestChoice : BaseGameAction
 {
     // action = GameActionType.REQUEST_CHOICE
 
-    // ¾î¶² Á¾·ùÀÇ ¼±ÅÃÀ» ¿ä±¸ÇÏ´ÂÁö ¸í½Ã (¿¹: "POSITION", "DISCOVER_CARD", "TARGET")
-    public string? choiceType { get; set; }
+    // ì–´ë–¤ ì¢…ë¥˜ì˜ ì„ íƒì„ ìš”êµ¬í•˜ëŠ”ì§€ ëª…ì‹œ (ì˜ˆ: "POSITION", "DISCOVER_CARD", "TARGET")
+    public string choiceType { get; set; }
 
-    // ¼±ÅÃÇØ¾ß ÇÏ´Â °³¼ö (±âº» 1)
+    // ì„ íƒí•´ì•¼ í•˜ëŠ” ê°œìˆ˜ (ê¸°ë³¸ 1)
     public int count { get; set; } = 1;
 
-    // (¼±ÅÃ) Ä«µå ¹ß°ß µî Á¦ÇÑµÈ ¼±ÅÃÁö°¡ ÀÖÀ» ¶§ ÈÄº¸ ¸ñ·ÏÀ» º¸³¾ ¼ö ÀÖ½À´Ï´Ù.
-    public List<CardInfo>? availableOptions { get; set; }
+    // (ì„ íƒ) ì¹´ë“œ ë°œê²¬ ë“± ì œí•œëœ ì„ íƒì§€ê°€ ìˆì„ ë•Œ í›„ë³´ ëª©ë¡ì„ ë³´ë‚¼ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+    public List<CardInfo> availableOptions { get; set; }
 
     // ==========================================
-    // À¯Àú È­¸é UI¿¡ ¶ç¿öÁÙ ¾È³» ¸Ş¼¼Áö
+    // ìœ ì € í™”ë©´ UIì— ë„ì›Œì¤„ ì•ˆë‚´ ë©”ì„¸ì§€
     // ==========================================
-    public string? message { get; set; }
+    public string message { get; set; }
 
-    //  ÀÌ ¼±ÅÃÀ» ¿ä±¸ÇÏ°Ô ¸¸µç ÁÖÃ¼(¿¹: ¹æ±İ ³½ ÇÏ¼öÀÎÀÇ ID) 
-    // -> Å¬¶óÀÌ¾ğÆ®°¡ ÀÌ ´ë»óÀ» ¹à°Ô ÇÏÀÌ¶óÀÌÆ® Ç¥½ÃÇÒ ¼ö ÀÖÀ½
+    //  ì´ ì„ íƒì„ ìš”êµ¬í•˜ê²Œ ë§Œë“  ì£¼ì²´(ì˜ˆ: ë°©ê¸ˆ ë‚¸ í•˜ìˆ˜ì¸ì˜ ID) 
+    // -> í´ë¼ì´ì–¸íŠ¸ê°€ ì´ ëŒ€ìƒì„ ë°ê²Œ í•˜ì´ë¼ì´íŠ¸ í‘œì‹œí•  ìˆ˜ ìˆìŒ
     public int sourceEntityId { get; set; }
 
-    // (¼±ÅÃ) ¹«¾ùÀ» ¼ÒÈ¯/»ç¿ëÇÒ °ÍÀÎÁö ¸í½Ã (¿¹: "token-101")
-    public string? targetDataId { get; set; }
+    // (ì„ íƒ) ë¬´ì—‡ì„ ì†Œí™˜/ì‚¬ìš©í•  ê²ƒì¸ì§€ ëª…ì‹œ (ì˜ˆ: "token-101")
+    public string targetDataId { get; set; }
+}
+
+// ==========================================
+//  (S->C) (íƒ€ê²Ÿ ì§€ì • ìš”ì²­)
+// ==========================================
+public class S_RequestTargetForPlay : BaseGameAction
+{
+    // action = GameActionType.REQUEST_TARGET_FOR_PLAY
+    public string CardEntityId { get; set; }     // ëŒ€ìƒì„ ìš”êµ¬í•˜ëŠ” ì¹´ë“œì˜ InstanceId
+    public int position { get; set; }             // ì¹´ë“œê°€ ë†“ì¼ í•„ë“œ ìœ„ì¹˜
+    public int targetIndex { get; set; }          // (ë©€í‹° íƒ€ê²Ÿ í™•ì¥ìš©) í˜„ì¬ê°€ ëª‡ ë²ˆì§¸ íƒ€ê²Ÿì¸ê°€ (0, 1, 2...)
+    public List<int> ValidTargetIds { get; set; } // TargetValidatorê°€ ê³„ì‚°í•œ í˜„ì¬ í„´ì˜ ìœ íš¨í•œ íƒ€ê²Ÿ ëª©ë¡ [5]
+}
+
+/// <summary>
+// (S->C) íƒ€ê²Ÿ ê°€ëŠ¥í•œ ê°ì²´ë“¤ì„ ì•Œë ¤ì¤ë‹ˆë‹¤.
+/// </summary>
+public class S_ValidTargetResponse : BaseGameAction
+{
+    // action = "OPPONENT_PLAY_CARD"
+
+    // ì–´ë–¤ ì¹´ë“œì— ëŒ€í•œ íƒ€ê²Ÿ ê²°ê³¼ì¸ì§€ í´ë¼ì´ì–¸íŠ¸ê°€ ë§¤ì¹­í•  ìˆ˜ ìˆë„ë¡ ê·¸ëŒ€ë¡œ ëŒë ¤ì¤Œ
+    public string CardEntityId { get; set; }
+
+    // TargetValidatorê°€ ê³„ì‚°í•´ë‚¸ íƒ€ê²Ÿ ê°€ëŠ¥í•œ ëŒ€ìƒë“¤ì˜ EntityId ëª©ë¡
+    public List<int> ValidTargetIds { get; set; }
+}
+
+/// <summary>
+/// (S->C) ì„œë²„ê°€ ê³„ì‚°í•œ ê³µê²© ê°€ëŠ¥í•œ íƒ€ê²Ÿë“¤ì˜ EntityId ëª©ë¡ì„ í´ë¼ì´ì–¸íŠ¸ì— íšŒì‹ í•©ë‹ˆë‹¤.
+/// </summary>
+public class S_ValidAttackTargetsResponse : BaseGameAction
+{
+    // action = GameActionType.VALID_ATTACK_TARGETS_RESPONSE;
+
+    public int attackerEntityId { get; set; } // ëŒ€ìƒì„ ì¡°íšŒí•œ ê³µê²© í•˜ìˆ˜ì¸ì˜ ê³ ìœ  ID
+    public List<int> validDefenderEntityIds { get; set; } = new List<int>(); // ê³µê²© ê°€ëŠ¥í•œ ëŒ€ìƒë“¤ì˜ EntityId ëª©ë¡
 }
 
 public class S_OpponentPlayCard : BaseGameAction
@@ -342,6 +444,8 @@ public class S_OpponentPlayCard : BaseGameAction
     public CardInfo cardPlayed;
     public int handNum;
     public int targetEntityId;
+    public int position;     // í•˜ìˆ˜ì¸ì´ ë†“ì¼ í•„ë“œ ìŠ¬ë¡¯ ë²ˆí˜¸
+    public int entityId;     // ì„œë²„ê°€ ìƒì„±í•˜ì—¬ ë¶€ì—¬í•œ ê³ ìœ  ì—”í‹°í‹° ID
 }
 
 public class S_PlayCardSuccess : BaseGameAction

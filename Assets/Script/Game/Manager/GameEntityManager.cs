@@ -4,42 +4,44 @@ using System.Collections;
 using System;
 using System.ComponentModel;
 using Unity.VisualScripting;
+using UnityEngine.Rendering;
 
 /// <summary>
-/// ÇÊµå À§¿¡ ³ª¿ÍÀÖ´Â ÇÏ¼öÀÎÀÌ³ª ¿µ¿õ(Entity)µéÀ» °ü¸®ÇÏ´Â 'ÇöÀå °¨µ¶'ÀÔ´Ï´Ù.
-/// [¼öÁ¤µÊ] ¸öÅë ¹ÚÄ¡±â¸¦ ¿ÏÀüÈ÷ Á¦°ÅÇÏ°í, ¸ğµç ÀüÅõ¸¦ Åõ»çÃ¼(Projectile) ±â¹İÀ¸·Î º¯°æÇß½À´Ï´Ù.
-/// °ø°İÀÚ°¡ ¸ÕÀú ¹ß»çÇÏ°í, ¾à°£ÀÇ µô·¹ÀÌ ÈÄ ¼öºñÀÚ°¡ ¹İ°İÇÕ´Ï´Ù.
+/// í•„ë“œ ìœ„ì— ë‚˜ì™€ìˆëŠ” í•˜ìˆ˜ì¸ì´ë‚˜ ì˜ì›…(Entity)ë“¤ì„ ê´€ë¦¬í•˜ëŠ” 'í˜„ì¥ ê°ë…'ì…ë‹ˆë‹¤.
+/// [ìˆ˜ì •ë¨] ëª¸í†µ ë°•ì¹˜ê¸°ë¥¼ ì™„ì „íˆ ì œê±°í•˜ê³ , ëª¨ë“  ì „íˆ¬ë¥¼ íˆ¬ì‚¬ì²´(Projectile) ê¸°ë°˜ìœ¼ë¡œ ë³€ê²½í–ˆìŠµë‹ˆë‹¤.
+/// ê³µê²©ìê°€ ë¨¼ì € ë°œì‚¬í•˜ê³ , ì•½ê°„ì˜ ë”œë ˆì´ í›„ ìˆ˜ë¹„ìê°€ ë°˜ê²©í•©ë‹ˆë‹¤.
 /// </summary>
 public class GameEntityManager : MonoBehaviour
 {
     public static GameEntityManager Instance { get; private set; }
 
-    [Header("Å×½ºÆ® ¼³Á¤")]
+    [Header("í…ŒìŠ¤íŠ¸ ì„¤ì •")]
     public bool test;
 
-    [Header("ÇÊµå ½½·Ô (¹è¿­·Î Á÷Á¢ ÇÒ´ç)")]
-    [Tooltip("³» ÇÏ¼öÀÎµéÀÌ ³õÀÏ ½½·Ôµé (0~6)")]
+    [Header("í•„ë“œ ìŠ¬ë¡¯ (ë°°ì—´ë¡œ ì§ì ‘ í• ë‹¹)")]
+    [Tooltip("ë‚´ í•˜ìˆ˜ì¸ë“¤ì´ ë†“ì¼ ìŠ¬ë¡¯ë“¤ (0~6)")]
     public FieldSlot[] myFieldSlots;
-    [Tooltip("»ó´ë ÇÏ¼öÀÎµéÀÌ ³õÀÏ ½½·Ôµé (0~6)")]
+    [Tooltip("ìƒëŒ€ í•˜ìˆ˜ì¸ë“¤ì´ ë†“ì¼ ìŠ¬ë¡¯ë“¤ (0~6)")]
     public FieldSlot[] opponentFieldSlots;
 
-    [Header("¸â¹ö Á¸ ½½·Ô (¹è¿­·Î Á÷Á¢ ÇÒ´ç)")]
+    [Header("ë©¤ë²„ ì¡´ ìŠ¬ë¡¯ (ë°°ì—´ë¡œ ì§ì ‘ í• ë‹¹)")]
     public FieldSlot[] myMemberSlots;
     public FieldSlot[] opponentMemberSlots;
 
-    [Header("¸®´õ º¸µå")]
+    [Header("ë¦¬ë” ë³´ë“œ")]
     public GameCardDisplay myLeader;
     public GameCardDisplay opponentLeader;
 
-    [Header("ÇÁ¸®ÆÕ")]
-    public GameObject minionPrefab; // ÇÏ¼öÀÎ ¸ğÇü
+    [Header("í”„ë¦¬íŒ¹")]
+    public GameObject minionPrefab; // í•˜ìˆ˜ì¸ ëª¨í˜•
 
     private string myUid;
 
-    // ¼ÒÈ¯µÈ ³à¼®µéÀ» °ü¸®ÇÏ´Â ¸íºÎ (ID·Î Ã£À½)
+    // ì†Œí™˜ëœ ë…€ì„ë“¤ì„ ê´€ë¦¬í•˜ëŠ” ëª…ë¶€ (IDë¡œ ì°¾ìŒ)
     public Dictionary<int, GameCardDisplay> _spawnedEntities = new Dictionary<int, GameCardDisplay>();
+    public SerializedDictionary<int , GameCardDisplay> spawnedEntities = new SerializedDictionary<int , GameCardDisplay>();
 
-    // [Ãß°¡] ÆĞÅ¶À» ¼ø¼­´ë·Î ´ã¾ÆµÑ Å¥¿Í ½ÇÇà »óÅÂ ÇÃ·¡±×
+    // [ì¶”ê°€] íŒ¨í‚·ì„ ìˆœì„œëŒ€ë¡œ ë‹´ì•„ë‘˜ íì™€ ì‹¤í–‰ ìƒíƒœ í”Œë˜ê·¸
     private Queue<S_ActionResolution> _actionQueue = new Queue<S_ActionResolution>();
     private bool _isProcessingAction = false;
 
@@ -51,7 +53,7 @@ public class GameEntityManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // 1. ¼­¹ö Åë½Å ÀÌº¥Æ® ±¸µ¶ ½ÃÀÛ
+        // 1. ì„œë²„ í†µì‹  ì´ë²¤íŠ¸ êµ¬ë… ì‹œì‘
         if (GameClient.Instance != null)
         {
             myUid = GameClient.Instance.UserUid;
@@ -62,7 +64,7 @@ public class GameEntityManager : MonoBehaviour
 
     private void OnDisable()
     {
-        // 2. ÀÌº¥Æ® ±¸µ¶ ÇØÁ¦ (¸Ş¸ğ¸® ´©¼ö ¹æÁö)
+        // 2. ì´ë²¤íŠ¸ êµ¬ë… í•´ì œ (ë©”ëª¨ë¦¬ ëˆ„ìˆ˜ ë°©ì§€)
         if (GameClient.Instance != null)
         {
             // GameClient.Instance.OnEntitiesUpdatedEvent -= HandleEntitiesUpdated;
@@ -71,43 +73,50 @@ public class GameEntityManager : MonoBehaviour
 
     public void SetReader(S_GameReady info)
     {
-        myLeader.SetReader(info);
-        opponentLeader.SetReader(info);
-        _spawnedEntities.Add(info.myLeader.entityId, myLeader);
-        _spawnedEntities.Add(info.enemyLeader.entityId, opponentLeader);
+        if (myLeader != null && info.myLeader != null)
+        {
+            myLeader.SetLeader(info.myLeader);
+            _spawnedEntities[info.myLeader.entityId] = myLeader;
+        }
+
+        if (opponentLeader != null && info.enemyLeader != null)
+        {
+            opponentLeader.SetLeader(info.enemyLeader);
+            _spawnedEntities[info.enemyLeader.entityId] = opponentLeader;
+        }
     }
 
 
     // ==================================================================
-    // 1. ÀÌº¥Æ® Ã³¸® ¹× ÆÇ´Ü (Å¥ ½Ã½ºÅÛ Àû¿ë)
+    // 1. ì´ë²¤íŠ¸ ì²˜ë¦¬ ë° íŒë‹¨ (í ì‹œìŠ¤í…œ ì ìš©)
     // ==================================================================
 
-    // ±âÁ¸ ÇÔ¼ö ¼öÁ¤: ÆĞÅ¶ÀÌ ¿À¸é ¹Ù·Î ÄÚ·çÆ¾À» µ¹¸®Áö ¾Ê°í Å¥¿¡ ³Ö½À´Ï´Ù.
+    // ê¸°ì¡´ í•¨ìˆ˜ ìˆ˜ì •: íŒ¨í‚·ì´ ì˜¤ë©´ ë°”ë¡œ ì½”ë£¨í‹´ì„ ëŒë¦¬ì§€ ì•Šê³  íì— ë„£ìŠµë‹ˆë‹¤.
     public void ResolveActionSequence(S_ActionResolution info)
     {
         _actionQueue.Enqueue(info);
 
-        // ÇöÀç ½ÇÇà ÁßÀÎ ¿¬ÃâÀÌ ¾ø´Ù¸é Å¥ Ã³¸® ½ÃÀÛ
+        // í˜„ì¬ ì‹¤í–‰ ì¤‘ì¸ ì—°ì¶œì´ ì—†ë‹¤ë©´ í ì²˜ë¦¬ ì‹œì‘
         if (!_isProcessingAction)
         {
             StartCoroutine(ProcessBufferedActionsRoutine());
         }
     }
 
-    // [½Å±Ô] Å¥¿¡ ½×ÀÎ ÆĞÅ¶µéÀ» ¸ğ¾Æ¼­ ÇÏ³ª·Î º´ÇÕ ÈÄ Ã³¸®ÇÏ´Â ÄÚ·çÆ¾
+    // [ì‹ ê·œ] íì— ìŒ“ì¸ íŒ¨í‚·ë“¤ì„ ëª¨ì•„ì„œ í•˜ë‚˜ë¡œ ë³‘í•© í›„ ì²˜ë¦¬í•˜ëŠ” ì½”ë£¨í‹´
     private IEnumerator ProcessBufferedActionsRoutine()
     {
         _isProcessingAction = true;
 
         while (_actionQueue.Count > 0)
         {
-            // ¿©·¯ ÆĞÅ¶À¸·Î ÂÉ°³Á®¼­ ¿À´Â °æ¿ì¸¦ ´ëºñÇØ ¾ÆÁÖ Àá±ñ ´ë±âÇÏ¸ç Àå¹Ù±¸´Ï¿¡ ´ã½À´Ï´Ù.
+            // ì—¬ëŸ¬ íŒ¨í‚·ìœ¼ë¡œ ìª¼ê°œì ¸ì„œ ì˜¤ëŠ” ê²½ìš°ë¥¼ ëŒ€ë¹„í•´ ì•„ì£¼ ì ê¹ ëŒ€ê¸°í•˜ë©° ì¥ë°”êµ¬ë‹ˆì— ë‹´ìŠµë‹ˆë‹¤.
             yield return new WaitForSeconds(0.05f);
 
             List<GameEvent> mergedEventLog = new List<GameEvent>();
             List<EntityData> mergedFinalStates = new List<EntityData>();
 
-            // Å¥¿¡ µé¾îÀÖ´Â ¸ğµç ÆĞÅ¶À» ²¨³»¼­ ÇÏ³ªÀÇ ¸®½ºÆ®·Î ÇÕÄ¨´Ï´Ù.
+            // íì— ë“¤ì–´ìˆëŠ” ëª¨ë“  íŒ¨í‚·ì„ êº¼ë‚´ì„œ í•˜ë‚˜ì˜ ë¦¬ìŠ¤íŠ¸ë¡œ í•©ì¹©ë‹ˆë‹¤.
             while (_actionQueue.Count > 0)
             {
                 var packet = _actionQueue.Dequeue();
@@ -115,27 +124,25 @@ public class GameEntityManager : MonoBehaviour
                 if (packet.finalStateUpdates != null) mergedFinalStates.AddRange(packet.finalStateUpdates);
             }
 
-            // ¸ğµÎ ÇÕÃÄÁø ÅëÇÕ µ¥ÀÌÅÍ·Î ÀüÅõ ¿¬ÃâÀ» ½ÇÇàÇÏ°í ¿ÏÀüÈ÷ ³¡³¯ ¶§±îÁö ¿©±â¼­ ´ë±â(º´·Ä ½ÇÇà ¹æÁö)
+            // ëª¨ë‘ í•©ì³ì§„ í†µí•© ë°ì´í„°ë¡œ ì „íˆ¬ ì—°ì¶œì„ ì‹¤í–‰í•˜ê³  ì™„ì „íˆ ëë‚  ë•Œê¹Œì§€ ì—¬ê¸°ì„œ ëŒ€ê¸°(ë³‘ë ¬ ì‹¤í–‰ ë°©ì§€)
             yield return StartCoroutine(MergedActionSequenceRoutine(mergedEventLog, mergedFinalStates));
         }
 
         _isProcessingAction = false;
     }
 
-    // [½Å±Ô] ±âÁ¸ ActionSequenceRoutineÀ» ´ëÃ¼ÇÏ´Â º´ÇÕ ¹öÀü ÄÚ·çÆ¾
+    // [ì‹ ê·œ] ê¸°ì¡´ ActionSequenceRoutineì„ ëŒ€ì²´í•˜ëŠ” ë³‘í•© ë²„ì „ ì½”ë£¨í‹´
     private IEnumerator MergedActionSequenceRoutine(List<GameEvent> eventLog, List<EntityData> finalStateUpdates)
     {
-        // 1. ¼­¹ö°¡ º¸³»ÁØ eventLog¸¦ ¼øÂ÷ÀûÀ¸·Î ½ÇÇà
+        // 1. ì„œë²„ê°€ ë³´ë‚´ì¤€ eventLogë¥¼ ìˆœì°¨ì ìœ¼ë¡œ ì‹¤í–‰
         for (int i = 0; i < eventLog.Count; i++)
         {
             var log = eventLog[i];
 
-            Debug.Log($"[¼­¹ö ÀÌº¥Æ® ¼ö½Å] EventType: {log.eventType}");
-
             switch (log.eventType)
             {
                 case GameEventType.NONE:
-                    // Ã³¸®ÇÒ ³»¿ë ¾øÀ½
+                    // ì²˜ë¦¬í•  ë‚´ìš© ì—†ìŒ
                     break;
 
                 case GameEventType.ATTACK:
@@ -191,41 +198,44 @@ public class GameEntityManager : MonoBehaviour
                     break;
 
                 default:
-                    Debug.LogWarning($"[MergedActionSequenceRoutine] Á¤ÀÇµÇÁö ¾ÊÀº ÀÌº¥Æ® Å¸ÀÔÀÔ´Ï´Ù: {log.eventType}");
+                    Debug.LogWarning($"[MergedActionSequenceRoutine] ì •ì˜ë˜ì§€ ì•Šì€ ì´ë²¤íŠ¸ íƒ€ì…ì…ë‹ˆë‹¤: {log.eventType}");
                     break;
             }
         }
 
-        // 2. ¸ğµç ÀÌº¥Æ® ¿¬ÃâÀÌ ¿Ïº®È÷ Á¾·áµÈ ÈÄ ¸¶Áö¸·À¸·Î ÇÊµå »óÅÂ ¾÷µ¥ÀÌÆ®
+        // 2. ëª¨ë“  ì´ë²¤íŠ¸ ì—°ì¶œì´ ì™„ë²½íˆ ì¢…ë£Œëœ í›„ ë§ˆì§€ë§‰ìœ¼ë¡œ í•„ë“œ ìƒíƒœ ì—…ë°ì´íŠ¸
         if (finalStateUpdates != null && finalStateUpdates.Count > 0)
         {
-            yield return new WaitForSeconds(1.0f); // ¸ğµç ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ³¡³ª°í 1ÃÊ ´ë±â
-            HandleEntitiesUpdated(finalStateUpdates); // Á×Àº À¯´Ö ÆÄ±« ¹× ½ºÅÈ ÃÖ½ÅÈ­
+            yield return new WaitForSeconds(1.0f); // ëª¨ë“  ì• ë‹ˆë©”ì´ì…˜ì´ ëë‚˜ê³  1ì´ˆ ëŒ€ê¸°
+            HandleEntitiesUpdated(finalStateUpdates); // ì£½ì€ ìœ ë‹› íŒŒê´´ ë° ìŠ¤íƒ¯ ìµœì‹ í™”
         }
     }
 
     // ==================================================================
-    // °¢ ÀÌº¥Æ® Å¸ÀÔº° ´ëÀÀ ÇÔ¼ö 
+    // ê° ì´ë²¤íŠ¸ íƒ€ì…ë³„ ëŒ€ì‘ í•¨ìˆ˜ 
     // ==================================================================
 
-    /// <summary> °ø°İ ¼±¾ğ ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ê³µê²© ì„ ì–¸ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleAttack(GameEvent log)
     {
+        if (!_spawnedEntities.TryGetValue(log.sourceEntityId, out var a)) Debug.Log("ê³µê²©ì ì—†ìŒ");
+        if (!_spawnedEntities.TryGetValue(log.targetEntityId, out var b)) Debug.Log("ë°©ì–´ì ì—†ìŒ");
+
         if (_spawnedEntities.TryGetValue(log.sourceEntityId, out var attacker) &&
         _spawnedEntities.TryGetValue(log.targetEntityId, out var target))
         {
             bool isHit = false;
 
-            // ÆĞÅ¶¿¡ ´ã±ä triggerTypeÀ» ±×´ë·Î Àü´Ş (ÀÏ¹İ °ø°İÀÌ¸é NONE, È¿°ú¸é ON_PLAY µî)
+            // íŒ¨í‚·ì— ë‹´ê¸´ triggerTypeì„ ê·¸ëŒ€ë¡œ ì „ë‹¬ (ì¼ë°˜ ê³µê²©ì´ë©´ NONE, íš¨ê³¼ë©´ ON_PLAY ë“±)
             FireProjectile(attacker, target, log.triggerType, () => { isHit = true; });
 
-            // Åõ»çÃ¼°¡ ¸íÁßÇÒ ¶§±îÁö ´ë±â
+            // íˆ¬ì‚¬ì²´ê°€ ëª…ì¤‘í•  ë•Œê¹Œì§€ ëŒ€ê¸°
             yield return new WaitUntil(() => isHit);
         }
         else Debug.Log("Attack Error");
     }
 
-    /// <summary> µ¥¹ÌÁö ¹ß»ı ¿¬Ãâ (UI Ç¥½Ã, ÇÇ°İ ¸ğ¼Ç µî)À» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ë°ë¯¸ì§€ ë°œìƒ ì—°ì¶œ (UI í‘œì‹œ, í”¼ê²© ëª¨ì…˜ ë“±)ì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleDamage(GameEvent log)
     {
         if (_spawnedEntities.TryGetValue(log.targetEntityId, out var damagedEntity))
@@ -236,37 +246,37 @@ public class GameEntityManager : MonoBehaviour
         yield break;
     }
 
-    /// <summary> Ã¼·Â È¸º¹ ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ì²´ë ¥ íšŒë³µ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleHeal(GameEvent log)
     {
-        // TODO: È¸º¹ ÀÌÆåÆ® Ç¥½Ã ¹× ½ºÅÈ °»½Å ¿¬Ãâ ·ÎÁ÷ ÀÛ¼º
+        // TODO: íšŒë³µ ì´í™íŠ¸ í‘œì‹œ ë° ìŠ¤íƒ¯ ê°±ì‹  ì—°ì¶œ ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> ½ºÅÈ ¹öÇÁ ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ìŠ¤íƒ¯ ë²„í”„ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleBuff(GameEvent log)
     {
-        // TODO: ¹öÇÁ ÀÌÆåÆ® ¹× °ø/Ã¼ ÅØ½ºÆ® ÃÊ·Ï»ö º¯°æ ¿¬Ãâ ·ÎÁ÷ ÀÛ¼º
+        // TODO: ë²„í”„ ì´í™íŠ¸ ë° ê³µ/ì²´ í…ìŠ¤íŠ¸ ì´ˆë¡ìƒ‰ ë³€ê²½ ì—°ì¶œ ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> °³Ã¼ »ç¸Á ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ê°œì²´ ì‚¬ë§ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleDeath(GameEvent log)
     {
-        // TODO: Ä«µå ÆÄ±« ÀÌÆåÆ® ¹× ÇÊµå ÀÌÅ» ´ë±â ·ÎÁ÷ ÀÛ¼º
+        // TODO: ì¹´ë“œ íŒŒê´´ ì´í™íŠ¸ ë° í•„ë“œ ì´íƒˆ ëŒ€ê¸° ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> ÀüÅõÀÇ ÇÔ¼º, Á×À½ÀÇ ¸Ş¾Æ¸® µî Æ¯¼ö È¿°ú ¹ßµ¿ ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ì „íˆ¬ì˜ í•¨ì„±, ì£½ìŒì˜ ë©”ì•„ë¦¬ ë“± íŠ¹ìˆ˜ íš¨ê³¼ ë°œë™ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleEffectTrigger(GameEvent log)
     {
-        // È¿°ú¸¦ ¹ß»ı½ÃÅ² °³Ã¼(¿¹: ÀüÅõÀÇ ÇÔ¼ºÀ» ¾´ ÇÏ¼öÀÎ)¸¦ Ã£À½
+        // íš¨ê³¼ë¥¼ ë°œìƒì‹œí‚¨ ê°œì²´(ì˜ˆ: ì „íˆ¬ì˜ í•¨ì„±ì„ ì“´ í•˜ìˆ˜ì¸)ë¥¼ ì°¾ìŒ
         if (_spawnedEntities.TryGetValue(log.sourceEntityId, out var triggerEntity))
         {
-            // Ä«µå µğ½ºÇÃ·¹ÀÌ¿¡°Ô ¿¬Ãâ Àç»ı ¸í·ÉÀ» ³»¸²
+            // ì¹´ë“œ ë””ìŠ¤í”Œë ˆì´ì—ê²Œ ì—°ì¶œ ì¬ìƒ ëª…ë ¹ì„ ë‚´ë¦¼
             triggerEntity.PlayTriggerAnimation(log.triggerType);
 
-            // ¿¬ÃâÀÌ ³¡³¯ ¶§±îÁö ´ë±â (ÀÌÆåÆ® ±æÀÌ¿¡ µû¶ó À¯µ¿ÀûÀ¸·Î Á¶Àı °¡´É)
+            // ì—°ì¶œì´ ëë‚  ë•Œê¹Œì§€ ëŒ€ê¸° (ì´í™íŠ¸ ê¸¸ì´ì— ë”°ë¼ ìœ ë™ì ìœ¼ë¡œ ì¡°ì ˆ ê°€ëŠ¥)
             yield return new WaitForSeconds(1.0f);
         }
         else
@@ -275,63 +285,77 @@ public class GameEntityManager : MonoBehaviour
         }
     }
 
-    /// <summary> ÇÏ¼öÀÎ ¼ÒÈ¯ ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> í•˜ìˆ˜ì¸ ì†Œí™˜ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleSummon(GameEvent log)
     {
         if (log.entityData != null)
         {
-            // »ó´ë Ä«µå¶ó¸é º¸¿©ÁÖ´Â ¿¬Ãâ ³» Ä«µå¶ó¸é SpawnCard ½ÇÇà
-            CardActionQueueManager.Instance.ResolvePlay(log.entityData);
-            HandInteractionManager.instance.AlignHand();
+            // 1. í ë§¤ë‹ˆì €ì—ê²Œ ëŒ€ê¸° ì¤‘ì¸ ì¹´ë“œê°€ ìˆëŠ”ì§€ ë¬¼ì–´ë´„ (ìƒëŒ€ ì¹´ë“œì˜ ì‹œê°ì  ì—°ì¶œìš©)
+            bool isHandledByQueue = false;
+            if (CardActionQueueManager.Instance != null)
+            {
+                isHandledByQueue = CardActionQueueManager.Instance.ResolvePlay(log.entityData);
+            }
+
+            // 2. ëŒ€ê¸° ì¤‘ì¸ UI ì¹´ë“œê°€ ì—†ë‹¤ë©´ (ë‚´ ì¹´ë“œ ì‚¬ìš© ì´ê±°ë‚˜, í† í° ì†Œí™˜ ë“±)
+            if (!isHandledByQueue)
+            {
+                // ì§€ì—°ì´ë‚˜ í ì €ì¥ ì—†ì´ ì¦‰ì‹œ 3D í•„ë“œì— ì†Œí™˜!
+                SpawnCard(log.entityData);
+            }
         }
-        else Debug.Log("Summon Error");
-        yield break;
+        else
+        {
+
+        }
+
+        yield break; // ì½”ë£¨í‹´ ì¦‰ì‹œ ì¢…ë£Œ
     }
 
-    /// <summary> Ä«µå µå·Î¿ì ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ì¹´ë“œ ë“œë¡œìš° ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleDraw(GameEvent log)
     {
-        // TODO: µ¦¿¡¼­ Ä«µå°¡ »ÌÈ÷´Â DOTween ¾Ö´Ï¸ŞÀÌ¼Ç ´ë±â ·ÎÁ÷ ÀÛ¼º
+        // TODO: ë±ì—ì„œ ì¹´ë“œê°€ ë½‘íˆëŠ” DOTween ì• ë‹ˆë©”ì´ì…˜ ëŒ€ê¸° ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> ¼Ó¹Ú (ºù°á) ºÎ¿© ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ì†ë°• (ë¹™ê²°) ë¶€ì—¬ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleBind(GameEvent log)
     {
-        // TODO: ¾ó¾îºÙ´Â ÀÌÆåÆ® Ç¥½Ã ·ÎÁ÷ ÀÛ¼º
+        // TODO: ì–¼ì–´ë¶™ëŠ” ì´í™íŠ¸ í‘œì‹œ ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> Ä§¹¬ ºÎ¿© ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ì¹¨ë¬µ ë¶€ì—¬ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleSilence(GameEvent log)
     {
-        // TODO: Ä§¹¬ ÀÌÆåÆ® Ç¥½Ã ¹× ¹öÇÁ ¾ÆÀÌÄÜ Á¦°Å ·ÎÁ÷ ÀÛ¼º
+        // TODO: ì¹¨ë¬µ ì´í™íŠ¸ í‘œì‹œ ë° ë²„í”„ ì•„ì´ì½˜ ì œê±° ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> °­Á¦ °ø°İ ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ê°•ì œ ê³µê²© ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleForceAttack(GameEvent log)
     {
-        // TODO: °­Á¦ Å¸°ÙÆÃ ÁöÁ¤ ¹× °ø°İ ½ÇÇà ¿¬Ãâ ·ÎÁ÷ ÀÛ¼º
+        // TODO: ê°•ì œ íƒ€ê²ŸíŒ… ì§€ì • ë° ê³µê²© ì‹¤í–‰ ì—°ì¶œ ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> Å°¿öµå(µµ¹ß, ¼Ó°ø µî) ºÎ¿© ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> í‚¤ì›Œë“œ(ë„ë°œ, ì†ê³µ ë“±) ë¶€ì—¬ ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleGrantKeyword(GameEvent log)
     {
-        // TODO: Å°¿öµå È¹µæ ÀÌÆåÆ® Ç¥½Ã ·ÎÁ÷ ÀÛ¼º
+        // TODO: í‚¤ì›Œë“œ íšë“ ì´í™íŠ¸ í‘œì‹œ ë¡œì§ ì‘ì„±
         yield break;
     }
 
-    /// <summary> ¸¶³ª Á¶ÀÛ(ÆßÇÎ ¶Ç´Â ÆÄ±«) ¿¬ÃâÀ» Ã³¸®ÇÕ´Ï´Ù. </summary>
+    /// <summary> ë§ˆë‚˜ ì¡°ì‘(íŒí•‘ ë˜ëŠ” íŒŒê´´) ì—°ì¶œì„ ì²˜ë¦¬í•©ë‹ˆë‹¤. </summary>
     private IEnumerator HandleManaMod(GameEvent log)
     {
-        // TODO: ¸¶³ª ¼öÁ¤ÀÌ Ãß°¡µÇ°Å³ª ±úÁö´Â UI ÀÌÆåÆ® ·ÎÁ÷ ÀÛ¼º
+        // TODO: ë§ˆë‚˜ ìˆ˜ì •ì´ ì¶”ê°€ë˜ê±°ë‚˜ ê¹¨ì§€ëŠ” UI ì´í™íŠ¸ ë¡œì§ ì‘ì„±
         yield break;
     }
 
     /// <summary>
-    /// ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ³¡³ª°í º¸¿©Áú ÃÖÁ¾ ÇÊµå
+    /// ì• ë‹ˆë©”ì´ì…˜ì´ ëë‚˜ê³  ë³´ì—¬ì§ˆ ìµœì¢… í•„ë“œ
     /// </summary>
     public void HandleEntitiesUpdated(List<EntityData> updatedList)
     {
@@ -339,17 +363,17 @@ public class GameEntityManager : MonoBehaviour
 
         foreach (var entityData in updatedList)
         {
-            // ½º½º·Î ³» °ÍÀÎÁö ÆÇ´ÜÇÕ´Ï´Ù.
+            // ìŠ¤ìŠ¤ë¡œ ë‚´ ê²ƒì¸ì§€ íŒë‹¨í•©ë‹ˆë‹¤.
             bool isMine = (entityData.ownerUid == myUid);
 
-            // ÀÌ¹Ì ÀÖ´Â ³à¼®ÀÎ°¡?
+            // ì´ë¯¸ ìˆëŠ” ë…€ì„ì¸ê°€?
             if (_spawnedEntities.ContainsKey(entityData.entityId))
             {
                 UpdateEntity(entityData);
             }
             else
             {
-                // ¾ø´Âµ¥ »ì¾ÆÀÖ´Ù¸é »õ·Î ¼ÒÈ¯!
+                // ì—†ëŠ”ë° ì‚´ì•„ìˆë‹¤ë©´ ìƒˆë¡œ ì†Œí™˜!
                 if (entityData.health > 0)
                 {
                     StartCoroutine(SpawnEntity(entityData, isMine));
@@ -365,12 +389,12 @@ public class GameEntityManager : MonoBehaviour
     }
 
     // ==================================================================
-    // 2. ¼ÒÈ¯ ¹× °»½Å ·ÎÁ÷
+    // 2. ì†Œí™˜ ë° ê°±ì‹  ë¡œì§
     // ==================================================================
 
 
     /// <summary>
-    /// EntityDataÀü¿ë ¼ÒÈ¯ ½ºÅ©¸³Æ®
+    /// EntityDataì „ìš© ì†Œí™˜ ìŠ¤í¬ë¦½íŠ¸
     /// </summary>
     /// <param name="entityData"></param>
     /// <param name="isMine"></param>
@@ -379,48 +403,48 @@ public class GameEntityManager : MonoBehaviour
     {
         if (_spawnedEntities.ContainsKey(entityData.entityId))
         {
-            Debug.Log("ÇÊµå¿¡ ÀÌ¹Ì ÇÏ¼öÀÎÀÌ ÀÖÀ½");
             yield break;
         }
 
         CardData cardData = ResourceManager.Instance.GetCardData(entityData.cardId);
         if (cardData == null) yield break;
 
-        // 1. ÇÏ¼öÀÎÀÌ ³õÀÏ '¹è¿­' °áÁ¤ (ÇÊµå vs ¸â¹öÁ¸)
+        // 1. í•˜ìˆ˜ì¸ì´ ë†“ì¼ 'ë°°ì—´' ê²°ì • (í•„ë“œ vs ë©¤ë²„ì¡´)
         FieldSlot[] targetSlots;
         if (entityData.isMember)
             targetSlots = isMine ? myMemberSlots : opponentMemberSlots;
         else
             targetSlots = isMine ? myFieldSlots : opponentFieldSlots;
 
-        // 2. ¼­¹ö°¡ ÁöÁ¤ÇÑ position ¹øÈ£ÀÇ ½½·Ô Ã£±â
+        // 2. ì„œë²„ê°€ ì§€ì •í•œ position ë²ˆí˜¸ì˜ ìŠ¬ë¡¯ ì°¾ê¸°
         FieldSlot slot = null;
         if (targetSlots != null && entityData.position < targetSlots.Length)
         {
             slot = targetSlots[entityData.position];
         }
 
-        // ¸¸¾à ½½·ÔÀ» ¸ø Ã£¾Ò´Ù¸é ÀÓ½Ã·Î GameEntityManager ÀÚ½ÅÀÇ À§Ä¡¸¦ »ç¿ë
+        // ë§Œì•½ ìŠ¬ë¡¯ì„ ëª» ì°¾ì•˜ë‹¤ë©´ ì„ì‹œë¡œ GameEntityManager ìì‹ ì˜ ìœ„ì¹˜ë¥¼ ì‚¬ìš©
         Transform finalParent = slot != null ? slot.transform : transform;
 
-        // 3. »ı¼º ¹× ¹èÄ¡ (½½·ÔÀÇ À§Ä¡¿Í È¸Àü°ª¿¡ ¸ÂÃã)
+        // 3. ìƒì„± ë° ë°°ì¹˜ (ìŠ¬ë¡¯ì˜ ìœ„ì¹˜ì™€ íšŒì „ê°’ì— ë§ì¶¤)
         GameObject newObj = Instantiate(minionPrefab, finalParent.position, finalParent.rotation, finalParent);
         GameCardDisplay display = newObj.GetComponent<GameCardDisplay>();
 
-        // [Ãß°¡] 4. ½½·Ô »óÅÂ Á¡À¯·Î º¯°æ
+        // [ì¶”ê°€] 4. ìŠ¬ë¡¯ ìƒíƒœ ì ìœ ë¡œ ë³€ê²½
         if (slot != null)
         {
             slot.IsOccupied = true;
-            slot.cardData = cardData; // FieldSlot ½ºÅ©¸³Æ®¿¡ ÀÖ´Â cardData¿¡µµ ÀúÀåÇØµÎ¸é À¯¿ëÇÕ´Ï´Ù.
+            slot.cardData = cardData; // FieldSlot ìŠ¤í¬ë¦½íŠ¸ì— ìˆëŠ” cardDataì—ë„ ì €ì¥í•´ë‘ë©´ ìœ ìš©í•©ë‹ˆë‹¤.
         }
 
-        // 5. ½ºÆù ÀÌÆÑÆ® ½ÇÇàµ¿¾È ºñÈ°¼ºÈ­
+        // 5. ìŠ¤í° ì´íŒ©íŠ¸ ì‹¤í–‰ë™ì•ˆ ë¹„í™œì„±í™”
         newObj.SetActive(false);
 
         if (display != null)
         {
             display.SetupEntity(entityData, cardData);
             _spawnedEntities.Add(entityData.entityId, display);
+            spawnedEntities.Add(entityData.entityId, display);
             yield return new WaitForSeconds(cardData.spawnEffectData.duration);
             newObj.SetActive(true);
         }
@@ -434,7 +458,8 @@ public class GameEntityManager : MonoBehaviour
         {
             display.UpdateEntityStats(entityData);
 
-            if (entityData.health <= 0)
+            // ë¦¬ë”ê°€ ì•„ë‹Œ ì¼ë°˜ í•˜ìˆ˜ì¸ë§Œ ì²´ë ¥ì´ 0 ì´í•˜ì¼ ë•Œ í•„ë“œì—ì„œ ì œê±°
+            if (entityData.health <= 0 && !entityData.isLeader)
             {
                 RemoveEntity(entityData.entityId);
             }
@@ -443,9 +468,10 @@ public class GameEntityManager : MonoBehaviour
 
     private void RemoveEntity(int entityId)
     {
+
         if (_spawnedEntities.TryGetValue(entityId, out GameCardDisplay display))
         {
-            // [Ãß°¡] ÆÄ±«µÇ´Â °³Ã¼°¡ ÀÖ¾ú´ø ½½·ÔÀ» ºñ¿öÁİ´Ï´Ù.
+            // [ì¶”ê°€] íŒŒê´´ë˜ëŠ” ê°œì²´ê°€ ìˆì—ˆë˜ ìŠ¬ë¡¯ì„ ë¹„ì›Œì¤ë‹ˆë‹¤.
             EntityData data = display.CurrentEntityData;
             if (data != null)
             {
@@ -462,24 +488,25 @@ public class GameEntityManager : MonoBehaviour
             }
 
             _spawnedEntities.Remove(entityId);
+            spawnedEntities.Remove(entityId);
             StartCoroutine(DestroyRoutine(display));
         }
     }
 
     private IEnumerator DestroyRoutine(GameCardDisplay display)
     {
-        // »ç¸Á ¿¬Ãâ ´ë±â
+        // ì‚¬ë§ ì—°ì¶œ ëŒ€ê¸°
         yield return new WaitForSeconds(0.5f);
         Destroy(display.gameObject);
     }
 
     // ==================================================================
-    // 3. ÀüÅõ ¿¬Ãâ (Åõ»çÃ¼ ±â¹İ ÅÏÁ¦ ±³Àü)
+    // 3. ì „íˆ¬ ì—°ì¶œ (íˆ¬ì‚¬ì²´ ê¸°ë°˜ í„´ì œ êµì „)
     // ==================================================================
 
     public void TestAttack(GameCardDisplay attacker, GameCardDisplay target)
     {
-        Debug.Log("Å×½ºÆ® °ø°İ ½ÃÀÛ");
+        Debug.Log("í…ŒìŠ¤íŠ¸ ê³µê²© ì‹œì‘");
         StartCoroutine(AttackRoutine(attacker, target));
     }
 
@@ -494,19 +521,19 @@ public class GameEntityManager : MonoBehaviour
 
     private IEnumerator AttackRoutine(GameCardDisplay attacker, GameCardDisplay target)
     {
-        // [¿¬Ãâ 1] °ø°İÀÚÀÇ ¼±°ø Åõ»çÃ¼ ¹ß»ç! (ÀÏ¹İ °ø°İÀÌ¹Ç·Î NONE °íÁ¤)
+        // [ì—°ì¶œ 1] ê³µê²©ìì˜ ì„ ê³µ íˆ¬ì‚¬ì²´ ë°œì‚¬! (ì¼ë°˜ ê³µê²©ì´ë¯€ë¡œ NONE ê³ ì •)
         bool attackerHit = false;
         FireProjectile(attacker, target, EffectTriggerType.NONE, () => { attackerHit = true; });
 
         yield return new WaitUntil(() => attackerHit);
 
-        // [¿¬Ãâ 3] ¼öºñÀÚÀÇ ¹İ°İ Åõ»çÃ¼ ¹ß»ç!
+        // [ì—°ì¶œ 3] ìˆ˜ë¹„ìì˜ ë°˜ê²© íˆ¬ì‚¬ì²´ ë°œì‚¬!
         bool targetHit = false;
         bool canCounterAttack = target.CurrentEntityData != null && target.CurrentEntityData.attack > 0;
 
         if (canCounterAttack)
         {
-            // ¼öºñÀÚÀÇ ¹İ°İµµ ÀÏ¹İ °ø°İÀÌ¹Ç·Î NONE °íÁ¤
+            // ìˆ˜ë¹„ìì˜ ë°˜ê²©ë„ ì¼ë°˜ ê³µê²©ì´ë¯€ë¡œ NONE ê³ ì •
             FireProjectile(target, attacker, EffectTriggerType.NONE, () => { targetHit = true; });
         }
         else
@@ -518,7 +545,7 @@ public class GameEntityManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ¹ß»çÀÚ(Shooter)ÀÇ µ¥ÀÌÅÍ¸¦ ÀĞ¾î Åõ»çÃ¼¸¦ »ı¼ºÇÏ°í ¸ñÇ¥(Target)¸¦ ÇâÇØ ³¯¸³´Ï´Ù.
+    /// ë°œì‚¬ì(Shooter)ì˜ ë°ì´í„°ë¥¼ ì½ì–´ íˆ¬ì‚¬ì²´ë¥¼ ìƒì„±í•˜ê³  ëª©í‘œ(Target)ë¥¼ í–¥í•´ ë‚ ë¦½ë‹ˆë‹¤.
     /// </summary>
     private void FireProjectile(GameCardDisplay shooter, GameCardDisplay target, EffectTriggerType triggerType, Action onHitCallback)
     {
@@ -526,49 +553,49 @@ public class GameEntityManager : MonoBehaviour
 
         if (data != null)
         {
-            // 1. ±âº» Åõ»çÃ¼¸¦ ÃÊ±â°ªÀ¸·Î ¼³Á¤ (ÀÏ¹İ °ø°İ¿ë)
+            // 1. ê¸°ë³¸ íˆ¬ì‚¬ì²´ë¥¼ ì´ˆê¸°ê°’ìœ¼ë¡œ ì„¤ì • (ì¼ë°˜ ê³µê²©ìš©)
             GameObject prefabToUse = data.projectilePrefab;
 
-            // 2. ÀÏ¹İ °ø°İ(NONE)ÀÌ ¾Æ´Ò °æ¿ì, triggerVFXList¿¡¼­ ¾Ë¸ÂÀº ÀÌÆåÆ® Ã£±â
+            // 2. ì¼ë°˜ ê³µê²©(NONE)ì´ ì•„ë‹ ê²½ìš°, triggerVFXListì—ì„œ ì•Œë§ì€ ì´í™íŠ¸ ì°¾ê¸°
             if (triggerType != EffectTriggerType.NONE)
             {
-                // ÀÌÀü ´ëÈ­¿¡¼­ ¼³°èÇÑ CardVFXData ¸®½ºÆ® È°¿ë
+                // ì´ì „ ëŒ€í™”ì—ì„œ ì„¤ê³„í•œ CardVFXData ë¦¬ìŠ¤íŠ¸ í™œìš©
                 CardVFXData vfxData = data.triggerVFXList.Find(x => x.triggerType == triggerType);
 
-                // ÇØ´ç Æ®¸®°Å¿¡ ¸Â´Â µ¥ÀÌÅÍ¿Í ÇÁ¸®ÆÕÀÌ µî·ÏµÇ¾î ÀÖ´Ù¸é Æ¯¼ö Åõ»çÃ¼·Î µ¤¾î¾²±â
+                // í•´ë‹¹ íŠ¸ë¦¬ê±°ì— ë§ëŠ” ë°ì´í„°ì™€ í”„ë¦¬íŒ¹ì´ ë“±ë¡ë˜ì–´ ìˆë‹¤ë©´ íŠ¹ìˆ˜ íˆ¬ì‚¬ì²´ë¡œ ë®ì–´ì“°ê¸°
                 if (vfxData != null && vfxData.vfxPrefab != null)
                 {
                     prefabToUse = vfxData.vfxPrefab;
                 }
                 else
                 {
-                    Debug.Log($"{shooter.name}ÀÇ {triggerType}¿¡ µî·ÏµÈ Æ¯¼ö Åõ»çÃ¼°¡ ¾ø¾î ±âº» Åõ»çÃ¼·Î ¹ß»çÇÕ´Ï´Ù.");
+                    Debug.Log($"{shooter.name}ì˜ {triggerType}ì— ë“±ë¡ëœ íŠ¹ìˆ˜ íˆ¬ì‚¬ì²´ê°€ ì—†ì–´ ê¸°ë³¸ íˆ¬ì‚¬ì²´ë¡œ ë°œì‚¬í•©ë‹ˆë‹¤.");
                 }
             }
 
             if (prefabToUse != null)
             {
-                // 3. ¼±ÅÃµÈ Åõ»çÃ¼ »ı¼º
+                // 3. ì„ íƒëœ íˆ¬ì‚¬ì²´ ìƒì„±
                 GameObject projObj = Instantiate(prefabToUse, shooter.transform.position, Quaternion.identity);
                 ProjectileController projectile = projObj.GetComponent<ProjectileController>();
 
                 if (projectile != null)
                 {
-                    // 4. ¹ß»ç
+                    // 4. ë°œì‚¬
                     projectile.Fire(
                         shooter.transform.position,
                         target.transform.position,
                         onHitCallback
                     );
-                    return; // Á¤»ó ¹ß»ç ¼º°ø
+                    return; // ì •ìƒ ë°œì‚¬ ì„±ê³µ
                 }
             }
             else
-                Debug.Log("Åõ»çÃ¼ ÇÁ¸®ÆÕÀÌ ºñ¾îÀÖÀ½");
+                Debug.Log("íˆ¬ì‚¬ì²´ í”„ë¦¬íŒ¹ì´ ë¹„ì–´ìˆìŒ");
         }
 
-        // Åõ»çÃ¼ ÇÁ¸®ÆÕÀÌ ¾Æ¿¹ ¾ø°Å³ª ¿¡·¯°¡ ³µÀ» °æ¿ì (°ÔÀÓ ¸ØÃã ¹æÁö¿ë ¾ÈÀüÀåÄ¡)
-        Debug.LogWarning($"[°æ°í] {shooter.name}ÀÇ Åõ»çÃ¼ ÇÁ¸®ÆÕÀÌ ¾ø°Å³ª ProjectileController°¡ ¾ø½À´Ï´Ù! Áï½Ã ÀûÁß Ã³¸®ÇÕ´Ï´Ù.");
+        // íˆ¬ì‚¬ì²´ í”„ë¦¬íŒ¹ì´ ì•„ì˜ˆ ì—†ê±°ë‚˜ ì—ëŸ¬ê°€ ë‚¬ì„ ê²½ìš° (ê²Œì„ ë©ˆì¶¤ ë°©ì§€ìš© ì•ˆì „ì¥ì¹˜)
+        Debug.LogWarning($"[ê²½ê³ ] {shooter.name}ì˜ íˆ¬ì‚¬ì²´ í”„ë¦¬íŒ¹ì´ ì—†ê±°ë‚˜ ProjectileControllerê°€ ì—†ìŠµë‹ˆë‹¤! ì¦‰ì‹œ ì ì¤‘ ì²˜ë¦¬í•©ë‹ˆë‹¤.");
         onHitCallback?.Invoke();
     }
 }

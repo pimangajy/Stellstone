@@ -1,14 +1,15 @@
-using Firebase.Firestore;
-using Firebase.Auth;
-using UnityEngine;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using System.Linq; // Linq
-using System.Collections.Generic; // List
+using Firebase.Auth;
+using Firebase.Firestore;
+using UnityEngine;
 
 /// <summary>
-/// Firestore¸¦ ÀÌ¿ëÇÑ ¸ÅÄ¡¸ŞÀÌÅ· ·ÎÁ÷À» Ã³¸®ÇÕ´Ï´Ù.
-/// UI°¡ ¾øÀ¸¸ç, MatchingManager¿Í ÀÌº¥Æ®·Î Åë½ÅÇÕ´Ï´Ù.
+/// Firestoreë¥¼ ì´ìš©í•œ ë§¤ì¹˜ë©”ì´í‚¹ ë¡œì§ì„ ì²˜ë¦¬í•©ë‹ˆë‹¤.
+/// UIì— ì˜ì¡´í•˜ì§€ ì•Šìœ¼ë©°, MatchingManagerê°€ ì´ë²¤íŠ¸ë¥¼ êµ¬ë…í•˜ì—¬ UIë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
 /// </summary>
 public class MatchmakingService : MonoBehaviour
 {
@@ -16,13 +17,19 @@ public class MatchmakingService : MonoBehaviour
     private FirebaseAuth auth;
     private ListenerRegistration matchmakingListener;
     private string currentUserId;
+    private Coroutine botMatchCoroutine;
+
+    [Header("ì„¤ì •")]
+    [SerializeField] private string gameScene = "Battle";
+    [Tooltip("ìƒëŒ€ë¥¼ ì°¾ì§€ ëª»í–ˆì„ ë•Œ ë´‡ ëŒ€ì „ìœ¼ë¡œ ì—°ê²°í• ì§€ ì—¬ë¶€")]
+    [SerializeField] private bool enableBotMatchFallback = true;
+    [Tooltip("ë´‡ ëŒ€ì „ìœ¼ë¡œ ì—°ê²°ë˜ê¸° ì „ 'ë§¤ì¹­ ì°¾ëŠ” ì¤‘' ëŒ€ê¸° ì‹œê°„(ì´ˆ)")]
+    [SerializeField] private float botMatchDelaySeconds = 2.5f;
 
     public event Action OnMatchmakingStarted;
     public event Action OnMatchmakingCancelled;
     public event Action<string> OnMatchmakingFailed;
     public event Action<string, string> OnMatchFound; // (gameId, opponentUid)
-
-    [SerializeField] private string gameScene;
 
     void Awake()
     {
@@ -48,86 +55,73 @@ public class MatchmakingService : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸ÅÄ¡¸ŞÀÌÅ·À» ½ÃÀÛÇÕ´Ï´Ù. (¼öÁ¤µÈ ·ÎÁ÷)
-    /// 1. ¹Û¿¡¼­ »ó´ë¸¦ '°Ë»ö'ÇÕ´Ï´Ù.
-    /// 2. Ã£¾ÒÀ¸¸é 'Æ®·£Àè¼Ç'À¸·Î 'ÂòÇÏ±â'¸¦ ½ÃµµÇÕ´Ï´Ù.
-    /// 3. ¸ø Ã£¾Ò°Å³ª ÂòÇÏ±â¿¡ ½ÇÆĞÇÏ¸é '´ë±â' »óÅÂ·Î ÀüÈ¯ÇÕ´Ï´Ù.
+    /// ë§¤ì¹˜ë©”ì´í‚¹ì„ ì‹œì‘í•©ë‹ˆë‹¤.
+    /// 1. íì—ì„œ ìƒëŒ€ë¥¼ 'ê²€ìƒ‰'í•©ë‹ˆë‹¤.
+    /// 2. ì°¾ì•˜ìœ¼ë©´ 'íŠ¸ëœì­ì…˜'ìœ¼ë¡œ 'ë‚šì•„ì±„ê¸°'ë¥¼ ì‹œë„í•©ë‹ˆë‹¤.
+    /// 3. ëª» ì°¾ì•˜ê±°ë‚˜ ë‚šì•„ì±„ê¸°ì— ì‹¤íŒ¨í•˜ë©´ 'ëŒ€ê¸°' ìƒíƒœë¡œ ì „í™˜í•©ë‹ˆë‹¤.
     /// </summary>
     public async void StartMatchmaking(DeckData selectedDeck)
     {
         if (string.IsNullOrEmpty(currentUserId) || selectedDeck == null)
         {
-            Debug.LogError("·Î±×ÀÎÇÑ À¯Àú°¡ ¾ø°Å³ª µ¦ÀÌ ¼±ÅÃµÇÁö ¾Ê¾Ò½À´Ï´Ù.");
-            OnMatchmakingFailed?.Invoke("·Î±×ÀÎ ¶Ç´Â µ¦ ¼±ÅÃÀÌ ÇÊ¿äÇÕ´Ï´Ù.");
+            Debug.LogError("[Matchmaking] ë¡œê·¸ì¸ì´ ì•ˆë˜ì–´ ìˆê±°ë‚˜ ë±ì´ ì„ íƒë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
+            OnMatchmakingFailed?.Invoke("ë¡œê·¸ì¸ ë˜ëŠ” ë± ì„ íƒì´ í•„ìš”í•©ë‹ˆë‹¤.");
             return;
         }
 
-        Debug.Log("¸ÅÄ¡¸ŞÅ·À» ½ÃÀÛÇÕ´Ï´Ù...");
-        int myLevel = 1; // TODO: ½ÇÁ¦ À¯Àú ·¹º§ ¶Ç´Â MMR
+        Debug.Log("[Matchmaking] ë§¤ì¹˜ë©”ì´í‚¹ì„ ì‹œì‘í•©ë‹ˆë‹¤...");
 
-        // 1. ³» ¸ÅÄª Á¤º¸ ÁØºñ (Passive Waiter°¡ µÉ °æ¿ì »ç¿ë)
+        // ë‚´ ì •ë³´ ì¤€ë¹„
+        int myLevel = 1; // TODO: ì‹¤ì œ ìœ ì € ë ˆë²¨ ì—°ë™
         MatchmakingEntry myEntry = new MatchmakingEntry
         {
-            status = "waiting",
-            level = myLevel,
             deckId = selectedDeck.deckId,
-            playerName = auth.CurrentUser.DisplayName ?? "Player"
+            level = myLevel,
+            status = "waiting"
         };
 
-        QuerySnapshot potentialOpponentsSnapshot = null;
+        // --- [1ë‹¨ê³„: ê²€ìƒ‰] ---
+        QuerySnapshot potentialOpponentsSnapshot;
         try
         {
-            // --- [1´Ü°è: °Ë»ö (Æ®·£Àè¼Ç *¹Û*)] ---
-            // '!=' Äõ¸®´Â ´ÜÀÏ ÇÊµå¿¡¼­¸¸ ÀÛµ¿ÇÏ°Å³ª º¹ÇÕ ÀÎµ¦½º°¡ ÇÊ¿äÇÒ ¼ö ÀÖ½À´Ï´Ù.
-            // ¿©±â¼­´Â FieldPath.DocumentId¸¦ »ç¿ëÇØº¾´Ï´Ù. (ÀÛµ¿ÇÏÁö ¾ÊÀ¸¸é Linq·Î ÈÄÃ³¸®)
             Query potentialOpponentsQuery = db.Collection("MatchmakingQueue")
                 .WhereEqualTo("status", "waiting")
                 .WhereEqualTo("level", myLevel)
                 .WhereNotEqualTo(FieldPath.DocumentId, currentUserId)
-                .Limit(1); // 1¸í¸¸ Ã£½À´Ï´Ù.
+                .Limit(1);
 
             potentialOpponentsSnapshot = await potentialOpponentsQuery.GetSnapshotAsync();
         }
         catch (Exception e)
         {
-            Debug.LogError($"¸ÅÄ¡¸ŞÀÌÅ· »ó´ë °Ë»ö ½ÇÆĞ: {e.Message}. ´ë±â¿­ µî·ÏÀ¸·Î ÀüÈ¯ÇÕ´Ï´Ù.");
-            // Äõ¸® ÀÚÃ¼¿¡ ½ÇÆĞÇÏ¸é(¿¹: ÀÎµ¦½º ¹®Á¦) Áï½Ã '´ë±â' »óÅÂ·Î ÀüÈ¯
+            Debug.LogError($"[Matchmaking] í ê²€ìƒ‰ ì˜¤ë¥˜: {e.Message}. ëŒ€ê¸°ì—´ ë“±ë¡ìœ¼ë¡œ ì „í™˜í•©ë‹ˆë‹¤.");
             await RegisterAsWaiter(myEntry);
             return;
         }
 
-        // --- [2´Ü°è: ºĞ±â] ---
+        // --- [2ë‹¨ê³„: íŒë³„] ---
         DocumentSnapshot opponentDoc = potentialOpponentsSnapshot.Documents.FirstOrDefault();
 
         if (opponentDoc != null)
         {
-            // --- [3´Ü°è: ÂòÇÏ±â (Æ®·£Àè¼Ç *¾È*)] ---
-            Debug.Log($"»ó´ë ¹ß°ß: {opponentDoc.Id}. ÂòÇÏ±â(Æ®·£Àè¼Ç) ½Ãµµ...");
-
-            // [¼öÁ¤] ÂòÇÒ »ó´ëÀÇ DocumentReference¸¦ ¹Ì¸® °¡Á®¿É´Ï´Ù.
+            // --- [3ë‹¨ê³„: ë‚šì•„ì±„ê¸° (íŠ¸ëœì­ì…˜)] ---
+            Debug.Log($"[Matchmaking] ìƒëŒ€ ë°œê²¬: {opponentDoc.Id}. ë‚šì•„ì±„ê¸° ì‹œë„...");
             DocumentReference opponentRef = opponentDoc.Reference;
             string gameId = Guid.NewGuid().ToString();
 
             try
             {
-                // Æ®·£Àè¼ÇÀ» ½ÇÇàÇÕ´Ï´Ù.
                 await db.RunTransactionAsync(async transaction =>
                 {
-                    // [¼öÁ¤] ÀÌÁ¦ DocumentReference·Î GetSnapshotAsync¸¦ È£ÃâÇÕ´Ï´Ù.
                     DocumentSnapshot opponentLatestSnapshot = await transaction.GetSnapshotAsync(opponentRef);
-
                     if (!opponentLatestSnapshot.Exists)
                     {
-                        // »ó´ë°¡ ±×»õ Å¥¸¦ ³ª°¨
-                        throw new Exception("»ó´ë°¡ Å¥¸¦ ³ª°¬½À´Ï´Ù.");
+                        throw new Exception("ìƒëŒ€ê°€ íë¥¼ ë‚˜ê°”ìŠµë‹ˆë‹¤.");
                     }
 
                     MatchmakingEntry opponentData = opponentLatestSnapshot.ConvertTo<MatchmakingEntry>();
-
-                    // [ÇÙ½É] »óÅÂ°¡ ¿©ÀüÈ÷ "waiting"ÀÎÁö Æ®·£Àè¼Ç ¾È¿¡¼­ ÀçÈ®ÀÎ
                     if (opponentData.status == "waiting")
                     {
-                        // "ÂòÇÏ±â" ¼º°ø! »ó´ë ¹®¼­¸¦ ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.
                         Dictionary<string, object> updates = new Dictionary<string, object>
                         {
                             { "status", "matched" },
@@ -138,59 +132,71 @@ public class MatchmakingService : MonoBehaviour
                     }
                     else
                     {
-                        // "ÂòÇÏ±â" ½ÇÆĞ (´Ù¸¥ »ç¶÷ÀÌ Ã¤°¬À½)
-                        throw new Exception("»ó´ë¸¦ ÂòÇÏ´Â µ¥ ½ÇÆĞÇß½À´Ï´Ù (´Ù¸¥ À¯Àú°¡ ¸ÅÄªµÊ).");
+                        throw new Exception("ë‹¤ë¥¸ ìœ ì €ì™€ ë§¤ì¹­ë˜ì—ˆìŠµë‹ˆë‹¤.");
                     }
                 });
 
-                // --- [Æ®·£Àè¼Ç ¼º°ø!] ---
-                Debug.Log($"¸ÅÄª È®Á¤! (Active Seeker ¼º°ø). °ÔÀÓ ID: {gameId}, »ó´ë: {opponentDoc.Id}");
+                Debug.Log($"[Matchmaking] âš”ï¸ ë§¤ì¹­ í™•ì •! ê²Œì„ ID: {gameId}, ìƒëŒ€: {opponentDoc.Id}");
                 OnMatchFound?.Invoke(gameId, opponentDoc.Id);
             }
             catch (Exception e)
             {
-                // --- [Æ®·£Àè¼Ç ½ÇÆĞ!] (ÂòÇÏ±â ½ÇÆĞ ¶Ç´Â ±âÅ¸ ¿À·ù) ---
-                Debug.LogWarning($"ÂòÇÏ±â ½ÇÆĞ: {e.Message}. '´ë±â' »óÅÂ·Î ÀüÈ¯ÇÕ´Ï´Ù.");
-                // "Active Seeker"¿¡ ½ÇÆĞÇßÀ¸´Ï, "Passive Waiter"·Î ÀüÈ¯ÇÕ´Ï´Ù.
+                Debug.LogWarning($"[Matchmaking] ë‚šì•„ì±„ê¸° ì‹¤íŒ¨: {e.Message}. ëŒ€ê¸° ìƒíƒœë¡œ ì „í™˜í•©ë‹ˆë‹¤.");
                 await RegisterAsWaiter(myEntry);
             }
         }
         else
         {
-            // --- [»ó´ë ¸ø Ã£À½] ---
-            Debug.Log("»ó´ë¸¦ Ã£Áö ¸øÇß½À´Ï´Ù. '´ë±â' »óÅÂ·Î ÀüÈ¯ÇÕ´Ï´Ù.");
+            Debug.Log("[Matchmaking] ëŒ€ê¸° ì¤‘ì¸ ìƒëŒ€ë¥¼ ì°¾ì§€ ëª»í–ˆìŠµë‹ˆë‹¤. 'ëŒ€ê¸°' ìƒíƒœë¡œ ì „í™˜í•©ë‹ˆë‹¤.");
             await RegisterAsWaiter(myEntry);
         }
     }
 
     /// <summary>
-    /// "Passive Waiter" (¼öµ¿Àû ´ë±âÀÚ)°¡ µÇ±â À§ÇØ Å¥¿¡ µî·ÏÇÏ°í ¸®½º³Ê¸¦ ½ÃÀÛÇÕ´Ï´Ù.
-    /// (Áßº¹ ·ÎÁ÷À» º°µµ ÇÔ¼ö·Î ºĞ¸®)
+    /// ëŒ€ê¸°ì—´ì— ë“±ë¡í•˜ê³  ìƒëŒ€ë¥¼ ê¸°ë‹¤ë¦½ë‹ˆë‹¤.
     /// </summary>
     private async Task RegisterAsWaiter(MatchmakingEntry myEntry)
     {
         try
         {
             DocumentReference myQueueDoc = db.Collection("MatchmakingQueue").Document(currentUserId);
-            await myQueueDoc.SetAsync(myEntry); // 'myEntry' °´Ã¼·Î ³» ¹®¼­ »ı¼º
+            await myQueueDoc.SetAsync(myEntry);
 
-            OnMatchmakingStarted?.Invoke(); // UI¿¡ "Ã£´Â Áß..." Ç¥½Ã
-            ListenForMatch(currentUserId); // ³» ¹®¼­ ±¸µ¶ ½ÃÀÛ
+            // UIì— "ë§¤ì¹­ ì°¾ëŠ” ì¤‘..." í™”ë©´ í‘œì‹œ
+            OnMatchmakingStarted?.Invoke();
+            ListenForMatch(currentUserId);
 
-            // ½Ì±Û Å×½ºÆ®
-            string gameId = Guid.NewGuid().ToString();
-            myEntry.gameId = gameId;
-            OnMatchFound?.Invoke(myEntry.gameId, "bot id");
+            // ë´‡ ëŒ€ì „ í´ë°±ì´ ì¼œì ¸ ìˆëŠ” ê²½ìš° ì§€ì •ëœ ì‹œê°„ ë™ì•ˆ ëŒ€ê¸° í™”ë©´ì„ ë³´ì—¬ì¤€ ë’¤ ë´‡ ë§¤ì¹­ ì‹œì‘
+            if (enableBotMatchFallback)
+            {
+                if (botMatchCoroutine != null) StopCoroutine(botMatchCoroutine);
+                botMatchCoroutine = StartCoroutine(DelayedBotMatch(myEntry));
+            }
         }
         catch (Exception e)
         {
-            Debug.LogError($"´ë±â¿­ µî·Ï ½ÇÆĞ: {e.Message}");
-            OnMatchmakingFailed?.Invoke($"´ë±â¿­ µî·Ï Áß ¿À·ù: {e.Message}");
+            Debug.LogError($"[Matchmaking] ëŒ€ê¸°ì—´ ë“±ë¡ ì‹¤íŒ¨: {e.Message}");
+            OnMatchmakingFailed?.Invoke($"ëŒ€ê¸°ì—´ ë“±ë¡ ì¤‘ ì˜¤ë¥˜: {e.Message}");
         }
     }
 
     /// <summary>
-    /// ¸ÅÄªÀÌ µÇ¾ú´ÂÁö ½Ç½Ã°£À¸·Î °¨ÁöÇÕ´Ï´Ù. (Passive Waiter ·ÎÁ÷)
+    /// ì§€ì •ëœ ëŒ€ê¸° ì‹œê°„ ë™ì•ˆ 'ë§¤ì¹­ ì¤‘' í™”ë©´ì„ ë„ìš´ ë’¤ ë´‡ ëŒ€ì „ì„ ì‹œì‘í•©ë‹ˆë‹¤.
+    /// </summary>
+    private IEnumerator DelayedBotMatch(MatchmakingEntry myEntry)
+    {
+        yield return new WaitForSeconds(botMatchDelaySeconds);
+
+        string gameId = Guid.NewGuid().ToString();
+        myEntry.gameId = gameId;
+        Debug.Log($"[Matchmaking] ğŸ¤– ë´‡ ëŒ€ì „ ì—°ê²° ì™„ë£Œ! (GameId: {gameId})");
+
+        StopListening();
+        OnMatchFound?.Invoke(myEntry.gameId, "bot id");
+    }
+
+    /// <summary>
+    /// ì‹¤ì‹œê°„ìœ¼ë¡œ ë§¤ì¹­ ì„±ì‚¬ ì—¬ë¶€ë¥¼ ê°ì§€í•©ë‹ˆë‹¤.
     /// </summary>
     private void ListenForMatch(string userId)
     {
@@ -203,7 +209,12 @@ public class MatchmakingService : MonoBehaviour
                 MatchmakingEntry entry = snapshot.ConvertTo<MatchmakingEntry>();
                 if (entry.status == "matched")
                 {
-                    Debug.Log($"¸ÅÄª ¼º°ø! (»ó´ë°¡ ³ª¸¦ Ã£À½) »ó´ë: {entry.opponentUid}, °ÔÀÓ ID: {entry.gameId}");
+                    Debug.Log($"[Matchmaking] âš”ï¸ ë§¤ì¹­ ì„±ì‚¬! (ìƒëŒ€ê°€ ë‚˜ë¥¼ ì°¾ìŒ) ìƒëŒ€: {entry.opponentUid}, ê²Œì„ ID: {entry.gameId}");
+                    if (botMatchCoroutine != null)
+                    {
+                        StopCoroutine(botMatchCoroutine);
+                        botMatchCoroutine = null;
+                    }
                     StopListening();
                     OnMatchFound?.Invoke(entry.gameId, entry.opponentUid);
                     myQueueDoc.DeleteAsync();
@@ -211,7 +222,7 @@ public class MatchmakingService : MonoBehaviour
             }
             else
             {
-                Debug.Log("¸ÅÄ¡¸ŞÀÌÅ· Å¥¿¡¼­ ¹®¼­°¡ »ç¶óÁ³½À´Ï´Ù. (Ãë¼Ò ¶Ç´Â Å¸ÀÓ¾Æ¿ô)");
+                Debug.Log("[Matchmaking] ë§¤ì¹˜ë©”ì´í‚¹ íì—ì„œ ë¬¸ì„œê°€ ì œê±°ë˜ì—ˆìŠµë‹ˆë‹¤.");
                 StopListening();
                 OnMatchmakingCancelled?.Invoke();
             }
@@ -219,12 +230,18 @@ public class MatchmakingService : MonoBehaviour
     }
 
     /// <summary>
-    /// À¯Àú°¡ Á÷Á¢ "´ëÀü Ã£±â"¸¦ Ãë¼ÒÇÕ´Ï´Ù.
+    /// ë§¤ì¹­ ì·¨ì†Œ
     /// </summary>
     public async void CancelMatchmaking()
     {
+        if (botMatchCoroutine != null)
+        {
+            StopCoroutine(botMatchCoroutine);
+            botMatchCoroutine = null;
+        }
+
         if (string.IsNullOrEmpty(currentUserId)) return;
-        Debug.Log("¸ÅÄ¡¸ŞÀÌÅ·À» Ãë¼ÒÇÕ´Ï´Ù...");
+        Debug.Log("[Matchmaking] ë§¤ì¹˜ë©”ì´í‚¹ì„ ì·¨ì†Œí•©ë‹ˆë‹¤...");
         StopListening();
         try
         {
@@ -234,7 +251,7 @@ public class MatchmakingService : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"¸ÅÄ¡¸ŞÅ· Ãë¼Ò(¹®¼­ »èÁ¦) Áß ¿À·ù: {e.Message}");
+            Debug.LogError($"[Matchmaking] ì·¨ì†Œ ì¤‘ ì˜¤ë¥˜: {e.Message}");
             OnMatchmakingCancelled?.Invoke();
         }
     }
@@ -247,8 +264,16 @@ public class MatchmakingService : MonoBehaviour
 
     void OnDestroy()
     {
+        if (botMatchCoroutine != null)
+        {
+            StopCoroutine(botMatchCoroutine);
+            botMatchCoroutine = null;
+        }
         StopListening();
-        auth.StateChanged -= OnAuthStateChanged;
+        if (auth != null)
+        {
+            auth.StateChanged -= OnAuthStateChanged;
+        }
     }
 
     private void StopListening()

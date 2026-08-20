@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
@@ -8,21 +8,21 @@ public class TurnEndController : MonoBehaviour
     public Button turnButton;
     public TextMeshProUGUI statusText;
 
-    [Tooltip("½Ã°£ Ç¥½Ã¸¦ À§ÇÑ ½½¶óÀÌ´õ ÄÄÆ÷³ÍÆ®")]
+    [Tooltip("ì‹œê°„ í‘œì‹œë¥¼ ìœ„í•œ ìŠ¬ë¼ì´ë” ì»´í¬ë„ŒíŠ¸")]
     public Slider timerSlider;
 
-    [Tooltip("½½¶óÀÌ´õÀÇ »ö»óÀ» º¯°æÇÏ±â À§ÇÑ Fill ÀÌ¹ÌÁö")]
+    [Tooltip("ìŠ¬ë¼ì´ë”ì˜ ìƒ‰ìƒì„ ë³€ê²½í•˜ê¸° ìœ„í•œ Fill ì´ë¯¸ì§€")]
     public Image sliderFillImage;
 
     [Header("Settings")]
     public float maxTurnTime = 60f;
-    [Tooltip("°æ°í »ö»óÀ¸·Î º¯°æµÉ ³²Àº ½Ã°£ ±âÁØ (ÃÊ)")]
+    [Tooltip("ê²½ê³  ìƒ‰ìƒìœ¼ë¡œ ë³€ê²½ë  ë‚¨ì€ ì‹œê°„ ê¸°ì¤€ (ì´ˆ)")]
     public float warningThreshold = 10f;
 
     [Header("Colors")]
-    public Color myTurnColor = new Color(0.2f, 0.8f, 0.4f); // ÃÊ·Ï»ö
-    public Color enemyTurnColor = new Color(0.9f, 0.3f, 0.2f); // »¡°£»ö
-    public Color warningColor = new Color(1f, 0.6f, 0f); // ÁÖÈ²»ö/³ë¶õ»ö
+    public Color myTurnColor = new Color(0.2f, 0.8f, 0.4f); // ì´ˆë¡ìƒ‰
+    public Color enemyTurnColor = new Color(0.9f, 0.3f, 0.2f); // ë¹¨ê°„ìƒ‰
+    public Color warningColor = new Color(1f, 0.6f, 0f); // ì£¼í™©ìƒ‰/ë…¸ë€ìƒ‰
 
     private float currentTimer;
     private bool isMyTurn = true;
@@ -54,7 +54,7 @@ public class TurnEndController : MonoBehaviour
                 timerSlider.value = currentTimer;
             }
 
-            // 10ÃÊ ÀÌÇÏÀÏ ¶§ »ö»ó º¯°æ ·ÎÁ÷
+            // 10ì´ˆ ì´í•˜ì¼ ë•Œ ìƒ‰ìƒ ë³€ê²½ ë¡œì§
             if (currentTimer <= warningThreshold && sliderFillImage != null)
             {
                 sliderFillImage.color = warningColor;
@@ -68,7 +68,7 @@ public class TurnEndController : MonoBehaviour
         }
     }
 
-    // Å¸ÀÌ¸Ó ÃÊ±âÈ­ ¹× ÃÖ´ë°ª º¯°æ
+    // íƒ€ì´ë¨¸ ì´ˆê¸°í™” ë° ìµœëŒ€ê°’ ë³€ê²½
     public void TimerSetting()
     {
         if ((timerSlider != null))
@@ -80,7 +80,7 @@ public class TurnEndController : MonoBehaviour
         }
     }
 
-    // ÅÏ º¯°æ
+    // í„´ ë³€ê²½
     public void ToggleTurn()
     {
         isMyTurn = !isMyTurn;
@@ -94,21 +94,21 @@ public class TurnEndController : MonoBehaviour
         UpdateUI();
     }
 
-    // ÅÏ ¹öÆ° ÅØ½ºÆ® º¯°æ
+    // í„´ ë²„íŠ¼ í…ìŠ¤íŠ¸ ë³€ê²½
     void UpdateUI()
     {
         if (isMyTurn) 
         {
-            statusText.text = "³ªÀÇ ÅÏ";
+            statusText.text = "ë‚˜ì˜ í„´";
             statusText.color = Color.white;
 
-            // ³» ÅÏ ½ÃÀÛ ½Ã ±âº» »ö»óÀ¸·Î ÃÊ±âÈ­ (10ÃÊ ÀÌ»óÀÏ ¶§)
+            // ë‚´ í„´ ì‹œì‘ ì‹œ ê¸°ë³¸ ìƒ‰ìƒìœ¼ë¡œ ì´ˆê¸°í™” (10ì´ˆ ì´ìƒì¼ ë•Œ)
             if (sliderFillImage != null)
                 sliderFillImage.color = myTurnColor;
         }
         else
         {
-            statusText.text = "»ó´ëÀÇ ÅÏ";
+            statusText.text = "ìƒëŒ€ì˜ í„´";
             statusText.color = Color.gray;
 
             if (sliderFillImage != null)

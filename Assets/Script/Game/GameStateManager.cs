@@ -1,41 +1,41 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using Firebase.Auth;
-using System; // Action »ç¿ëÀ» À§ÇØ ÇÊ¿ä
+using System; // Action ì‚¬ìš©ì„ ìœ„í•´ í•„ìš”
 
 /// <summary>
-/// Å¬¶óÀÌ¾ğÆ® ÃøÀÇ °ÔÀÓ »óÅÂ(³» ÅÏ ¿©ºÎ, ¸¶³ª, ÆäÀÌÁî µî)¸¦ Áß¾Ó¿¡¼­ °ü¸®ÇÏ´Â ½ºÅ©¸³Æ®ÀÔ´Ï´Ù.
-/// GameClientÀÇ ÀÌº¥Æ®¸¦ ±¸µ¶ÇÏ¿© µ¥ÀÌÅÍ¸¦ °»½ÅÇÏ°í,
-/// »óÅÂ°¡ º¯ÇÏ¸é ´Ù½Ã UI³ª ´Ù¸¥ ¸Å´ÏÀúµé¿¡°Ô ÀÌº¥Æ®¸¦ »Ñ·ÁÁÖ´Â 'Çãºê' ¿ªÇÒÀ» ÇÕ´Ï´Ù.
+/// í´ë¼ì´ì–¸íŠ¸ ì¸¡ì˜ ê²Œì„ ìƒíƒœ(ë‚´ í„´ ì—¬ë¶€, ë§ˆë‚˜, í˜ì´ì¦ˆ ë“±)ë¥¼ ì¤‘ì•™ì—ì„œ ê´€ë¦¬í•˜ëŠ” ìŠ¤í¬ë¦½íŠ¸ì…ë‹ˆë‹¤.
+/// GameClientì˜ ì´ë²¤íŠ¸ë¥¼ êµ¬ë…í•˜ì—¬ ë°ì´í„°ë¥¼ ê°±ì‹ í•˜ê³ ,
+/// ìƒíƒœê°€ ë³€í•˜ë©´ ë‹¤ì‹œ UIë‚˜ ë‹¤ë¥¸ ë§¤ë‹ˆì €ë“¤ì—ê²Œ ì´ë²¤íŠ¸ë¥¼ ë¿Œë ¤ì£¼ëŠ” 'í—ˆë¸Œ' ì—­í• ì„ í•©ë‹ˆë‹¤.
 /// </summary>
 public class GameStateManager : MonoBehaviour
 {
     public static GameStateManager Instance { get; private set; }
 
     // ==================================================================
-    // 1. »óÅÂ º¯È­ ¾Ë¸² ÀÌº¥Æ® (UI³ª ´Ù¸¥ ¸Å´ÏÀú°¡ ±¸µ¶ÇÔ)
+    // 1. ìƒíƒœ ë³€í™” ì•Œë¦¼ ì´ë²¤íŠ¸ (UIë‚˜ ë‹¤ë¥¸ ë§¤ë‹ˆì €ê°€ êµ¬ë…í•¨)
     // ==================================================================
-    // "ÆäÀÌÁî°¡ ¹Ù²î¾ú½À´Ï´Ù" (¿¹: "Draw", "Main", "End")
+    // "í˜ì´ì¦ˆê°€ ë°”ë€Œì—ˆìŠµë‹ˆë‹¤" (ì˜ˆ: "Draw", "Main", "End")
     public event Action<GamePhase> OnPhaseChanged;
 
-    // "³» ÅÏ »óÅÂ°¡ ¹Ù²î¾ú½À´Ï´Ù" (true: ³» ÅÏ, false: »ó´ë ÅÏ)
+    // "ë‚´ í„´ ìƒíƒœê°€ ë°”ë€Œì—ˆìŠµë‹ˆë‹¤" (true: ë‚´ í„´, false: ìƒëŒ€ í„´)
     public event Action<bool> OnTurnChanged;
 
-    // "¸¶³ª Á¤º¸°¡ ¹Ù²î¾ú½À´Ï´Ù" (ÇöÀç ¸¶³ª, ÃÖ´ë ¸¶³ª)
+    // "ë§ˆë‚˜ ì •ë³´ê°€ ë°”ë€Œì—ˆìŠµë‹ˆë‹¤" (í˜„ì¬ ë§ˆë‚˜, ìµœëŒ€ ë§ˆë‚˜)
     public event Action<string, int, int> OnManaChanged;
 
 
     // ==================================================================
-    // 2. ³»ºÎ µ¥ÀÌÅÍ ¹× ÇÁ·ÎÆÛÆ¼
+    // 2. ë‚´ë¶€ ë°ì´í„° ë° í”„ë¡œí¼í‹°
     // ==================================================================
-    [Header("°ÔÀÓ »óÅÂ Á¤º¸")]
+    [Header("ê²Œì„ ìƒíƒœ ì •ë³´")]
     [SerializeField] private bool _isMyTurn = false;
     [SerializeField] private GamePhase _currentPhase = GamePhase.MAIN;
 
-    [Header("³» ¸¶³ª")]
+    [Header("ë‚´ ë§ˆë‚˜")]
     [SerializeField] private int _myCurrentMana = 0;
     [SerializeField] private int _myMaxMana = 0;
 
-    [Header("»ó´ë ¸¶³ª")]
+    [Header("ìƒëŒ€ ë§ˆë‚˜")]
     [SerializeField] private int _oppCurrentMana = 0;
     [SerializeField] private int _oppMaxMana = 0;
 
@@ -58,7 +58,7 @@ public class GameStateManager : MonoBehaviour
 
     void Start()
     {
-        // GameClientÀÇ ÀÌº¥Æ® ±¸µ¶
+        // GameClientì˜ ì´ë²¤íŠ¸ êµ¬ë…
         if (GameClient.Instance != null)
         {
             GameClient.Instance.OnPhaseStartEvent += HandlePhaseStart;
@@ -69,7 +69,7 @@ public class GameStateManager : MonoBehaviour
 
     void OnDestroy()
     {
-        // ±¸µ¶ ÇØÁ¦ (¸Ş¸ğ¸® ´©¼ö ¹æÁö)
+        // êµ¬ë… í•´ì œ (ë©”ëª¨ë¦¬ ëˆ„ìˆ˜ ë°©ì§€)
         if (GameClient.Instance != null)
         {
             GameClient.Instance.OnPhaseStartEvent -= HandlePhaseStart;
@@ -79,60 +79,60 @@ public class GameStateManager : MonoBehaviour
     }
 
     // ==================================================================
-    // 3. ÀÌº¥Æ® ÇÚµé·¯ (¼­¹ö µ¥ÀÌÅÍ¸¦ ³» »óÅÂ·Î ¹İ¿µ)
+    // 3. ì´ë²¤íŠ¸ í•¸ë“¤ëŸ¬ (ì„œë²„ ë°ì´í„°ë¥¼ ë‚´ ìƒíƒœë¡œ ë°˜ì˜)
     // ==================================================================
 
-    // °ÔÀÓ ½ÃÀÛ ½Ã Ã³¸®
+    // ê²Œì„ ì‹œì‘ ì‹œ ì²˜ë¦¬
     private void HandleGameReady(S_GameReady info)
     {
-        // ¼±°ø ¿©ºÎ È®ÀÎ ¹× ¼³Á¤
+        // ì„ ê³µ ì—¬ë¶€ í™•ì¸ ë° ì„¤ì •
         CheckTurn(info.firstPlayerUid);
     }
 
-    // ÆäÀÌÁî ½ÃÀÛ ÆĞÅ¶ ¼ö½Å ½Ã
+    // í˜ì´ì¦ˆ ì‹œì‘ íŒ¨í‚· ìˆ˜ì‹  ì‹œ
     private void HandlePhaseStart(S_PhaseStart info)
     {
-        // 1. ÆäÀÌÁî °ª °»½Å
+        // 1. í˜ì´ì¦ˆ ê°’ ê°±ì‹ 
         if (_currentPhase != info.phase)
         {
             _currentPhase = info.phase;
-            Debug.Log($"[GameStateManager] ÆäÀÌÁî º¯°æ: {_currentPhase}");
+            Debug.Log($"[GameStateManager] í˜ì´ì¦ˆ ë³€ê²½: {_currentPhase}");
 
-            // ¡Ú »óÅÂ°¡ º¯ÇßÀ½À» UI µî¿¡°Ô ¾Ë¸²
+            // â˜… ìƒíƒœê°€ ë³€í–ˆìŒì„ UI ë“±ì—ê²Œ ì•Œë¦¼
             OnPhaseChanged?.Invoke(_currentPhase);
         }
 
-        // 2. ÅÏ ÁÖÀÎ Á¤º¸°¡ °°ÀÌ ¿Ô´Ù¸é °»½Å
+        // 2. í„´ ì£¼ì¸ ì •ë³´ê°€ ê°™ì´ ì™”ë‹¤ë©´ ê°±ì‹ 
         if (!string.IsNullOrEmpty(info.TurnPlayerUid))
         {
             CheckTurn(info.TurnPlayerUid);
         }
     }
 
-    // ¸¶³ª ¾÷µ¥ÀÌÆ® ÆĞÅ¶ ¼ö½Å ½Ã
+    // ë§ˆë‚˜ ì—…ë°ì´íŠ¸ íŒ¨í‚· ìˆ˜ì‹  ì‹œ
     private void HandleUpdateMana(S_UpdateMana info)
     {
         if (info.ownerUid == MyUid)
         {
-            // ³» ¸¶³ª Á¤º¸ÀÎ °æ¿ì
+            // ë‚´ ë§ˆë‚˜ ì •ë³´ì¸ ê²½ìš°
             _myCurrentMana = info.currentMana;
             _myMaxMana = info.maxMana;
-            Debug.Log($"[Mana] ³» ¸¶³ª °»½Å: {_myCurrentMana}/{_myMaxMana}");
+            Debug.Log($"[Mana] ë‚´ ë§ˆë‚˜ ê°±ì‹ : {_myCurrentMana}/{_myMaxMana}");
         }
         else
         {
-            // »ó´ë¹æ ¸¶³ª Á¤º¸ÀÎ °æ¿ì
+            // ìƒëŒ€ë°© ë§ˆë‚˜ ì •ë³´ì¸ ê²½ìš°
             _oppCurrentMana = info.currentMana;
             _oppMaxMana = info.maxMana;
-            Debug.Log($"[Mana] »ó´ë ¸¶³ª °»½Å: {_oppCurrentMana}/{_oppMaxMana}");
+            Debug.Log($"[Mana] ìƒëŒ€ ë§ˆë‚˜ ê°±ì‹ : {_oppCurrentMana}/{_oppMaxMana}");
         }
 
-        // UI ¸Å´ÏÀú µîÀÌ ÀÌ ÀÌº¥Æ®¸¦ ¹Ş¾Æ¼­ ownerUid¿¡ µû¶ó ´Ù¸¥ UI ÅØ½ºÆ®¸¦ °íÄ¡°Ô µË´Ï´Ù.
+        // UI ë§¤ë‹ˆì € ë“±ì´ ì´ ì´ë²¤íŠ¸ë¥¼ ë°›ì•„ì„œ ownerUidì— ë”°ë¼ ë‹¤ë¥¸ UI í…ìŠ¤íŠ¸ë¥¼ ê³ ì¹˜ê²Œ ë©ë‹ˆë‹¤.
         OnManaChanged?.Invoke(info.ownerUid, info.currentMana, info.maxMana);
     }
 
     // ==================================================================
-    // 4. ³»ºÎ ·ÎÁ÷ ÇïÆÛ
+    // 4. ë‚´ë¶€ ë¡œì§ í—¬í¼
     // ==================================================================
 
     private void CheckTurn(string turnPlayerUid)
@@ -142,15 +142,15 @@ public class GameStateManager : MonoBehaviour
         if (MyUid == turnPlayerUid)
         {
             _isMyTurn = true;
-            if (!wasMyTurn) Debug.Log("³ªÀÇ ÅÏÀÔ´Ï´Ù!");
+            if (!wasMyTurn) Debug.Log("ë‚˜ì˜ í„´ì…ë‹ˆë‹¤!");
         }
         else
         {
             _isMyTurn = false;
-            if (wasMyTurn) Debug.Log("»ó´ëÀÇ ÅÏÀÔ´Ï´Ù.");
+            if (wasMyTurn) Debug.Log("ìƒëŒ€ì˜ í„´ì…ë‹ˆë‹¤.");
         }
 
-        // ÅÏ »óÅÂ°¡ ÀÌÀü°ú ´Ş¶óÁ³´Ù¸é ÀÌº¥Æ® ¹ß»ı
+        // í„´ ìƒíƒœê°€ ì´ì „ê³¼ ë‹¬ë¼ì¡Œë‹¤ë©´ ì´ë²¤íŠ¸ ë°œìƒ
         if (wasMyTurn != _isMyTurn)
         {
             OnTurnChanged?.Invoke(_isMyTurn);

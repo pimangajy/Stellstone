@@ -3,22 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ³» ÇÏ¼öÀÎÀ» µå·¡±×ÇÏ¿© ÀûÀ» °ø°İÇÕ´Ï´Ù.
-/// [¼öÁ¤µÊ] GameInputManager¿¡ ÀÇÇØ ¼öµ¿(Passive)À¸·Î Á¦¾îµÇµµ·Ï º¯°æµÇ¾ú½À´Ï´Ù.
-/// ½º½º·Î ÀÔ·ÂÀ» °¨ÁöÇÏ´Â Update()¿Í HandleInput()ÀÌ »èÁ¦µÇ¾ú½À´Ï´Ù.
+/// ë‚´ í•˜ìˆ˜ì¸ì„ ë“œë˜ê·¸í•˜ì—¬ ì ì„ ê³µê²©í•©ë‹ˆë‹¤.
+/// [ìˆ˜ì •ë¨] GameInputManagerì— ì˜í•´ ìˆ˜ë™(Passive)ìœ¼ë¡œ ì œì–´ë˜ë„ë¡ ë³€ê²½ë˜ì—ˆìŠµë‹ˆë‹¤.
+/// ìŠ¤ìŠ¤ë¡œ ì…ë ¥ì„ ê°ì§€í•˜ëŠ” Update()ì™€ HandleInput()ì´ ì‚­ì œë˜ì—ˆìŠµë‹ˆë‹¤.
 /// </summary>
 public class EntityAttackManager : MonoBehaviour
 {
     public static EntityAttackManager Instance;
 
-    [Header("¼³Á¤")]
+    [Header("ì„¤ì •")]
     public LayerMask entityLayer;
 
-    // --- »óÅÂ º¯¼ö ---
-    private GameCardDisplay _currentAttacker;   // °ø°İÇÏ´Â ³» ÇÏ¼öÀÎ
-    private GameCardDisplay _currentTargetInfo; // Á¶ÁØ ´çÇÏ°í ÀÖ´Â Àû ÇÏ¼öÀÎ
-    // µå·¡±× Áß ÇÏÀÌ¶óÀÌÆ®°¡ ÄÑÁø Å¸°ÙµéÀ» ÀúÀåÇØµÑ ¸®½ºÆ®
-    private List<GameCardDisplay> _highlightedTargets = new List<GameCardDisplay>();
+    // --- ìƒíƒœ ë³€ìˆ˜ ---
+    private GameCardDisplay _currentAttacker;   // ê³µê²©í•˜ëŠ” ë‚´ í•˜ìˆ˜ì¸
+    private GameCardDisplay _currentTargetInfo; // ì¡°ì¤€ ë‹¹í•˜ê³  ìˆëŠ” ì  í•˜ìˆ˜ì¸
 
     private Camera _mainCamera;
 
@@ -40,44 +38,30 @@ public class EntityAttackManager : MonoBehaviour
         }
     }
 
-    // --- ·ÎÁ÷: µå·¡±× ½ÃÀÛ (GameInputManager¿¡¼­ È£Ãâ) ---
+    // --- ë¡œì§: ë“œë˜ê·¸ ì‹œì‘ (GameInputManagerì—ì„œ í˜¸ì¶œ) ---
     public void StartAttackDrag(GameCardDisplay attacker)
     {
         _currentAttacker = attacker;
 
-        // 1. È­»ìÇ¥ ÄÑ±â
+        // 1. í™”ì‚´í‘œ ì¼œê¸°
         if (TargetingReticle.Instance != null)
         {
             TargetingReticle.Instance.StartTargeting(_currentAttacker.transform);
         }
 
-        // 2. [¿¬Ãâ] °ø°İÀÚ(³» Ä«µå) °øÁß ºÎ¾ç!
+        // 2. [ì—°ì¶œ] ê³µê²©ì(ë‚´ ì¹´ë“œ) ê³µì¤‘ ë¶€ì–‘!
         _currentAttacker.SetFloatingState(true);
 
-        // 3. [Ãß°¡] Å¸°ÙÆÃ ½ÃÀÛ Áï½Ã ¸ğµç À¯È¿ÇÑ ´ë»ó ÇÏÀÌ¶óÀÌÆ® ÄÑ±â
-        HighlightAllValidTargets();
-    }
-
-    // ÇÊµåÀÇ ¸ğµç Ä«µå¸¦ È®ÀÎÇÏ¿© Å¸°ÙÆÃ °¡´ÉÇÑ ´ë»ó¸¸ ÇÏÀÌ¶óÀÌÆ® Ç¥½Ã
-    private void HighlightAllValidTargets()
-    {
-        _highlightedTargets.Clear();
-
-        // ÇÊµå À§ÀÇ ¸ğµç GameCardDisplay ¿ÀºêÁ§Æ®¸¦ Ã£½À´Ï´Ù.
-        List<GameCardDisplay> allCards = new List<GameCardDisplay>(GameEntityManager.Instance._spawnedEntities.Values);
-
-        foreach (var targetCard in allCards)
+        // ì„œë²„ì— íƒ€ê²ŸíŒ… ê°€ëŠ¥í•œ ëŒ€ìƒ ìš”ì²­
+        if (GameClient.Instance != null)
         {
-            // IsValidAttackTarget °ËÁõÀ» Åë°úÇÑ À¯È¿ÇÑ Àû(Å¸°Ù)ÀÎ °æ¿ì
-            if (CardTargetingManager.Instance.IsValidAttackTarget(_currentAttacker, targetCard))
-            {
-                targetCard.SetGlowState(true);          // ÇÏÀÌ¶óÀÌÆ® ÄÑ±â
-                _highlightedTargets.Add(targetCard);    // ÃÊ±âÈ­ ½Ã ²ô±â À§ÇØ ¸®½ºÆ®¿¡ º¸°ü
-            }
+            GameClient.Instance.SendValidAttackTargetsRequest(_currentAttacker.EntityId);
         }
     }
 
-    // --- ·ÎÁ÷: µå·¡±× Áß Å¸°Ù °»½Å (GameInputManager¿¡¼­ ¸Å ÇÁ·¹ÀÓ È£Ãâ) ---
+
+
+    // --- ë¡œì§: ë“œë˜ê·¸ ì¤‘ íƒ€ê²Ÿ ê°±ì‹  (GameInputManagerì—ì„œ ë§¤ í”„ë ˆì„ í˜¸ì¶œ) ---
     public void UpdateTargetHighlight()
     {
         if (_currentAttacker == null) return;
@@ -85,36 +69,36 @@ public class EntityAttackManager : MonoBehaviour
         Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
         GameCardDisplay hitCard = null;
 
-        // ¸¶¿ì½º ¾Æ·¡ ÀûÀÌ ÀÖ´ÂÁö Å½»ö
         if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
         {
-            GameCardDisplay tempCard = hit.collider.GetComponent<GameCardDisplay>();
-            if (CardTargetingManager.Instance.IsValidAttackTarget(_currentAttacker, tempCard))
+            GameCardDisplay tempCard = hit.collider.GetComponentInParent<GameCardDisplay>();
+            if (tempCard != null)
             {
-                hitCard = tempCard;
+                // â˜… ìˆ˜ì •: ì„œë²„ê°€ ìŠ¹ì¸í•œ ëŒ€ìƒ ëª©ë¡ì— ìˆëŠ”ì§€ë§Œ í™•ì¸
+                if (BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(tempCard.EntityId))
+                {
+                    hitCard = tempCard;
+                }
             }
         }
 
         _currentTargetInfo = hitCard;
     }
 
-    // --- ·ÎÁ÷: °ø°İ È®Á¤ (GameInputManager¿¡¼­ È£Ãâ) ---
+    // --- ë¡œì§: ê³µê²© í™•ì • (GameInputManagerì—ì„œ í˜¸ì¶œ) ---
     public void TryCompleteAttack()
     {
-        // ¸¶Áö¸·À¸·Î Å¸°Ù È®ÀÎ
-        if (_currentTargetInfo != null && CardTargetingManager.Instance.IsValidAttackTarget(_currentAttacker, _currentTargetInfo))
+        // â˜… ìˆ˜ì •: ë§ˆì§€ë§‰ìœ¼ë¡œ íƒ€ê²Ÿì´ ì„œë²„ ìŠ¹ì¸ ëŒ€ìƒì¸ì§€ í™•ì¸
+        if (_currentTargetInfo != null && BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(_currentTargetInfo.EntityId))
         {
             int attackerId = _currentAttacker.EntityId;
             int targetId = _currentTargetInfo.EntityId;
 
-            // Å×½ºÆ®
-            if(GameEntityManager.Instance.test)
+            if (GameEntityManager.Instance.test)
             {
                 GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
                 return;
             }
-            // ½ÇÁ¦ ÀüÅõ GameEntityManager ¿¡°Ô À§ÀÓ
-            // GameEntityManager.Instance.PerformAttack(attackerId, targetId);
 
             if (GameClient.Instance != null)
             {
@@ -125,44 +109,36 @@ public class EntityAttackManager : MonoBehaviour
         ResetState();
     }
 
-    // --- ·ÎÁ÷: »óÅÂ ÃÊ±âÈ­ (¿ø»óº¹±¸) ---
+    // --- ë¡œì§: ìƒíƒœ ì´ˆê¸°í™” (ì›ìƒë³µêµ¬) ---
     public void ResetState()
     {
-        // 1. [¼öÁ¤] ÄÑÁ®ÀÖ´ø ¸ğµç Å¸°ÙÀÇ ºû ²ô±â
-        foreach (var target in _highlightedTargets)
-        {
-            if (target != null)
-            {
-                target.SetGlowState(false);
-            }
-        }
-        _highlightedTargets.Clear();
         _currentTargetInfo = null;
 
-        // 2. °ø°İÀÚ(³» Ä«µå) Âø·ú½ÃÅ°±â
         if (_currentAttacker != null)
         {
             _currentAttacker.SetFloatingState(false);
             _currentAttacker = null;
         }
 
-        // 3. È­»ìÇ¥ ²ô±â
         if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
+
+        // â˜… ì¶”ê°€: ì¡°ì¤€ì´ ëë‚˜ë©´ ë°˜ì§ì„ í•˜ì´ë¼ì´íŠ¸ ë° ì„œë²„ íƒ€ê²Ÿ ëª©ë¡ ì´ˆê¸°í™”
+        if (BattleManager.Instance != null) BattleManager.Instance.ResetHighlights();
     }
 
-    // --- °ËÁõ ·ÎÁ÷ (GameInputManager¿¡¼­µµ »ç¿ëÇÏ¹Ç·Î publicÀ¸·Î º¯°æ) ---
+    // --- ê²€ì¦ ë¡œì§ (GameInputManagerì—ì„œë„ ì‚¬ìš©í•˜ë¯€ë¡œ publicìœ¼ë¡œ ë³€ê²½) ---
     public bool IsValidAttacker(GameCardDisplay display)
     {
         if (display == null) return false;
         var data = display.CurrentEntityData;
 
-        // ³» ÇÏ¼öÀÎÀÎÁö È®ÀÎ
+        // ë‚´ í•˜ìˆ˜ì¸ì¸ì§€ í™•ì¸
         if (data == null || data.ownerUid != MyUid)
         {
             return false;
         }
 
-        // (ÃßÈÄ) °ø°İ °¡´É »óÅÂÀÎÁö È®ÀÎ: if (!data.canAttack) return false;
+        // (ì¶”í›„) ê³µê²© ê°€ëŠ¥ ìƒíƒœì¸ì§€ í™•ì¸: if (!data.canAttack) return false;
 
         return true;
     }
@@ -170,10 +146,10 @@ public class EntityAttackManager : MonoBehaviour
     private bool IsValidTarget(GameCardDisplay target)
     {
         if (target == null) return false;
-        if (target == _currentAttacker) return false; // ÀÚÇØ ºÒ°¡
+        if (target == _currentAttacker) return false; // ìí•´ ë¶ˆê°€
 
         var data = target.CurrentEntityData;
-        // ¾Æ±º °ø°İ ºÒ°¡
+        // ì•„êµ° ê³µê²© ë¶ˆê°€
         if (data != null && data.ownerUid == MyUid) return false;
 
         return true;

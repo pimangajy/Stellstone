@@ -1,13 +1,13 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// ¿ìÅ¬¸¯ -> Create ¸Ş´º¿¡¼­ ½±°Ô »ı¼ºÇÒ ¼ö ÀÖµµ·Ï ¼Ó¼º Ãß°¡
+// ìš°í´ë¦­ -> Create ë©”ë‰´ì—ì„œ ì‰½ê²Œ ìƒì„±í•  ìˆ˜ ìˆë„ë¡ ì†ì„± ì¶”ê°€
 [CreateAssetMenu(fileName = "New VFX Data", menuName = "Card Game/Trigger VFX Data")]
 public class CardVFXData : ScriptableObject
 {
-    public EffectTriggerType triggerType; // ON_PLAY, ON_DEATH µî
-    public GameObject vfxPrefab;          // ½ÇÇàÇÒ ÆÄÆ¼Å¬/¾Ö´Ï¸ŞÀÌ¼Ç ÇÁ¸®ÆÕ
-    public AudioClip soundEffect;         // ½ÇÇàÇÒ È¿°úÀ½
+    public EffectTriggerType triggerType; // ON_PLAY, ON_DEATH ë“±
+    public GameObject vfxPrefab;          // ì‹¤í–‰í•  íŒŒí‹°í´/ì• ë‹ˆë©”ì´ì…˜ í”„ë¦¬íŒ¹
+    public AudioClip soundEffect;         // ì‹¤í–‰í•  íš¨ê³¼ìŒ
 
-    // ÀÌÆåÆ® À¯Áö ½Ã°£ÀÌ³ª Å©±â µî °øÅëÀ¸·Î ¾µ ¼³Á¤ÀÌ ÀÖ´Ù¸é ¿©±â¿¡ Ãß°¡ÇØµµ ÁÁ½À´Ï´Ù.
+    // ì´í™íŠ¸ ìœ ì§€ ì‹œê°„ì´ë‚˜ í¬ê¸° ë“± ê³µí†µìœ¼ë¡œ ì“¸ ì„¤ì •ì´ ìˆë‹¤ë©´ ì—¬ê¸°ì— ì¶”ê°€í•´ë„ ì¢‹ìŠµë‹ˆë‹¤.
     // public float duration = 1.0f;
 }

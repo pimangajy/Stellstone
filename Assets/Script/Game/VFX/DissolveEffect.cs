@@ -1,20 +1,20 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewDissolveEffect", menuName = "CardGame/Dissolven Effect Data")]
 public class DissolveEffect : ScriptableObject
 {
-    [Header("1. »ç¿ë ¿¬Ãâ")]
-    [Tooltip("»ç¿ë ¿¬Ãâ ¾Ö´Ï¸ŞÀÌ¼Ç")]
+    [Header("1. ì‚¬ìš© ì—°ì¶œ")]
+    [Tooltip("ì‚¬ìš© ì—°ì¶œ ì• ë‹ˆë©”ì´ì…˜")]
     public GameObject dissolveEfectObject;
 
-    [Header("2. »ç¿îµå È¿°ú (SFX)")]
-    [Tooltip("µîÀåÇÒ ¶§ Àç»ıÇÒ È¿°úÀ½ÀÔ´Ï´Ù.")]
+    [Header("2. ì‚¬ìš´ë“œ íš¨ê³¼ (SFX)")]
+    [Tooltip("ë“±ì¥í•  ë•Œ ì¬ìƒí•  íš¨ê³¼ìŒì…ë‹ˆë‹¤.")]
     public AudioClip spawnSound;
     [Range(0f, 1f)]
     public float soundVolume = 1.0f;
 
-    [Header("3. »ç¿ë ¿¬Ãâ ½Ã°£")]
-    [Tooltip("»ç¿ë ¿¬Ãâ ½Ã°£")]
+    [Header("3. ì‚¬ìš© ì—°ì¶œ ì‹œê°„")]
+    [Tooltip("ì‚¬ìš© ì—°ì¶œ ì‹œê°„")]
     public float dissolveTime;
 
     public void PlayCard(Transform card)

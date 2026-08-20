@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -6,7 +6,7 @@ public class ClientDebugAction : MonoBehaviour
 {
     public static ClientDebugAction Instance { get; private set; }
 
-    [Header("µğ¹ö±× º¯¼ö")]
+    [Header("ë””ë²„ê·¸ ë³€ìˆ˜")]
     public Transform deckInfoList;
     public GameObject infoPanel;
 
@@ -25,7 +25,7 @@ public class ClientDebugAction : MonoBehaviour
 
     public void DeckInfoRequest()
     {
-        // BaseDebugAction ´ë½Å ¸í½ÃÀûÀÎ ¿äÃ» Å¬·¡½º »ç¿ë
+        // BaseDebugAction ëŒ€ì‹  ëª…ì‹œì ì¸ ìš”ì²­ í´ë˜ìŠ¤ ì‚¬ìš©
         C_DebugRequestDeckInfo action = new C_DebugRequestDeckInfo
         {
             debugAction = DebugAction.RequestDeckInfo, 
@@ -49,7 +49,7 @@ public class ClientDebugAction : MonoBehaviour
         DebugDeckinfo(infoList);
     }
 
-    // ¼­¹ö¿¡¼­ µ¦ÀÇ Á¤º¸¸¦ ¹Ş¾Æ ¸®½ºÆ® »ı¼º
+    // ì„œë²„ì—ì„œ ë±ì˜ ì •ë³´ë¥¼ ë°›ì•„ ë¦¬ìŠ¤íŠ¸ ìƒì„±
     public void DebugDeckinfo(List<CardInfo> infoList)
     {
         deckList = infoList;

@@ -1,46 +1,46 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
 using System.Linq;
 using UnityEngine.UI;
 
 /// <summary>
-/// ¿©·¯ ÀåÀÇ ½ºÇÁ¶óÀÌÆ®(ÀÌ¹ÌÁö)¸¦ ¿¬¼ÓÀ¸·Î º¸¿©Áà¼­
-/// ¸¶Ä¡ GIFÃ³·³ ¿òÁ÷ÀÌ´Â ±×¸²À» ¸¸µé¾îÁÖ´Â ½ºÅ©¸³Æ®ÀÔ´Ï´Ù.
+/// ì—¬ëŸ¬ ì¥ì˜ ìŠ¤í”„ë¼ì´íŠ¸(ì´ë¯¸ì§€)ë¥¼ ì—°ì†ìœ¼ë¡œ ë³´ì—¬ì¤˜ì„œ
+/// ë§ˆì¹˜ GIFì²˜ëŸ¼ ì›€ì§ì´ëŠ” ê·¸ë¦¼ì„ ë§Œë“¤ì–´ì£¼ëŠ” ìŠ¤í¬ë¦½íŠ¸ì…ë‹ˆë‹¤.
 /// </summary>
 public class SpriteGifPlayer : MonoBehaviour
 {
-    // ÀÌ¹ÌÁö¸¦ ¾î¶»°Ô Ã¤¿ïÁö °áÁ¤ÇÏ´Â ¿É¼Ç
+    // ì´ë¯¸ì§€ë¥¼ ì–´ë–»ê²Œ ì±„ìš¸ì§€ ê²°ì •í•˜ëŠ” ì˜µì…˜
     public enum ScaleType
     {
-        Stretch,    // Âî±×·¯Á®µµ ²Ë Ã¤¿ò
-        FitInside,  // ºñÀ² À¯ÁöÇÏ¸ç ¾È¿¡ ½ï (¿©¹é »ı±è - ÇÊµå Ä«µå¿ë)
-        Cover       // ºñÀ² À¯ÁöÇÏ¸ç ²Ë Ã¤¿ò (Àß¸² - ¼ÕÆĞ Ä«µå¿ë)
+        Stretch,    // ì°Œê·¸ëŸ¬ì ¸ë„ ê½‰ ì±„ì›€
+        FitInside,  // ë¹„ìœ¨ ìœ ì§€í•˜ë©° ì•ˆì— ì™ (ì—¬ë°± ìƒê¹€ - í•„ë“œ ì¹´ë“œìš©)
+        Cover       // ë¹„ìœ¨ ìœ ì§€í•˜ë©° ê½‰ ì±„ì›€ (ì˜ë¦¼ - ì†íŒ¨ ì¹´ë“œìš©)
     }
 
-    [Header("¼³Á¤")]
+    [Header("ì„¤ì •")]
     public bool feildCard;
-    public Sprite[] gifFrames; // ÇÁ·¹ÀÓ ÀÌ¹ÌÁöµé
-    public float framesPerSecond = 10.0f; // 1ÃÊ¿¡ ¸î Àå º¸¿©ÁÙÁö
+    public Sprite[] gifFrames; // í”„ë ˆì„ ì´ë¯¸ì§€ë“¤
+    public float framesPerSecond = 10.0f; // 1ì´ˆì— ëª‡ ì¥ ë³´ì—¬ì¤„ì§€
 
-    [Header("Å©±â ÀÚµ¿ Á¶Àı")]
+    [Header("í¬ê¸° ìë™ ì¡°ì ˆ")]
     public bool autoFitSize = true;
     public ScaleType scaleType = ScaleType.Cover;
-    public Vector2 targetSize = new Vector2(1.0f, 1.5f); // ¸ñÇ¥ Å©±â
+    public Vector2 targetSize = new Vector2(1.0f, 1.5f); // ëª©í‘œ í¬ê¸°
 
-    public Image image;  // ui¿ë
-    public SpriteRenderer spriteRenderer;  //  ÇÊµå ¿ë
+    public Image image;  // uiìš©
+    public SpriteRenderer spriteRenderer;  //  í•„ë“œ ìš©
     private Coroutine playCoroutine;
 
     void Awake()
     {
-        // spriteRenderer = GetComponent<SpriteRenderer>(); // ÇÊ¿äÇÏ¸é ÁÖ¼® ÇØÁ¦
+        // spriteRenderer = GetComponent<SpriteRenderer>(); // í•„ìš”í•˜ë©´ ì£¼ì„ í•´ì œ
     }
 
     void OnEnable()
     {
         if (gifFrames != null && gifFrames.Length > 0)
         {
-            // ÇÁ·¹ÀÓ ¼ö¸¸Å­ ¼Óµµ ÀÚµ¿ Á¶Àı (¼±ÅÃ»çÇ×)
+            // í”„ë ˆì„ ìˆ˜ë§Œí¼ ì†ë„ ìë™ ì¡°ì ˆ (ì„ íƒì‚¬í•­)
             framesPerSecond = gifFrames.Count();
             if (autoFitSize) FitSpriteToSize();
             if(!feildCard) PlayAnimation();
@@ -52,18 +52,18 @@ public class SpriteGifPlayer : MonoBehaviour
         StopAnimation();
     }
 
-    // ÀÌ¹ÌÁö¸¦ ¸ñÇ¥ Å©±â¿¡ ¸Â°Ô ½ºÄÉÀÏ Á¶Àı
+    // ì´ë¯¸ì§€ë¥¼ ëª©í‘œ í¬ê¸°ì— ë§ê²Œ ìŠ¤ì¼€ì¼ ì¡°ì ˆ
     void FitSpriteToSize()
     {
         if (spriteRenderer == null || gifFrames.Length == 0) return;
 
-        // Ã¹ ÇÁ·¹ÀÓ Àû¿ë
+        // ì²« í”„ë ˆì„ ì ìš©
         spriteRenderer.sprite = gifFrames[0];
 
-        // 2. SpriteÀÇ ¿øº» ÇÈ¼¿ Å©±â °¡Á®¿À±â
+        // 2. Spriteì˜ ì›ë³¸ í”½ì…€ í¬ê¸° ê°€ì ¸ì˜¤ê¸°
         Vector2 spriteSize = spriteRenderer.sprite.rect.size;
 
-        // ¿øº» ÀÌ¹ÌÁö°¡ ºñ¾îÀÖÀ» °æ¿ì ¿À·ù ¹æÁö
+        // ì›ë³¸ ì´ë¯¸ì§€ê°€ ë¹„ì–´ìˆì„ ê²½ìš° ì˜¤ë¥˜ ë°©ì§€
         if (spriteSize.x == 0 || spriteSize.y == 0) return;
 
         float ratioX = targetSize.x / spriteSize.x;
@@ -86,13 +86,13 @@ public class SpriteGifPlayer : MonoBehaviour
                 break;
         }
 
-        // 3. UI¿¡ ¸Â°Ô Transform ´ë½Å RectTransformÀÇ sizeDelta(³Êºñ/³ôÀÌ) Á¶Àı
+        // 3. UIì— ë§ê²Œ Transform ëŒ€ì‹  RectTransformì˜ sizeDelta(ë„ˆë¹„/ë†’ì´) ì¡°ì ˆ
         RectTransform rectTransform = spriteRenderer.GetComponent<RectTransform>();
 
-        // ScaleÀº 1,1,1·Î ÃÊ±âÈ­ (UI ±ÇÀå »çÇ×)
+        // Scaleì€ 1,1,1ë¡œ ì´ˆê¸°í™” (UI ê¶Œì¥ ì‚¬í•­)
         rectTransform.localScale = Vector3.one;
 
-        // ÃÖÁ¾ Å©±â(¿øº» ÇÈ¼¿ Å©±â * °è»êµÈ ºñÀ²)¸¦ RectTransform »çÀÌÁî¿¡ Àû¿ë
+        // ìµœì¢… í¬ê¸°(ì›ë³¸ í”½ì…€ í¬ê¸° * ê³„ì‚°ëœ ë¹„ìœ¨)ë¥¼ RectTransform ì‚¬ì´ì¦ˆì— ì ìš©
         rectTransform.sizeDelta = new Vector2(spriteSize.x * finalScaleX, spriteSize.y * finalScaleY);
     }
 
@@ -108,7 +108,7 @@ public class SpriteGifPlayer : MonoBehaviour
         playCoroutine = null;
     }
 
-    // ÀÌ¹ÌÁö¸¦ °è¼Ó ±³Ã¼ÇÏ¸ç Àç»ıÇÏ´Â ·çÇÁ
+    // ì´ë¯¸ì§€ë¥¼ ê³„ì† êµì²´í•˜ë©° ì¬ìƒí•˜ëŠ” ë£¨í”„
     IEnumerator PlayGifRoutine()
     {
         int index = 0;
@@ -125,7 +125,7 @@ public class SpriteGifPlayer : MonoBehaviour
         }
     }
 
-    // ¿ÜºÎ¿¡¼­ »õ·Î¿î GIF¸¦ ¼³Á¤ÇÒ ¶§ »ç¿ë
+    // ì™¸ë¶€ì—ì„œ ìƒˆë¡œìš´ GIFë¥¼ ì„¤ì •í•  ë•Œ ì‚¬ìš©
     public void SetGif(Sprite[] newFrames, float speed = 10.0f)
     {
         this.gifFrames = newFrames;
@@ -139,6 +139,9 @@ public class SpriteGifPlayer : MonoBehaviour
 
     public void SetSpriteRender(Sprite[] newImage)
     {
-        spriteRenderer.sprite = newImage[0];
+        if(newImage != null)
+        {
+            spriteRenderer.sprite = newImage[0];
+        }
     }
 }

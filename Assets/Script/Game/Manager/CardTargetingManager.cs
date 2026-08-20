@@ -1,9 +1,11 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Burst.Intrinsics;
+using DG.Tweening.Core.Easing;
 
 /// <summary>
-/// Ä«µåÀÇ Å¸°ÙÆÃ Á¶°Ç ÆÇº°, À¯È¿¼º °Ë»ç, ¼­¹ö Àü¼ÛÀ» Àü´ãÇÏ´Â ¸Å´ÏÀúÀÔ´Ï´Ù.
+/// ì¹´ë“œì˜ íƒ€ê²ŸíŒ… ì¡°ê±´ íŒë³„, ìœ íš¨ì„± ê²€ì‚¬, ì„œë²„ ì „ì†¡ì„ ì „ë‹´í•˜ëŠ” ë§¤ë‹ˆì €ì…ë‹ˆë‹¤.
 /// </summary>
 public class CardTargetingManager : MonoBehaviour
 {
@@ -16,78 +18,28 @@ public class CardTargetingManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 1. ÇØ´ç Ä«µå°¡ Å¸°ÙÆÃ(Á¶ÁØ¼±)ÀÌ ÇÊ¿äÇÑ Ä«µåÀÎÁö ÆÇº°ÇÕ´Ï´Ù.
+    /// 1. í•´ë‹¹ ì¹´ë“œê°€ íƒ€ê²ŸíŒ…(ì¡°ì¤€ì„ )ì´ í•„ìš”í•œ ì¹´ë“œì¸ì§€ íŒë³„í•©ë‹ˆë‹¤.
     /// </summary>
     public bool RequiresTargeting(CardData cardData)
     {
-        if (cardData == null || cardData.effects == null) return false;
+        if(cardData == null && cardData.targeting == false) return false;
 
-        foreach (var effect in cardData.effects)
-        {
-            // ¹ßµ¿ ½ÃÁ¡ÀÌ ON_PLAY(¶Ç´Â ±âº»°ª)ÀÌ¸é¼­ ´ë»ó ÁöÁ¤(TARGET)ÀÌ Æ÷ÇÔµÈ °æ¿ì [1, 2]
-            if ((string.IsNullOrEmpty(effect.trigger) || effect.trigger == "ON_PLAY") &&
-                !string.IsNullOrEmpty(effect.target) && effect.target.ToUpper().Contains("TARGET"))
-            {
-                return true;
-            }
-        }
-        return false;
+        return true;
     }
 
     /// <summary>
-    /// 2. ÁöÁ¤ÇÑ Å¸°ÙÀÌ Ä«µå È¿°úÀÇ ´ë»ó ±ÔÄ¢(TargetRule)¿¡ ¸Â´ÂÁö À¯È¿¼º °Ë»ç¸¦ ÇÕ´Ï´Ù.
+    /// 2. ì§€ì •í•œ íƒ€ê²Ÿì´ ì¹´ë“œ íš¨ê³¼ì˜ ëŒ€ìƒ ê·œì¹™ì— ë§ëŠ”ì§€ ê²€ì‚¬í•©ë‹ˆë‹¤. (ì„œë²„ ì‘ë‹µ ê¸°ì¤€)
     /// </summary>
     public bool IsValidTarget(GameCardDisplay sourceCard, GameCardDisplay target)
     {
-        Debug.LogWarning("È¿°ú ¹ßµ¿ ´ë»ó È®ÀÎÁß..");
+        if (target == null || sourceCard == null) return false;
 
-        if (target == null || sourceCard == null || sourceCard._cardData == null) return false;
-
-        // [ÇÙ½É º¯°æ] ¹®ÀÚ¿­ÀÌ ¾Æ´Ñ ¿ì¸®°¡ ¸¸µç Enum °ªÀ» Á÷Á¢ °¡Á®¿É´Ï´Ù.
-        TargetRule rule = sourceCard._cardData.targetRule;
-        string myUid = GameClient.Instance != null ? GameClient.Instance.UserUid : "";
-
-        // ´ë»óÀÇ »óÅÂ (³» °ÍÀÎÁö, ÇÏ¼öÀÎÀÎÁö) ÆÄ¾Ç
-        bool isTargetMine = (target.CurrentEntityData != null && target.CurrentEntityData.ownerUid == myUid);
-        bool isTargetMinion = target._cardData != null && target._cardData.cardType == CardType.ÇÏ¼öÀÎ;
-
-        // Enum °ªÀ» ±âÁØÀ¸·Î ºĞ±â
-        switch (rule)
-        {
-            case TargetRule.Target_All: // ¸ğµç Ä³¸¯ÅÍ (Á¦ÇÑ ¾øÀ½)
-                return true;
-
-            case TargetRule.Target_Minion: // ¸ğµç ÇÏ¼öÀÎ
-                return isTargetMinion;
-
-            case TargetRule.Target_Enemy_All: // ¸ğµç Àû Ä³¸¯ÅÍ
-                return !isTargetMine;
-
-            case TargetRule.Target_Enemy_Minion: // Àû ÇÏ¼öÀÎ
-                return !isTargetMine && isTargetMinion;
-
-            case TargetRule.Target_Enemy_Leader: // Àû ¿µ¿õ (¸íÄ¡)
-                                                 // ³» °ÍÀÌ ¾Æ´Ï°í, ÇÏ¼öÀÎµµ ¾Æ´Ï¾î¾ß ¿µ¿õÀÔ´Ï´Ù.
-                return !isTargetMine && !isTargetMinion;
-
-            case TargetRule.Target_Friend_All: // ¸ğµç ¾Æ±º Ä³¸¯ÅÍ
-                return isTargetMine;
-
-            case TargetRule.Target_Friend_Minion: // ¾Æ±º ÇÏ¼öÀÎ
-                return isTargetMine && isTargetMinion;
-
-            case TargetRule.Target_Friend_Leader: // ¾Æ±º ¿µ¿õ
-                return isTargetMine && !isTargetMinion;
-
-            default:
-                // Å¸°ÙÆÃÀÌ ÇÊ¿ä ¾ø´Â Ä«µå°Å³ª Àß¸øµÈ ·êÀÏ °æ¿ì
-                Debug.LogWarning($"À¯È¿ÇÏÁö ¾Ê°Å³ª ÁöÁ¤ÇÒ ¼ö ¾ø´Â Å¸°Ù ·ê: {rule}");
-                return false;
-        }
+        // â˜… ìˆ˜ì •: ì„œë²„ê°€ ì¤€ íƒ€ê²Ÿ ëª©ë¡ì— ìˆëŠ”ì§€ í™•ì¸
+        return BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(target.EntityId);
     }
 
     /// <summary>
-    /// 3. À¯È¿¼º °Ë»ç°¡ ³¡³­ ÈÄ ´ë»óÀÇ ID¸¦ Æ÷ÇÔÇÏ¿© ¼­¹ö·Î Ä«µå ÇÃ·¹ÀÌ¸¦ ¿äÃ»ÇÕ´Ï´Ù.
+    /// 3. ìœ íš¨ì„± ê²€ì‚¬ê°€ ëë‚œ í›„ ëŒ€ìƒì˜ IDë¥¼ í¬í•¨í•˜ì—¬ ì„œë²„ë¡œ ì¹´ë“œ í”Œë ˆì´ë¥¼ ìš”ì²­í•©ë‹ˆë‹¤.
     /// </summary>
     public void SendPlayTargetCardRequest(GameObject cardObj, int slotIndex, GameCardDisplay targetEntity)
     {
@@ -95,58 +47,19 @@ public class CardTargetingManager : MonoBehaviour
         if (cardDisplay != null && GameClient.Instance != null)
         {
             int targetId = targetEntity != null ? targetEntity.EntityId : 0;
-            // GameClientÀÇ SendPlayCardRequest È£Ãâ (targetEntityId Æ÷ÇÔ) [7]
+            // GameClientì˜ SendPlayCardRequest í˜¸ì¶œ (targetEntityId í¬í•¨) [7]
             GameClient.Instance.SendPlayCardRequest(cardDisplay.InstanceId, slotIndex, targetId);
         }
     }
 
     /// <summary>
-    /// 4. ÇÏ¼öÀÎÀÌ ÀÏ¹İ ÀüÅõ(°ø°İ)¸¦ ÇÒ ¶§ À¯È¿ÇÑ ´ë»óÀÎÁö °Ë»çÇÕ´Ï´Ù. (µµ¹ß, Àº½Å ±ÔÄ¢ Àû¿ë)
+    /// 4. í•˜ìˆ˜ì¸ì´ ì¼ë°˜ ì „íˆ¬(ê³µê²©)ë¥¼ í•  ë•Œ ìœ íš¨í•œ ëŒ€ìƒì¸ì§€ ê²€ì‚¬í•©ë‹ˆë‹¤. (ì„œë²„ ì‘ë‹µ ê¸°ì¤€)
     /// </summary>
     public bool IsValidAttackTarget(GameCardDisplay attacker, GameCardDisplay target)
     {
         if (target == null || attacker == null) return false;
-        if (target == attacker) return false; // ÀÚ±â ÀÚ½Å °ø°İ ºÒ°¡
 
-        var targetEntity = target.CurrentEntityData;
-        string myUid = GameClient.Instance != null ? GameClient.Instance.UserUid : "";
-
-        // 1. ´ë»óÀÌ Àû±ºÀÎÁö È®ÀÎ (³» À¯´ÖÀº °ø°İ ºÒ°¡)
-        if (targetEntity == null || targetEntity.ownerUid == myUid) return false;
-
-        // 2. ´ë»óÀÌ Àº½Å(STEALTH) »óÅÂÀÎÁö È®ÀÎ -> Àº½Å »óÅÂ¸é °ø°İ ´ë»óÀ¸·Î ÁöÁ¤ ºÒ°¡
-        if (targetEntity.keywords != null && targetEntity.keywords.Contains(CardKeywords.Stealth))
-        {
-            return false;
-        }
-
-        // 3. Àû ÇÊµå¿¡ µµ¹ß(TAUNT) ÇÏ¼öÀÎÀÌ Á¸ÀçÇÏ´ÂÁö È®ÀÎ
-        bool enemyHasTaunt = false;
-        foreach (var entity in GameEntityManager.Instance._spawnedEntities.Values)
-        {
-            var entityData = entity.CurrentEntityData;
-
-            // ´ë»óÀÌ Àû±º ÇÏ¼öÀÎÀÌ°í
-            if (entityData != null && entityData.ownerUid != myUid && entity._cardData.cardType == CardType.ÇÏ¼öÀÎ)
-            {
-                // µµ¹ß Å°¿öµå°¡ ÀÖÀ¸¸é¼­ Àº½Å »óÅÂ°¡ ¾Æ´Ï¶ó¸é
-                if (entityData.keywords != null && entityData.keywords.Contains(CardKeywords.Taunt) && !entityData.keywords.Contains(CardKeywords.Stealth))
-                {
-                    enemyHasTaunt = true;
-                    break;
-                }
-            }
-        }
-
-        // 4. ÇÊµå¿¡ µµ¹ß ÇÏ¼öÀÎÀÌ ÀÖ´Ù¸é, ÇöÀç Á¶ÁØÇÑ ´ë»óµµ ¹İµå½Ã µµ¹ßÀ» °¡Áö°í ÀÖ¾î¾ß ÇÔ
-        if (enemyHasTaunt)
-        {
-            if (targetEntity.keywords == null || !targetEntity.keywords.Contains(CardKeywords.Taunt))
-            {
-                return false; // µµ¹ßÀÌ ¾Æ´Ñ ÀûÀº °ø°İ ºÒ°¡
-            }
-        }
-
-        return true; // À§ Á¶°ÇÀ» ¸ğµÎ Åë°úÇÏ¸é À¯È¿ÇÑ Å¸°Ù
+        // â˜… ìˆ˜ì •: ì„œë²„ê°€ ì¤€ íƒ€ê²Ÿ ëª©ë¡ì— ìˆëŠ”ì§€ í™•ì¸
+        return BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(target.EntityId);
     }
 }

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using DG.Tweening;
 using System.Collections.Generic;
 using System.Collections;
@@ -6,29 +6,29 @@ using System.Linq;
 
 
 /// <summary>
-/// µ¦¿¡¼­ Ä«µå¸¦ »Ì´Â 'µå·Î¿ì ¾Ö´Ï¸ŞÀÌ¼Ç'À» ´ã´çÇÕ´Ï´Ù. (2D UI È¯°æ)
-/// µ¦ UI À§Ä¡¿¡¼­ Ä«µå°¡ »ı¼ºµÇ¾î -> È­¸é Áß¾Ó UI¿¡ Àá½Ã º¸¿´´Ù°¡ -> ¼ÕÆĞ·Î µé¾î°¡´Â ¿¬ÃâÀ» ÇÕ´Ï´Ù.
+/// ë±ì—ì„œ ì¹´ë“œë¥¼ ë½‘ëŠ” 'ë“œë¡œìš° ì• ë‹ˆë©”ì´ì…˜'ì„ ë‹´ë‹¹í•©ë‹ˆë‹¤. (2D UI í™˜ê²½)
+/// ë± UI ìœ„ì¹˜ì—ì„œ ì¹´ë“œê°€ ìƒì„±ë˜ì–´ -> í™”ë©´ ì¤‘ì•™ UIì— ì ì‹œ ë³´ì˜€ë‹¤ê°€ -> ì†íŒ¨ë¡œ ë“¤ì–´ê°€ëŠ” ì—°ì¶œì„ í•©ë‹ˆë‹¤.
 /// </summary>
 public class CardDrawManager : MonoBehaviour
 {
     public static CardDrawManager Instance;
 
-    [Header("ÇÁ¸®ÆÕ ¹× ¾À ¿¬°á")]
-    public GameObject cardPrefab; // UI Ä«µå ÇÁ¸®ÆÕ
+    [Header("í”„ë¦¬íŒ¹ ë° ì”¬ ì—°ê²°")]
+    public GameObject cardPrefab; // UI ì¹´ë“œ í”„ë¦¬íŒ¹
 
-    // [º¯°æÁ¡ 1] 3D Transform ´ë½Å UI¿ë RectTransform »ç¿ë
-    public RectTransform deckTransform; // µ¦ UI À§Ä¡
-    [Tooltip("Ä«µå¸¦ »Ì¾ÒÀ» ¶§ Àá½Ã º¸¿©ÁÙ UI À§Ä¡ (º¸Åë È­¸é Áß¾Ó)")]
+    // [ë³€ê²½ì  1] 3D Transform ëŒ€ì‹  UIìš© RectTransform ì‚¬ìš©
+    public RectTransform deckTransform; // ë± UI ìœ„ì¹˜
+    [Tooltip("ì¹´ë“œë¥¼ ë½‘ì•˜ì„ ë•Œ ì ì‹œ ë³´ì—¬ì¤„ UI ìœ„ì¹˜ (ë³´í†µ í™”ë©´ ì¤‘ì•™)")]
     public RectTransform showCardTransform;
 
-    [Header("ÇÙ½É ¿¬°á")]
-    // [º¯°æÁ¡ 2] »õ·Î ¸¸µç 2D UI Àü¿ë ¼ÕÆĞ ¸Å´ÏÀú·Î ±³Ã¼
+    [Header("í•µì‹¬ ì—°ê²°")]
+    // [ë³€ê²½ì  2] ìƒˆë¡œ ë§Œë“  2D UI ì „ìš© ì†íŒ¨ ë§¤ë‹ˆì €ë¡œ êµì²´
     public HandCardControllManager handCardControllManager;
 
-    [Header("¾Ö´Ï¸ŞÀÌ¼Ç ¼³Á¤")]
-    public float drawDuration = 0.4f; // µ¦ -> Áß¾Ó ÀÌµ¿ ½Ã°£
-    public float showDuration = 0.6f; // Áß¾Ó¿¡¼­ ¸Ó¹«´Â ½Ã°£
-    public float batchDrawInterval = 0.5f; // ¿©·¯ Àå »ÌÀ» ¶§ °£°İ
+    [Header("ì• ë‹ˆë©”ì´ì…˜ ì„¤ì •")]
+    public float drawDuration = 0.4f; // ë± -> ì¤‘ì•™ ì´ë™ ì‹œê°„
+    public float showDuration = 0.6f; // ì¤‘ì•™ì—ì„œ ë¨¸ë¬´ëŠ” ì‹œê°„
+    public float batchDrawInterval = 0.5f; // ì—¬ëŸ¬ ì¥ ë½‘ì„ ë•Œ ê°„ê²©
 
     [Header("Test CardData")]
     public CardData testCard;
@@ -42,13 +42,13 @@ public class CardDrawManager : MonoBehaviour
     void Start()
     {
         if (handCardControllManager == null)
-            Debug.LogError("[CardDrawManager] HandCardControllManager ¿¬°á ¾ÈµÊ!");
+            Debug.LogError("[CardDrawManager] HandCardControllManager ì—°ê²° ì•ˆë¨!");
     }
 
-    // --- Å×½ºÆ® ÄÚµå (Å°º¸µå D, B) ---
+    // --- í…ŒìŠ¤íŠ¸ ì½”ë“œ (í‚¤ë³´ë“œ D, B) ---
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.D)) // ´ÜÀÏ µå·Î¿ì Å×½ºÆ®
+        if (Input.GetKeyDown(KeyCode.D)) // ë‹¨ì¼ ë“œë¡œìš° í…ŒìŠ¤íŠ¸
         {
             var testCardData = new CardInfo
             {
@@ -58,7 +58,7 @@ public class CardDrawManager : MonoBehaviour
             PerformDrawAnimation(testCardData);
         }
 
-        if (Input.GetKeyDown(KeyCode.B)) // 3Àå µå·Î¿ì Å×½ºÆ®
+        if (Input.GetKeyDown(KeyCode.B)) // 3ì¥ ë“œë¡œìš° í…ŒìŠ¤íŠ¸
         {
             List<CardInfo> testBatch = new List<CardInfo>();
             for (int i = 0; i < 3; i++)
@@ -68,7 +68,7 @@ public class CardDrawManager : MonoBehaviour
             PerformBatchDraw(testBatch);
         }
 
-        if (Input.GetKeyDown(KeyCode.S)) // ´ÜÀÏ µå·Î¿ì Å×½ºÆ®
+        if (Input.GetKeyDown(KeyCode.S)) // ë‹¨ì¼ ë“œë¡œìš° í…ŒìŠ¤íŠ¸
         {
             var testCardData = new CardInfo
             {
@@ -80,7 +80,7 @@ public class CardDrawManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ¿©·¯ ÀåÀ» ¼ø¼­´ë·Î »Ì½À´Ï´Ù. (¸Ö¸®°Ç Á¾·á ÈÄ µî)
+    /// ì—¬ëŸ¬ ì¥ì„ ìˆœì„œëŒ€ë¡œ ë½‘ìŠµë‹ˆë‹¤. (ë©€ë¦¬ê±´ ì¢…ë£Œ í›„ ë“±)
     /// </summary>
     public void PerformBatchDraw(List<CardInfo> cards)
     {
@@ -93,21 +93,21 @@ public class CardDrawManager : MonoBehaviour
         foreach (var cardData in cards)
         {
             PerformDrawAnimation(cardData);
-            yield return new WaitForSeconds(batchDrawInterval); // ÇÑ Àå »Ì°í ´ë±â
+            yield return new WaitForSeconds(batchDrawInterval); // í•œ ì¥ ë½‘ê³  ëŒ€ê¸°
         }
     }
 
     /// <summary>
-    /// [ÇÙ½É] Ä«µå ID¸¦ ÀÌ¿ëÇØ ½ÇÁ¦ µ¥ÀÌÅÍ¸¦ Ã£½À´Ï´Ù. (±âÁ¸ ·ÎÁ÷ À¯Áö)
+    /// [í•µì‹¬] ì¹´ë“œ IDë¥¼ ì´ìš©í•´ ì‹¤ì œ ë°ì´í„°ë¥¼ ì°¾ìŠµë‹ˆë‹¤. (ê¸°ì¡´ ë¡œì§ ìœ ì§€)
     /// </summary>
     public CardData GetCardDataById(string id)
     {
         if (ResourceManager.Instance == null) return null;
 
-        // 1. ·ÎÄÃ ¸®¼Ò½º¿¡¼­ ¿øº» Ã£±â
+        // 1. ë¡œì»¬ ë¦¬ì†ŒìŠ¤ì—ì„œ ì›ë³¸ ì°¾ê¸°
         CardData localData = ResourceManager.Instance.GetCardData(id);
 
-        // 2. Firebase(¼­¹ö)¿¡¼­ ÃÖ½Å ¹ë·±½º µ¥ÀÌÅÍ È®ÀÎ
+        // 2. Firebase(ì„œë²„)ì—ì„œ ìµœì‹  ë°¸ëŸ°ìŠ¤ ë°ì´í„° í™•ì¸
         if (CardDatabaseManager.instance != null)
         {
             var task = CardDatabaseManager.instance.GetAllCardsAsync();
@@ -115,7 +115,7 @@ public class CardDrawManager : MonoBehaviour
             {
                 CardDataFirebase firebaseData = task.Result[id];
 
-                // ¿øº»À» ÈÑ¼ÕÇÏÁö ¾Ê±â À§ÇØ º¹»çº»(Instance)À» ¸¸µì´Ï´Ù.
+                // ì›ë³¸ì„ í›¼ì†í•˜ì§€ ì•Šê¸° ìœ„í•´ ë³µì‚¬ë³¸(Instance)ì„ ë§Œë“­ë‹ˆë‹¤.
                 if (localData != null)
                 {
                     localData = Instantiate(localData);
@@ -127,7 +127,7 @@ public class CardDrawManager : MonoBehaviour
                     localData.cardID = id;
                 }
 
-                // ¼­¹ö µ¥ÀÌÅÍ·Î µ¤¾î¾²±â
+                // ì„œë²„ ë°ì´í„°ë¡œ ë®ì–´ì“°ê¸°
                 localData.cardName = firebaseData.name;
                 localData.description = firebaseData.description;
                 localData.manaCost = firebaseData.cost;
@@ -141,7 +141,7 @@ public class CardDrawManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ä«µå ÇÑ ÀåÀ» »Ì´Â ¾Ö´Ï¸ŞÀÌ¼ÇÀ» ½ÇÇàÇÕ´Ï´Ù.
+    /// ì¹´ë“œ í•œ ì¥ì„ ë½‘ëŠ” ì• ë‹ˆë©”ì´ì…˜ì„ ì‹¤í–‰í•©ë‹ˆë‹¤.
     /// </summary>
     public void PerformDrawAnimation(CardInfo cardData)
     {
@@ -149,17 +149,17 @@ public class CardDrawManager : MonoBehaviour
 
         Quaternion flippedRotation = deckTransform.rotation * Quaternion.Euler(0, 180f, 0);
 
-        // 1. µ¦ À§Ä¡¿¡ Ä«µå »ı¼º 
-        // [º¯°æÁ¡ 3] »ı¼º ½Ã deckTransformÀÇ ºÎ¸ğ(Canvas °ü·Ã)¸¦ ºÎ¸ğ·Î ÁöÁ¤ÇÏ¿© UI¿¡¼­ Á¤»óÀûÀ¸·Î ·»´õ¸µµÇ°Ô ÇÔ
+        // 1. ë± ìœ„ì¹˜ì— ì¹´ë“œ ìƒì„± 
+        // [ë³€ê²½ì  3] ìƒì„± ì‹œ deckTransformì˜ ë¶€ëª¨(Canvas ê´€ë ¨)ë¥¼ ë¶€ëª¨ë¡œ ì§€ì •í•˜ì—¬ UIì—ì„œ ì •ìƒì ìœ¼ë¡œ ë Œë”ë§ë˜ê²Œ í•¨
         GameObject newCardObject = Instantiate(cardPrefab, deckTransform.position, flippedRotation, deckTransform.parent);
         newCardObject.name = $"Card [{cardData.cardId}] (Drawing)";
 
         RectTransform cardRect = newCardObject.GetComponent<RectTransform>();
 
-        // [º¯°æÁ¡ 4] »ÌÈ÷´Â Ä«µå°¡ ´Ù¸¥ UI³ª ±âÁ¸ Ä«µåµé¿¡ °¡·ÁÁöÁö ¾Êµµ·Ï ÇÏÀÌ¾î¶óÅ° ¸Ç ¾Æ·¡(È­¸é ¸Ç ¾Õ)·Î º¸³¿
+        // [ë³€ê²½ì  4] ë½‘íˆëŠ” ì¹´ë“œê°€ ë‹¤ë¥¸ UIë‚˜ ê¸°ì¡´ ì¹´ë“œë“¤ì— ê°€ë ¤ì§€ì§€ ì•Šë„ë¡ í•˜ì´ì–´ë¼í‚¤ ë§¨ ì•„ë˜(í™”ë©´ ë§¨ ì•)ë¡œ ë³´ëƒ„
         cardRect.SetAsLastSibling();
 
-        // 2. µ¥ÀÌÅÍ ÁÖÀÔ (ÀÌ¹ÌÁö, ÅØ½ºÆ® ¼³Á¤)
+        // 2. ë°ì´í„° ì£¼ì… (ì´ë¯¸ì§€, í…ìŠ¤íŠ¸ ì„¤ì •)
         CardData staticData = GetCardDataById(cardData.cardId);
         GameCardDisplay display = newCardObject.GetComponent<GameCardDisplay>();
 
@@ -171,27 +171,27 @@ public class CardDrawManager : MonoBehaviour
             display.Setup(testCard, null);
         }
 
-        // 3. DOTweenÀ¸·Î ¾Ö´Ï¸ŞÀÌ¼Ç ½ÃÄö½º ¸¸µé±â
+        // 3. DOTweenìœ¼ë¡œ ì• ë‹ˆë©”ì´ì…˜ ì‹œí€€ìŠ¤ ë§Œë“¤ê¸°
         Sequence drawSequence = DOTween.Sequence();
 
-        // 1´Ü°è: µ¦ -> Áß¾Ó ÀÌµ¿
+        // 1ë‹¨ê³„: ë± -> ì¤‘ì•™ ì´ë™
         drawSequence.Append(
             cardRect.DOMove(showCardTransform.position, drawDuration).SetEase(Ease.OutQuad)
         );
         
-        // 180µµ µÚÁıÈù »óÅÂ¿¡¼­ -> showCardTransformÀÇ È¸Àü°ª(¾Õ¸é)À¸·Î º¸°£µÇ¸é¼­ Ä«µå°¡ È× µ¹¾Æ°©´Ï´Ù.
+        // 180ë„ ë’¤ì§‘íŒ ìƒíƒœì—ì„œ -> showCardTransformì˜ íšŒì „ê°’(ì•ë©´)ìœ¼ë¡œ ë³´ê°„ë˜ë©´ì„œ ì¹´ë“œê°€ íœ™ ëŒì•„ê°‘ë‹ˆë‹¤.
         drawSequence.Join(
             cardRect.DORotateQuaternion(showCardTransform.rotation, drawDuration).SetEase(Ease.OutQuad)
         );
 
-        // 2´Ü°è: Àá½Ã ´ë±â (À¯Àú°¡ È®ÀÎ)
+        // 2ë‹¨ê³„: ì ì‹œ ëŒ€ê¸° (ìœ ì €ê°€ í™•ì¸)
         drawSequence.AppendInterval(showDuration);
 
-        // 3´Ü°è: ¼ÕÆĞ ¸Å´ÏÀú¿¡°Ô Ä«µå ³Ñ±â±â 
+        // 3ë‹¨ê³„: ì†íŒ¨ ë§¤ë‹ˆì €ì—ê²Œ ì¹´ë“œ ë„˜ê¸°ê¸° 
         drawSequence.OnComplete(() =>
         {
             newCardObject.name = $"Card [{cardData.cardId}]";
-            // [º¯°æÁ¡ 5] »õ·Î¿î HandCardControllManagerÀÇ AddCardToHand È£Ãâ
+            // [ë³€ê²½ì  5] ìƒˆë¡œìš´ HandCardControllManagerì˜ AddCardToHand í˜¸ì¶œ
             handCardControllManager.AddCardToHand(newCardObject);
         });
     }
@@ -200,27 +200,27 @@ public class CardDrawManager : MonoBehaviour
 /*
 
 /// <summary>
-/// 3D¿ÀºêÁ§Æ® Ä«µå »ç¿ë½Ã
-/// µ¦¿¡¼­ Ä«µå¸¦ »Ì´Â 'µå·Î¿ì ¾Ö´Ï¸ŞÀÌ¼Ç'À» ´ã´çÇÕ´Ï´Ù.
-/// µ¦ À§Ä¡¿¡¼­ Ä«µå°¡ »ı¼ºµÇ¾î -> È­¸é Áß¾Ó¿¡ Àá½Ã º¸¿´´Ù°¡ -> ¼ÕÆĞ·Î µé¾î°¡´Â ¿¬ÃâÀ» ÇÕ´Ï´Ù.
+/// 3Dì˜¤ë¸Œì íŠ¸ ì¹´ë“œ ì‚¬ìš©ì‹œ
+/// ë±ì—ì„œ ì¹´ë“œë¥¼ ë½‘ëŠ” 'ë“œë¡œìš° ì• ë‹ˆë©”ì´ì…˜'ì„ ë‹´ë‹¹í•©ë‹ˆë‹¤.
+/// ë± ìœ„ì¹˜ì—ì„œ ì¹´ë“œê°€ ìƒì„±ë˜ì–´ -> í™”ë©´ ì¤‘ì•™ì— ì ì‹œ ë³´ì˜€ë‹¤ê°€ -> ì†íŒ¨ë¡œ ë“¤ì–´ê°€ëŠ” ì—°ì¶œì„ í•©ë‹ˆë‹¤.
 /// </summary>
 public class CardDrawManager : MonoBehaviour
 {
     public static CardDrawManager Instance;
 
-    [Header("ÇÁ¸®ÆÕ ¹× ¾À ¿¬°á")]
-    public GameObject cardPrefab; // Ä«µå ¸ğÇü
-    public Transform deckTransform; // µ¦ À§Ä¡ (Ä«µå°¡ ³ª¿À´Â °÷)
-    [Tooltip("Ä«µå¸¦ »Ì¾ÒÀ» ¶§ Àá½Ã º¸¿©ÁÙ À§Ä¡ (º¸Åë È­¸é Áß¾Ó)")]
+    [Header("í”„ë¦¬íŒ¹ ë° ì”¬ ì—°ê²°")]
+    public GameObject cardPrefab; // ì¹´ë“œ ëª¨í˜•
+    public Transform deckTransform; // ë± ìœ„ì¹˜ (ì¹´ë“œê°€ ë‚˜ì˜¤ëŠ” ê³³)
+    [Tooltip("ì¹´ë“œë¥¼ ë½‘ì•˜ì„ ë•Œ ì ì‹œ ë³´ì—¬ì¤„ ìœ„ì¹˜ (ë³´í†µ í™”ë©´ ì¤‘ì•™)")]
     public Transform showCardTransform;
 
-    [Header("ÇÙ½É ¿¬°á")]
-    public HandInteractionManager handInteractionManager; // ´Ù »Ì°í³ª¸é ¿©±â·Î ³Ñ±è
+    [Header("í•µì‹¬ ì—°ê²°")]
+    public HandInteractionManager handInteractionManager; // ë‹¤ ë½‘ê³ ë‚˜ë©´ ì—¬ê¸°ë¡œ ë„˜ê¹€
 
-    [Header("¾Ö´Ï¸ŞÀÌ¼Ç ¼³Á¤")]
-    public float drawDuration = 0.4f; // µ¦ -> Áß¾Ó ÀÌµ¿ ½Ã°£
-    public float showDuration = 0.6f; // Áß¾Ó¿¡¼­ ¸Ó¹«´Â ½Ã°£
-    public float batchDrawInterval = 0.5f; // ¿©·¯ Àå »ÌÀ» ¶§ °£°İ
+    [Header("ì• ë‹ˆë©”ì´ì…˜ ì„¤ì •")]
+    public float drawDuration = 0.4f; // ë± -> ì¤‘ì•™ ì´ë™ ì‹œê°„
+    public float showDuration = 0.6f; // ì¤‘ì•™ì—ì„œ ë¨¸ë¬´ëŠ” ì‹œê°„
+    public float batchDrawInterval = 0.5f; // ì—¬ëŸ¬ ì¥ ë½‘ì„ ë•Œ ê°„ê²©
 
     private void Awake()
     {
@@ -231,13 +231,13 @@ public class CardDrawManager : MonoBehaviour
     void Start()
     {
         if (handInteractionManager == null)
-            Debug.LogError("[CardDrawManager] HandInteractionManager ¿¬°á ¾ÈµÊ!");
+            Debug.LogError("[CardDrawManager] HandInteractionManager ì—°ê²° ì•ˆë¨!");
     }
 
-    // --- Å×½ºÆ® ÄÚµå (Å°º¸µå D, B) ---
+    // --- í…ŒìŠ¤íŠ¸ ì½”ë“œ (í‚¤ë³´ë“œ D, B) ---
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.D)) // ´ÜÀÏ µå·Î¿ì Å×½ºÆ®
+        if (Input.GetKeyDown(KeyCode.D)) // ë‹¨ì¼ ë“œë¡œìš° í…ŒìŠ¤íŠ¸
         {
             var testCardData = new CardInfo
             {
@@ -247,7 +247,7 @@ public class CardDrawManager : MonoBehaviour
             PerformDrawAnimation(testCardData);
         }
 
-        if (Input.GetKeyDown(KeyCode.B)) // 3Àå µå·Î¿ì Å×½ºÆ®
+        if (Input.GetKeyDown(KeyCode.B)) // 3ì¥ ë“œë¡œìš° í…ŒìŠ¤íŠ¸
         {
             List<CardInfo> testBatch = new List<CardInfo>();
             for (int i = 0; i < 3; i++)
@@ -259,7 +259,7 @@ public class CardDrawManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ¿©·¯ ÀåÀ» ¼ø¼­´ë·Î »Ì½À´Ï´Ù. (¸Ö¸®°Ç Á¾·á ÈÄ µî)
+    /// ì—¬ëŸ¬ ì¥ì„ ìˆœì„œëŒ€ë¡œ ë½‘ìŠµë‹ˆë‹¤. (ë©€ë¦¬ê±´ ì¢…ë£Œ í›„ ë“±)
     /// </summary>
     public void PerformBatchDraw(List<CardInfo> cards)
     {
@@ -272,21 +272,21 @@ public class CardDrawManager : MonoBehaviour
         foreach (var cardData in cards)
         {
             PerformDrawAnimation(cardData);
-            yield return new WaitForSeconds(batchDrawInterval); // ÇÑ Àå »Ì°í ´ë±â
+            yield return new WaitForSeconds(batchDrawInterval); // í•œ ì¥ ë½‘ê³  ëŒ€ê¸°
         }
     }
 
     /// <summary>
-    /// [ÇÙ½É] Ä«µå ID¸¦ ÀÌ¿ëÇØ ½ÇÁ¦ µ¥ÀÌÅÍ¸¦ Ã£½À´Ï´Ù. (DB³ª ¸®¼Ò½º ¸Å´ÏÀú »ç¿ë)
+    /// [í•µì‹¬] ì¹´ë“œ IDë¥¼ ì´ìš©í•´ ì‹¤ì œ ë°ì´í„°ë¥¼ ì°¾ìŠµë‹ˆë‹¤. (DBë‚˜ ë¦¬ì†ŒìŠ¤ ë§¤ë‹ˆì € ì‚¬ìš©)
     /// </summary>
     public CardData GetCardDataById(string id)
     {
         if (ResourceManager.Instance == null) return null;
 
-        // 1. ·ÎÄÃ ¸®¼Ò½º¿¡¼­ ¿øº» Ã£±â
+        // 1. ë¡œì»¬ ë¦¬ì†ŒìŠ¤ì—ì„œ ì›ë³¸ ì°¾ê¸°
         CardData localData = ResourceManager.Instance.GetCardData(id);
 
-        // 2. Firebase(¼­¹ö)¿¡¼­ ÃÖ½Å ¹ë·±½º µ¥ÀÌÅÍ È®ÀÎ (°ø°İ·Â/Ã¼·Â ¼öÁ¤ µî)
+        // 2. Firebase(ì„œë²„)ì—ì„œ ìµœì‹  ë°¸ëŸ°ìŠ¤ ë°ì´í„° í™•ì¸ (ê³µê²©ë ¥/ì²´ë ¥ ìˆ˜ì • ë“±)
         if (CardDatabaseManager.instance != null)
         {
             var task = CardDatabaseManager.instance.GetAllCardsAsync();
@@ -294,7 +294,7 @@ public class CardDrawManager : MonoBehaviour
             {
                 CardDataFirebase firebaseData = task.Result[id];
 
-                // ¿øº»À» ÈÑ¼ÕÇÏÁö ¾Ê±â À§ÇØ º¹»çº»(Instance)À» ¸¸µì´Ï´Ù.
+                // ì›ë³¸ì„ í›¼ì†í•˜ì§€ ì•Šê¸° ìœ„í•´ ë³µì‚¬ë³¸(Instance)ì„ ë§Œë“­ë‹ˆë‹¤.
                 if (localData != null)
                 {
                     localData = Instantiate(localData);
@@ -306,7 +306,7 @@ public class CardDrawManager : MonoBehaviour
                     localData.cardID = id;
                 }
 
-                // ¼­¹ö µ¥ÀÌÅÍ·Î µ¤¾î¾²±â
+                // ì„œë²„ ë°ì´í„°ë¡œ ë®ì–´ì“°ê¸°
                 localData.cardName = firebaseData.name;
                 localData.description = firebaseData.description;
                 localData.manaCost = firebaseData.cost;
@@ -320,17 +320,17 @@ public class CardDrawManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ä«µå ÇÑ ÀåÀ» »Ì´Â ¾Ö´Ï¸ŞÀÌ¼ÇÀ» ½ÇÇàÇÕ´Ï´Ù.
+    /// ì¹´ë“œ í•œ ì¥ì„ ë½‘ëŠ” ì• ë‹ˆë©”ì´ì…˜ì„ ì‹¤í–‰í•©ë‹ˆë‹¤.
     /// </summary>
     public void PerformDrawAnimation(CardInfo cardData)
     {
         if (cardPrefab == null || deckTransform == null || showCardTransform == null || handInteractionManager == null) return;
 
-        // 1. µ¦ À§Ä¡¿¡ Ä«µå »ı¼º
+        // 1. ë± ìœ„ì¹˜ì— ì¹´ë“œ ìƒì„±
         GameObject newCardObject = Instantiate(cardPrefab, deckTransform.position, deckTransform.rotation);
         newCardObject.name = $"Card [{cardData.cardId}] (Drawing)";
 
-        // 2. µ¥ÀÌÅÍ ÁÖÀÔ (ÀÌ¹ÌÁö, ÅØ½ºÆ® ¼³Á¤)
+        // 2. ë°ì´í„° ì£¼ì… (ì´ë¯¸ì§€, í…ìŠ¤íŠ¸ ì„¤ì •)
         CardData staticData = GetCardDataById(cardData.cardId);
         GameCardDisplay display = newCardObject.GetComponent<GameCardDisplay>();
 
@@ -339,10 +339,10 @@ public class CardDrawManager : MonoBehaviour
             display.Setup(staticData, cardData);
         }
 
-        // 3. DOTweenÀ¸·Î ¾Ö´Ï¸ŞÀÌ¼Ç ½ÃÄö½º ¸¸µé±â
+        // 3. DOTweenìœ¼ë¡œ ì• ë‹ˆë©”ì´ì…˜ ì‹œí€€ìŠ¤ ë§Œë“¤ê¸°
         Sequence drawSequence = DOTween.Sequence();
 
-        // 1´Ü°è: µ¦ -> Áß¾Ó ÀÌµ¿
+        // 1ë‹¨ê³„: ë± -> ì¤‘ì•™ ì´ë™
         drawSequence.Append(
             newCardObject.transform.DOMove(showCardTransform.position, drawDuration).SetEase(Ease.OutQuad)
         );
@@ -350,10 +350,10 @@ public class CardDrawManager : MonoBehaviour
             newCardObject.transform.DORotateQuaternion(showCardTransform.rotation, drawDuration).SetEase(Ease.OutQuad)
         );
 
-        // 2´Ü°è: Àá½Ã ´ë±â (À¯Àú°¡ È®ÀÎ)
+        // 2ë‹¨ê³„: ì ì‹œ ëŒ€ê¸° (ìœ ì €ê°€ í™•ì¸)
         drawSequence.AppendInterval(showDuration);
 
-        // 3´Ü°è: ¼ÕÆĞ ¸Å´ÏÀú¿¡°Ô Ä«µå ³Ñ±â±â (¾Ë¾Æ¼­ ¼ÕÀ¸·Î ³¯¾Æ°¨)
+        // 3ë‹¨ê³„: ì†íŒ¨ ë§¤ë‹ˆì €ì—ê²Œ ì¹´ë“œ ë„˜ê¸°ê¸° (ì•Œì•„ì„œ ì†ìœ¼ë¡œ ë‚ ì•„ê°)
         drawSequence.OnComplete(() =>
         {
             newCardObject.name = $"Card [{cardData.cardId}]";

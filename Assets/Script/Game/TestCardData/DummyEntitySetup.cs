@@ -1,23 +1,23 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ¿¡µğÅÍ Å×½ºÆ®¿ë: °ÔÀÓ ½ÃÀÛ ½Ã Æ¯Á¤ ÇÏ¼öÀÎÀ» ÇÊµå¿¡ ¹Ì¸® »ı¼ºÇØµÓ´Ï´Ù.
+/// ì—ë””í„° í…ŒìŠ¤íŠ¸ìš©: ê²Œì„ ì‹œì‘ ì‹œ íŠ¹ì • í•˜ìˆ˜ì¸ì„ í•„ë“œì— ë¯¸ë¦¬ ìƒì„±í•´ë‘¡ë‹ˆë‹¤.
 /// </summary>
 public class DummyEntitySetup : MonoBehaviour
 {
-    [Header("Å×½ºÆ® ¼³Á¤")]
-    [Tooltip("Ã¼Å©ÇÏ¸é »ó´ë¹æ ÇÏ¼öÀÎ, ÇØÁ¦ÇÏ¸é ³» ÇÏ¼öÀÎÀ¸·Î ¼³Á¤µË´Ï´Ù.")]
-    public bool isEnemy = true; // ±âº»°ªÀ» true·Î ÇÏ¿© ¹Ù·Î Àû ÇÏ¼öÀÎÀ¸·Î »ç¿ë
+    [Header("í…ŒìŠ¤íŠ¸ ì„¤ì •")]
+    [Tooltip("ì²´í¬í•˜ë©´ ìƒëŒ€ë°© í•˜ìˆ˜ì¸, í•´ì œí•˜ë©´ ë‚´ í•˜ìˆ˜ì¸ìœ¼ë¡œ ì„¤ì •ë©ë‹ˆë‹¤.")]
+    public bool isEnemy = true; // ê¸°ë³¸ê°’ì„ trueë¡œ í•˜ì—¬ ë°”ë¡œ ì  í•˜ìˆ˜ì¸ìœ¼ë¡œ ì‚¬ìš©
 
-    [Header("ºñÁÖ¾ó µ¥ÀÌÅÍ")]
-    public CardData cardData; // ÀÎ½ºÆåÅÍ¿¡¼­ ¿øÇÏ´Â Ä«µå(SO)¸¦ µå·¡±×¾Øµå·Ó
+    [Header("ë¹„ì£¼ì–¼ ë°ì´í„°")]
+    public CardData cardData; // ì¸ìŠ¤í™í„°ì—ì„œ ì›í•˜ëŠ” ì¹´ë“œ(SO)ë¥¼ ë“œë˜ê·¸ì•¤ë“œë¡­
 
-    [Header("¼­¹ö µ¥ÀÌÅÍ (°¡Â¥)")]
-    public int fakeEntityId = 999; // ½ÇÁ¦ °ÔÀÓ ID¿Í °ãÄ¡Áö ¾Ê°Ô Å« ¼ıÀÚ·Î ¼³Á¤ ÃßÃµ
+    [Header("ì„œë²„ ë°ì´í„° (ê°€ì§œ)")]
+    public int fakeEntityId = 999; // ì‹¤ì œ ê²Œì„ IDì™€ ê²¹ì¹˜ì§€ ì•Šê²Œ í° ìˆ«ìë¡œ ì„¤ì • ì¶”ì²œ
     public int attack = 2;
     public int health = 10;
     [Range(0, 4)]
-    public int position = 0; // ÇÊµå ¸î ¹øÂ° Ä­¿¡ ÀÖÀ»Áö
+    public int position = 0; // í•„ë“œ ëª‡ ë²ˆì§¸ ì¹¸ì— ìˆì„ì§€
 
     void Start()
     {
@@ -25,20 +25,20 @@ public class DummyEntitySetup : MonoBehaviour
 
         if (display == null)
         {
-            Debug.LogError("GameCardDisplay ÄÄÆ÷³ÍÆ®°¡ ¾ø½À´Ï´Ù!");
+            Debug.LogError("GameCardDisplay ì»´í¬ë„ŒíŠ¸ê°€ ì—†ìŠµë‹ˆë‹¤!");
             return;
         }
 
-        // 1. ¼ÒÀ¯ÀÚ UID °áÁ¤ ·ÎÁ÷
-        // ½ÇÁ¦ °ÔÀÓ¿¡¼­´Â ¼­¹ö¿¡¼­ ¹ŞÀº UID¸¦ ½á¾ß ÇÏÁö¸¸, 
-        // Å×½ºÆ® È¯°æ¿¡¼­´Â Å¬¶óÀÌ¾ğÆ®°¡ 'Àû'À¸·Î ÀÎ½ÄÇÏ´Â ¹®ÀÚ¿­À» ³Ö¾îÁà¾ß ÇÕ´Ï´Ù.
-        // (º¸Åë GameManager¿¡¼­ ³» UID°¡ ¾Æ´Ï¸é ÀûÀ¸·Î °£ÁÖÇÏ¹Ç·Î, "Enemy_Test_UID" µîÀ¸·Î ¼³Á¤)
+        // 1. ì†Œìœ ì UID ê²°ì • ë¡œì§
+        // ì‹¤ì œ ê²Œì„ì—ì„œëŠ” ì„œë²„ì—ì„œ ë°›ì€ UIDë¥¼ ì¨ì•¼ í•˜ì§€ë§Œ, 
+        // í…ŒìŠ¤íŠ¸ í™˜ê²½ì—ì„œëŠ” í´ë¼ì´ì–¸íŠ¸ê°€ 'ì 'ìœ¼ë¡œ ì¸ì‹í•˜ëŠ” ë¬¸ìì—´ì„ ë„£ì–´ì¤˜ì•¼ í•©ë‹ˆë‹¤.
+        // (ë³´í†µ GameManagerì—ì„œ ë‚´ UIDê°€ ì•„ë‹ˆë©´ ì ìœ¼ë¡œ ê°„ì£¼í•˜ë¯€ë¡œ, "Enemy_Test_UID" ë“±ìœ¼ë¡œ ì„¤ì •)
         string ownerUid = isEnemy ? "Enemy_UID_For_Test" : "Player_UID_For_Test";
 
-        // *¸¸¾à ½ÇÁ¦ ¼­¹ö Åë½Å Å×½ºÆ® ÁßÀÌ¶ó¸é, ³» UID´Â ·Î±×ÀÎÇÑ ½ÇÁ¦ UID¿©¾ß ÇÏ°í
-        // Àû UID´Â ¼­¹ö°¡ ¾Ë°í ÀÖ´Â »ó´ë¹æ UID¿©¾ß ÇÕ´Ï´Ù. (¾Æ·¡ 2¹ø ¼³¸í ÂüÁ¶)
+        // *ë§Œì•½ ì‹¤ì œ ì„œë²„ í†µì‹  í…ŒìŠ¤íŠ¸ ì¤‘ì´ë¼ë©´, ë‚´ UIDëŠ” ë¡œê·¸ì¸í•œ ì‹¤ì œ UIDì—¬ì•¼ í•˜ê³ 
+        // ì  UIDëŠ” ì„œë²„ê°€ ì•Œê³  ìˆëŠ” ìƒëŒ€ë°© UIDì—¬ì•¼ í•©ë‹ˆë‹¤. (ì•„ë˜ 2ë²ˆ ì„¤ëª… ì°¸ì¡°)
 
-        // 2. °¡Â¥ ¿£Æ¼Æ¼ µ¥ÀÌÅÍ »ı¼º
+        // 2. ê°€ì§œ ì—”í‹°í‹° ë°ì´í„° ìƒì„±
         EntityData dummyEntity = new EntityData
         {
             entityId = fakeEntityId,
@@ -47,18 +47,18 @@ public class DummyEntitySetup : MonoBehaviour
             attack = attack,
             health = health,
             maxHealth = health,
-            canAttack = true, // º¸Åë ¼ÒÈ¯µÈÁö ¿À·¡µÈ »óÅÂ¸¦ °¡Á¤ÇÏ¹Ç·Î true
+            canAttack = true, // ë³´í†µ ì†Œí™˜ëœì§€ ì˜¤ë˜ëœ ìƒíƒœë¥¼ ê°€ì •í•˜ë¯€ë¡œ true
             hasAttacked = false,
             isMember = false,
             position = position,
         };
 
-        // 3. µğ½ºÇÃ·¹ÀÌ ¾÷µ¥ÀÌÆ®
-        // (Âü°í: isEnemy°¡ true¶ó¸é, ÀÌ ¿ÀºêÁ§Æ®´Â À¯´ÏÆ¼ ÇÏÀÌ¾î¶óÅ° »ó¿¡¼­
-        // EnemyField ½½·Ô(ºÎ¸ğ) ¹Ø¿¡ À§Ä¡ÇØ¾ß À§Ä¡°¡ ¿Ã¹Ù¸£°Ô º¸ÀÏ °ÍÀÔ´Ï´Ù.)
+        // 3. ë””ìŠ¤í”Œë ˆì´ ì—…ë°ì´íŠ¸
+        // (ì°¸ê³ : isEnemyê°€ trueë¼ë©´, ì´ ì˜¤ë¸Œì íŠ¸ëŠ” ìœ ë‹ˆí‹° í•˜ì´ì–´ë¼í‚¤ ìƒì—ì„œ
+        // EnemyField ìŠ¬ë¡¯(ë¶€ëª¨) ë°‘ì— ìœ„ì¹˜í•´ì•¼ ìœ„ì¹˜ê°€ ì˜¬ë°”ë¥´ê²Œ ë³´ì¼ ê²ƒì…ë‹ˆë‹¤.)
         display.SetupEntity(dummyEntity, cardData);
 
-        // Ãß°¡: ¸¸¾à EntityAttackManager °°Àº °÷¿¡ ÀÌ ´õ¹Ì¸¦ µî·ÏÇØ¾ß ÇÑ´Ù¸é ¿©±â¼­ È£Ãâ
+        // ì¶”ê°€: ë§Œì•½ EntityAttackManager ê°™ì€ ê³³ì— ì´ ë”ë¯¸ë¥¼ ë“±ë¡í•´ì•¼ í•œë‹¤ë©´ ì—¬ê¸°ì„œ í˜¸ì¶œ
         // Example: EntityAttackManager.Instance.RegisterDummy(fakeEntityId, display);
     }
 }

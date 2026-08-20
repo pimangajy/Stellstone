@@ -1,53 +1,55 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using DG.Tweening;
 using System.Collections;
 using Unity.VisualScripting;
 
 /// <summary>
-/// 2D UI ±â¹İ: ¼ÕÆĞ¿¡ ÀÖ´Â Ä«µå¸¦ ¸¶¿ì½º·Î Áı¾î¼­ ¿òÁ÷ÀÌ°í,
-/// ÇÊµå(3D)¿¡ ³»·Á³õ°Å³ª µÇµ¹·Á³õ´Â ±â´ÉÀ» ´ã´çÇÕ´Ï´Ù.
+/// 2D UI ê¸°ë°˜: ì†íŒ¨ì— ìˆëŠ” ì¹´ë“œë¥¼ ë§ˆìš°ìŠ¤ë¡œ ì§‘ì–´ì„œ ì›€ì§ì´ê³ ,
+/// í•„ë“œ(3D)ì— ë‚´ë ¤ë†“ê±°ë‚˜ ë˜ëŒë ¤ë†“ëŠ” ê¸°ëŠ¥ì„ ë‹´ë‹¹í•©ë‹ˆë‹¤.
 /// </summary>
 public class CardDragManager : MonoBehaviour
 {
     public static CardDragManager instance;
 
-    [Header("¿¬°á")]
-    // [º¯°æÁ¡ 1] ±âÁ¸ HandInteractionManager ´ë½Å »õ·Î ¸¸µç HandCardControllManager ¿¬°á
+    [Header("ì—°ê²°")]
+    // [ë³€ê²½ì  1] ê¸°ì¡´ HandInteractionManager ëŒ€ì‹  ìƒˆë¡œ ë§Œë“  HandCardControllManager ì—°ê²°
     public HandCardControllManager handManager;
     public Camera mainCamera;
-    public GameObject previewMinion; // Ãß°¡ Å¸°ÙÆÃ ½Ã º¸¿©ÁÙ ÀÓ½Ã ÇÏ¼öÀÎ ¿ÀºêÁ§Æ®
+    public GameObject previewMinion; // ì¶”ê°€ íƒ€ê²ŸíŒ… ì‹œ ë³´ì—¬ì¤„ ì„ì‹œ í•˜ìˆ˜ì¸ ì˜¤ë¸Œì íŠ¸
     private GameObject _previewMinion;
 
-    [Tooltip("UI Ä«µå°¡ ·»´õ¸µµÇ´Â ¸ŞÀÎ Äµ¹ö½º (¸¶¿ì½º ÁÂÇ¥ º¯È¯¿ë)")]
+    [Tooltip("UI ì¹´ë“œê°€ ë Œë”ë§ë˜ëŠ” ë©”ì¸ ìº”ë²„ìŠ¤ (ë§ˆìš°ìŠ¤ ì¢Œí‘œ ë³€í™˜ìš©)")]
     public Canvas dragCanvas;
 
-    [Header("µå·¡±× ¼³Á¤")]
-    // 3D¿ë dragHeight Á¦°Å
+    [Header("ë“œë˜ê·¸ ì„¤ì •")]
+    // 3Dìš© dragHeight ì œê±°
     public float dragFollowSpeed = 20f;
+    private bool _wasInHandZone = true; // ë“œë˜ê·¸ ì‹œì‘ ì‹œì ì—ëŠ” ë¬´ì¡°ê±´ ì†íŒ¨ ì•ˆì— ìˆìœ¼ë¯€ë¡œ true
 
-    [Header("UI Æ¿Æ®(±â¿ï±â) È¿°ú")]
-    public float tiltStrength = 0.5f; // ¸¶¿ì½º ÀÌµ¿ ¼Óµµ¿¡ µû¸¥ È¸Àü °­µµ
+    [Header("UI í‹¸íŠ¸(ê¸°ìš¸ê¸°) íš¨ê³¼")]
+    public float tiltStrength = 0.5f; // ë§ˆìš°ìŠ¤ ì´ë™ ì†ë„ì— ë”°ë¥¸ íšŒì „ ê°•ë„
     public float maxTiltAngle = 20f;
     public float tiltReturnSpeed = 10f;
 
-    [Header("¿µ¿ª ¹× ·¹ÀÌ¾î")]
+    [Header("ì˜ì—­ ë° ë ˆì´ì–´")]
     public float handZoneHeightRatio = 0.35f;
-    [Tooltip("3D ÇÊµå ½½·ÔÀ» °¨ÁöÇÏ±â À§ÇÑ ·¹ÀÌ¾î")]
+    [Tooltip("3D í•„ë“œ ìŠ¬ë¡¯ì„ ê°ì§€í•˜ê¸° ìœ„í•œ ë ˆì´ì–´")]
     public LayerMask fieldSlotLayer;
 
-    [Header("Å¸°ÙÆÃ")]
+    [Header("íƒ€ê²ŸíŒ…")]
     public bool temp_CardIsTargeted = true;
     public Transform targetingSourceTransform;
 
-    // ³»ºÎ º¯¼öµé
+    // ë‚´ë¶€ ë³€ìˆ˜ë“¤
     private GameObject _currentCard;
     private GameObject _waitingCard;
     private bool _isDragging = false;
-    public LayerMask entityLayer; // Inspector¿¡¼­ ÇÏ¼öÀÎ/¿µ¿õ ·¹ÀÌ¾î¸¦ ÇÒ´çÇØÁÖ¼¼¿ä.
-    public bool IsWaitingForTarget { get; private set; } = false; // InputManager¿Í Åë½Å¿ë
-    private int _pendingSlotIndex = -1; // Å¸°ÙÆÃ È®Á¤ ÈÄ º¸³¾ ½½·Ô À§Ä¡ ÀÓ½Ã ÀúÀå
+    public LayerMask entityLayer; // Inspectorì—ì„œ í•˜ìˆ˜ì¸/ì˜ì›… ë ˆì´ì–´ë¥¼ í• ë‹¹í•´ì£¼ì„¸ìš”.
+    public bool IsWaitingForTarget { get; private set; } = false; // InputManagerì™€ í†µì‹ ìš©
+    public int LastPlayedSlotIndex { get; private set; } = -1; // ë§ˆì§€ë§‰ìœ¼ë¡œ í•˜ìˆ˜ì¸ì„ ë‚¸ ìŠ¬ë¡¯ ìœ„ì¹˜
+    private int _pendingSlotIndex = -1; // íƒ€ê²ŸíŒ… í™•ì • í›„ ë³´ë‚¼ ìŠ¬ë¡¯ ìœ„ì¹˜ ì„ì‹œ ì €ì¥
 
-    // ±â¿ï±â °è»êÀ» À§ÇÑ ÀÌÀü ÇÁ·¹ÀÓ ¸¶¿ì½º À§Ä¡
+    // ê¸°ìš¸ê¸° ê³„ì‚°ì„ ìœ„í•œ ì´ì „ í”„ë ˆì„ ë§ˆìš°ìŠ¤ ìœ„ì¹˜
     private Vector2 _lastMousePosition;
 
     private void Awake()
@@ -75,22 +77,22 @@ public class CardDragManager : MonoBehaviour
     {
         if (handManager == null) return;
 
-        // 1. ÀüÅõÀÇ ÇÔ¼º Å¸°ÙÆÃ ´ë±â »óÅÂÀÏ ¶§ÀÇ ¸¶¿ì½º ÀÔ·Â Ã³¸®
+        // 1. ì „íˆ¬ì˜ í•¨ì„± íƒ€ê²ŸíŒ… ëŒ€ê¸° ìƒíƒœì¼ ë•Œì˜ ë§ˆìš°ìŠ¤ ì…ë ¥ ì²˜ë¦¬
         if (IsWaitingForTarget)
         {
             HandleTargetingPhase();
-            return; // Å¸°ÙÆÃ Áß¿¡´Â ±âÁ¸ µå·¡±× ·ÎÁ÷ ¹«½Ã
+            return; // íƒ€ê²ŸíŒ… ì¤‘ì—ëŠ” ê¸°ì¡´ ë“œë˜ê·¸ ë¡œì§ ë¬´ì‹œ
         }
 
-        // 2. ÀÏ¹İ µå·¡±× ÁßÀÏ ¶§
+        // 2. ì¼ë°˜ ë“œë˜ê·¸ ì¤‘ì¼ ë•Œ
         if (_isDragging && _currentCard != null)
         {
-            CheckZoneAndToggleTargeting(); // ¾î´À ÇÊµå¿¡ ³õÀ»Áö º¸¿©ÁÖ´Â º»·¡ ¿ëµµ·Î »ç¿ë
+            CheckZoneAndToggleTargeting(); // ì–´ëŠ í•„ë“œì— ë†“ì„ì§€ ë³´ì—¬ì£¼ëŠ” ë³¸ë˜ ìš©ë„ë¡œ ì‚¬ìš©
             UpdateCardPositionAndTilt();
         }
     }
 
-    // --- ¼­¹ö ÀÀ´ä Ã³¸® ÇÚµé·¯ ---
+    // --- ì„œë²„ ì‘ë‹µ ì²˜ë¦¬ í•¸ë“¤ëŸ¬ ---
     private void OnServerSuccessResponse(string instanceId)
     {
         if (_waitingCard != null)
@@ -100,11 +102,11 @@ public class CardDragManager : MonoBehaviour
             {
                 handManager.SetDraggedCard(null);
 
-                // CardActionQueueManager ¿¬Ãâ ½ÇÇà
-                CardActionQueueManager.Instance.PreparePlay(_waitingCard, false);
+                // [ìˆ˜ì •ë¨] CardActionQueueManager ì—°ì¶œ íë¡œ ë„˜ê¸°ì§€ ì•Šê³  ì¦‰ì‹œ íŒŒê´´
+                handManager.RemoveCardFromHand(_waitingCard);
                 _waitingCard = null;
 
-                HandCardControllManager.instance.AlignHand();  // »ç¿ë ¼º°ø½Ã ÇÚµå Á¤·Ä
+                handManager.AlignHand();  // ì‚¬ìš© ì„±ê³µì‹œ í•¸ë“œ ì •ë ¬
             }
         }
     }
@@ -113,7 +115,7 @@ public class CardDragManager : MonoBehaviour
     {
         if (_waitingCard != null)
         {
-            Debug.LogWarning($"Ä«µå »ç¿ë ½ÇÆĞ ({reason}). ¼ÕÆĞ·Î º¹±Í.");
+            Debug.LogWarning($"ì¹´ë“œ ì‚¬ìš© ì‹¤íŒ¨ ({reason}). ì†íŒ¨ë¡œ ë³µê·€.");
             _waitingCard.SetActive(true);
             handManager.SetDraggedCard(null);
             handManager.AlignHand();
@@ -122,13 +124,14 @@ public class CardDragManager : MonoBehaviour
     }
 
     // ==========================================================
-    // 1. µå·¡±× ½ÃÀÛ
+    // 1. ë“œë˜ê·¸ ì‹œì‘
     // ==========================================================
     public void StartDrag(GameObject card)
     {
         _currentCard = card;
         _isDragging = true;
         _lastMousePosition = Input.mousePosition;
+        _wasInHandZone = true;
 
         handManager.SetDraggedCard(_currentCard);
         handManager.CreatePhantomCard(_currentCard);
@@ -136,47 +139,47 @@ public class CardDragManager : MonoBehaviour
         RectTransform cardRect = _currentCard.GetComponent<RectTransform>();
         cardRect.DOKill();
 
-        // [º¯°æÁ¡ 2] ZÃà ÀÌµ¿ÀÌ ¾Æ´Ï¶ó, UI °èÃşÀÇ ¸Ç ¾ÕÀ¸·Î Ä«µå¸¦ °¡Á®¿É´Ï´Ù.
+        // [ë³€ê²½ì  2] Zì¶• ì´ë™ì´ ì•„ë‹ˆë¼, UI ê³„ì¸µì˜ ë§¨ ì•ìœ¼ë¡œ ì¹´ë“œë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
         cardRect.SetAsLastSibling();
 
-        // Ä«µå¸¦ ¿ø·¡ Å©±â·Î µ¹¸®°í, °¢µµ¸¦ ¶È¹Ù·Î ¼¼¿ó´Ï´Ù.
+        // ì¹´ë“œë¥¼ ì›ë˜ í¬ê¸°ë¡œ ëŒë¦¬ê³ , ê°ë„ë¥¼ ë˜‘ë°”ë¡œ ì„¸ì›ë‹ˆë‹¤.
         cardRect.DOScale(handManager.OriginalCardScale, 0.2f).SetEase(Ease.OutQuad);
         cardRect.DOLocalRotateQuaternion(Quaternion.identity, 0.2f);
     }
 
     // ==========================================================
-    // 2. Ä«µå ÀÌµ¿ ¹× ±â¿ï±â
+    // 2. ì¹´ë“œ ì´ë™ ë° ê¸°ìš¸ê¸°
     // ==========================================================
     private void UpdateCardPositionAndTilt()
     {
         RectTransform cardRect = _currentCard.GetComponent<RectTransform>();
 
-        // 1. À§Ä¡ ÀÌµ¿: °¡»ó Æò¸é(Plane)À» »èÁ¦ÇÏ°í ¸¶¿ì½º ÇÈ¼¿ ÁÂÇ¥¸¦ Á÷Á¢ ÃßÀûÇÕ´Ï´Ù.
+        // 1. ìœ„ì¹˜ ì´ë™: ê°€ìƒ í‰ë©´(Plane)ì„ ì‚­ì œí•˜ê³  ë§ˆìš°ìŠ¤ í”½ì…€ ì¢Œí‘œë¥¼ ì§ì ‘ ì¶”ì í•©ë‹ˆë‹¤.
         Vector2 targetPos = Input.mousePosition;
 
         if (dragCanvas != null && dragCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
         {
-            // Canvas°¡ Camera °ø°£ÀÏ ¶§ ºÎµå·¯¿î À§Ä¡ º¯È¯
+            // Canvasê°€ Camera ê³µê°„ì¼ ë•Œ ë¶€ë“œëŸ¬ìš´ ìœ„ì¹˜ ë³€í™˜
             RectTransformUtility.ScreenPointToWorldPointInRectangle(dragCanvas.transform as RectTransform, Input.mousePosition, dragCanvas.worldCamera, out Vector3 worldPoint);
             cardRect.position = Vector3.Lerp(cardRect.position, worldPoint, Time.deltaTime * dragFollowSpeed);
         }
         else
         {
-            // Canvas°¡ Overlay °ø°£ÀÏ ¶§
+            // Canvasê°€ Overlay ê³µê°„ì¼ ë•Œ
             cardRect.position = Vector3.Lerp(cardRect.position, targetPos, Time.deltaTime * dragFollowSpeed);
         }
 
-        // 2. ÀÌµ¿ ¹æÇâ¿¡ µû¸¥ ±â¿ï±â È¿°ú
+        // 2. ì´ë™ ë°©í–¥ì— ë”°ë¥¸ ê¸°ìš¸ê¸° íš¨ê³¼
         ApplyDragTilt(cardRect);
         _lastMousePosition = Input.mousePosition;
     }
 
     private void ApplyDragTilt(RectTransform cardRect)
     {
-        // 2D ¸¶¿ì½º ÇÈ¼¿ ÀÌµ¿ ¼Óµµ¸¦ ±¸ÇÕ´Ï´Ù.
+        // 2D ë§ˆìš°ìŠ¤ í”½ì…€ ì´ë™ ì†ë„ë¥¼ êµ¬í•©ë‹ˆë‹¤.
         Vector2 velocity = ((Vector2)Input.mousePosition - _lastMousePosition) / Time.deltaTime;
 
-        // UI¿¡ ¸Â°Ô X, YÃà È¸Àü °è»ê (¸¶¿ì½º°¡ À§/¾Æ·¡/ÁÂ/¿ì·Î ¿òÁ÷ÀÏ ¶§ Ä«µå°¡ Á¥ÇôÁü)
+        // UIì— ë§ê²Œ X, Yì¶• íšŒì „ ê³„ì‚° (ë§ˆìš°ìŠ¤ê°€ ìœ„/ì•„ë˜/ì¢Œ/ìš°ë¡œ ì›€ì§ì¼ ë•Œ ì¹´ë“œê°€ ì –í˜€ì§)
         float targetRotX = velocity.y * tiltStrength;
         float targetRotY = -velocity.x * tiltStrength;
 
@@ -188,34 +191,74 @@ public class CardDragManager : MonoBehaviour
     }
 
     // ==========================================================
-    // 3. ¿µ¿ª ÆÇÁ¤ ¹× Á¶ÁØ¼± Ç¥½Ã
+    // 3. ì˜ì—­ íŒì • ë° ì¡°ì¤€ì„  í‘œì‹œ
     // ==========================================================
     private void CheckZoneAndToggleTargeting()
     {
-        bool inHandZone = IsMouseInHandZone();
+        bool inHandZone = IsMouseInHandZone(); // [5]
+
+        // â˜… ìƒíƒœê°€ ë°”ë€Œì§€ ì•Šì•˜ë‹¤ë©´ ì•„ë¬´ê²ƒë„ í•˜ì§€ ì•Šê³  í•¨ìˆ˜ë¥¼ ì¦‰ì‹œ ë¹ ì ¸ë‚˜ê°‘ë‹ˆë‹¤!
+        if (inHandZone == _wasInHandZone) return;
+
+        // ìƒíƒœê°€ ë³€ê²½ë˜ì—ˆìŒì„ ê¸°ë¡í•©ë‹ˆë‹¤.
+        _wasInHandZone = inHandZone;
 
         if (inHandZone)
         {
-            if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-            if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
+            // [í•„ë“œ â” ì†íŒ¨ ì˜ì—­ ì•ˆìœ¼ë¡œ ë“¤ì–´ì˜¬ ë•Œ ë‹¨ 1ë²ˆ ì‹¤í–‰] [5]
+            if (!_currentCard.activeSelf) _currentCard.SetActive(true); // [5]
+            if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting(); // [2, 5]
         }
         else
         {
-            if (temp_CardIsTargeted)
+            // [ì†íŒ¨ â” í•„ë“œ ì˜ì—­ ë°–ìœ¼ë¡œ ë‚˜ê°ˆ ë•Œ ë‹¨ 1ë²ˆ ì‹¤í–‰] [2]
+
+            // 1. ì„œë²„ì— íƒ€ê²ŸíŒ… ê°€ëŠ¥í•œ ëŒ€ìƒ ìš”ì²­ì„ "ë”± í•œ ë²ˆë§Œ" ì „ì†¡í•©ë‹ˆë‹¤! [2]
+            GameClient.Instance.SendValidTargetResponse(_currentCard.GetComponent<GameCardDisplay>()._cardInfo.instanceId); // [2]
+
+            GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
+            if (cardDisplay != null && cardDisplay._cardData != null)
             {
-                if (_currentCard.activeSelf) _currentCard.SetActive(false);
-                if (TargetingReticle.Instance != null) TargetingReticle.Instance.StartTargeting(targetingSourceTransform);
-            }
-            else
-            {
-                if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-                if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
+                bool requiresTargeting = cardDisplay._cardData.targeting || cardDisplay._cardData.cardType == CardType.í•˜ìˆ˜ì¸;
+
+                if (requiresTargeting)
+                {
+                    // [íƒ€ê²ŸíŒ… ì£¼ë¬¸ / í•˜ìˆ˜ì¸ ì¹´ë“œ ì§„ì… ì‹œ ë‹¨ 1ë²ˆ]
+                    if (_currentCard.activeSelf) _currentCard.SetActive(false);
+                    if (TargetingReticle.Instance != null)
+                    {
+                        Transform source = targetingSourceTransform;
+                        if (source == null && GameEntityManager.Instance != null && GameEntityManager.Instance.myLeader != null)
+                        {
+                            source = GameEntityManager.Instance.myLeader.transform;
+                        }
+                        else if (source == null && handManager != null && handManager.handAnchor != null)
+                        {
+                            source = handManager.handAnchor;
+                        }
+                        else if (source == null)
+                        {
+                            source = transform;
+                        }
+
+                        TargetingReticle.Instance.StartTargeting(source);
+                    }
+                }
+                else
+                {
+                    // [ë¹„íƒ€ê²ŸíŒ… ì¹´ë“œ ì§„ì… ì‹œ ë‹¨ 1ë²ˆ]
+                    if (!_currentCard.activeSelf) _currentCard.SetActive(true);
+                    if (TargetingReticle.Instance != null)
+                    {
+                        TargetingReticle.Instance.StopTargeting();
+                    }
+                }
             }
         }
     }
 
     // ==========================================================
-    // 4. µå·¡±× Á¾·á (ÇÏÀÌºê¸®µå Ãæµ¹ ÆÇÁ¤)
+    // 4. ë“œë˜ê·¸ ì¢…ë£Œ (í•˜ì´ë¸Œë¦¬ë“œ ì¶©ëŒ íŒì •)
     // ==========================================================
     public void EndDrag()
     {
@@ -223,116 +266,70 @@ public class CardDragManager : MonoBehaviour
         if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
 
         handManager.RemovePhantomCard(_currentCard);
+
+        GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
+        bool isMinion = cardDisplay._cardData.cardType == CardType.í•˜ìˆ˜ì¸;
+        bool requiresTargeting = cardDisplay._cardData.targeting;
+
         bool requestSent = false;
 
-        // [ÇÙ½É] Ä«µå´Â UI Äµ¹ö½º¿¡ ÀÖÁö¸¸, ³õÀ» °÷(ÇÊµå)Àº 3DÀÌ¹Ç·Î Raycast¸¦ ½õ´Ï´Ù.
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
+        // 1. í•˜ìˆ˜ì¸ ì¹´ë“œì¸ ê²½ìš°
+        if (isMinion)
         {
-            FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
-
-            // Å×½ºÆ®¿ë 
-            if (slot != null && GameEntityManager.Instance.test && !slot.IsOccupied)
+            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
             {
-                GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
-
-                // [Ãß°¡µÈ ÇÙ½É ·ÎÁ÷] Ä«µå°¡ Å¸°ÙÆÃÀÌ ÇÊ¿äÇÑÁö(ÀüÅõÀÇ ÇÔ¼º) È®ÀÎ
-                if (CardTargetingManager.Instance != null &&
-                    CardTargetingManager.Instance.RequiresTargeting(cardDisplay._cardData))
+                FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
+                if (slot != null && !slot.IsOccupied)
                 {
-                    Debug.Log($"Å×½ºÆ® ¸ğµå ½½·Ô °¨ÁöµÊ: {slot.slotIndex} -> Å¸°ÙÆÃ ´ë±â ¸ğµå ÁøÀÔ");
-
-                    IsWaitingForTarget = true;
-                    _pendingSlotIndex = slot.slotIndex;
-                    _isDragging = false; // µå·¡±×´Â ³¡³²
-
-                    // 1. µå·¡±×ÇÏ´ø 2D UI Ä«µå´Â ¼û±é´Ï´Ù.
-                    _currentCard.SetActive(false);
-
-                    // 2. ½½·Ô À§Ä¡¿¡ 3D ÀÓ½Ã ÇÏ¼öÀÎ(¹Ì¸®º¸±â)À» »ı¼ºÇÕ´Ï´Ù.
-                    if (GameEntityManager.Instance != null && GameEntityManager.Instance.minionPrefab != null)
-                    {
-                        Vector3 previewMinionPosition = new Vector3(0, 0.5f, 0);
-
-                        _previewMinion = Instantiate
-                            (previewMinion, slot.transform.position + previewMinionPosition, previewMinion.transform.rotation, slot.transform);
-
-                        // Å¬¸¯ ¹æÇØ¸¦ ¸·±â À§ÇØ ÀÓ½Ã ÇÏ¼öÀÎÀÇ Äİ¶óÀÌ´õ¸¦ ²ü´Ï´Ù.
-                        Collider col = _previewMinion.GetComponent<Collider>();
-                        if (col != null) col.enabled = false;
-
-                        // 3. Á¶ÁØ¼±ÀÌ ÀÌ ÀÓ½Ã ÇÏ¼öÀÎ¿¡¼­ ½ÃÀÛÇÏµµ·Ï ¼³Á¤ÇÕ´Ï´Ù.
-                        if (TargetingReticle.Instance != null)
-                            TargetingReticle.Instance.StartTargeting(_previewMinion.transform);
-                    }
-
-                    return; // ¾ÆÁ÷ ¼­¹ö·Î Àü¼ÛÇÏÁö ¾Ê°í ÇÔ¼ö Á¾·á
-                }
-                else
-                {
-                    // Å¸°ÙÆÃÀÌ ÇÊ¿ä ¾ø´Â Ä«µå¸é Áï½Ã ¼ÒÈ¯ (±âÁ¸ ·ÎÁ÷)
-                    Debug.Log($"Å×½ºÆ® ¸ğµå ½½·Ô °¨ÁöµÊ: {slot.slotIndex}");
-                    GameEntityManager.Instance.SpawnCard(cardDisplay.CurrentEntityData);
-                }
-
-                return;
-            }
-
-            if (slot != null && !slot.IsOccupied)
-            {
-                GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
-
-                // [Ãß°¡µÈ ÇÙ½É ·ÎÁ÷] Ä«µå°¡ Å¸°ÙÆÃÀÌ ÇÊ¿äÇÑÁö(ÀüÅõÀÇ ÇÔ¼º) È®ÀÎ
-                if (CardTargetingManager.Instance != null &&
-                    CardTargetingManager.Instance.RequiresTargeting(cardDisplay._cardData))
-                {
-                    Debug.Log($"½½·Ô °¨ÁöµÊ: {slot.slotIndex} -> Å¸°ÙÆÃ ´ë±â ¸ğµå ÁøÀÔ");
-
-                    IsWaitingForTarget = true;
-                    _pendingSlotIndex = slot.slotIndex;
-
-                    // 1. µå·¡±×ÇÏ´ø 2D UI Ä«µå´Â ¼û±é´Ï´Ù.
-                    _currentCard.SetActive(false);
-
-                    // 2. ½½·Ô À§Ä¡¿¡ 3D ÀÓ½Ã ÇÏ¼öÀÎ(¹Ì¸®º¸±â)À» »ı¼ºÇÕ´Ï´Ù.
-                    if (GameEntityManager.Instance != null && GameEntityManager.Instance.minionPrefab != null)
-                    {
-                        Vector3 previewMinionPosition = new Vector3(0, 0.5f, 0);
-
-                        _previewMinion = Instantiate
-                            (previewMinion, slot.transform.position + previewMinionPosition, previewMinion.transform.rotation, slot.transform);
-
-                        // Å¬¸¯ ¹æÇØ¸¦ ¸·±â À§ÇØ ÀÓ½Ã ÇÏ¼öÀÎÀÇ Äİ¶óÀÌ´õ¸¦ ²ü´Ï´Ù.
-                        Collider col = _previewMinion.GetComponent<Collider>();
-                        if (col != null) col.enabled = false;
-
-                        // 3. Á¶ÁØ¼±ÀÌ ÀÌ ÀÓ½Ã ÇÏ¼öÀÎ¿¡¼­ ½ÃÀÛÇÏµµ·Ï ¼³Á¤ÇÕ´Ï´Ù.
-                        if (TargetingReticle.Instance != null)
-                            TargetingReticle.Instance.StartTargeting(_previewMinion.transform);
-                    }
-
-                    return; // ¾ÆÁ÷ ¼­¹ö·Î Àü¼ÛÇÏÁö ¾Ê°í ÇÔ¼ö Á¾·á
-                }
-                else
-                {
-                    // Å¸°ÙÆÃÀÌ ÇÊ¿ä ¾ø´Â Ä«µå¸é Áï½Ã ¼ÒÈ¯ (±âÁ¸ ·ÎÁ÷)
-                    Debug.Log($"½½·Ô °¨ÁöµÊ: {slot.slotIndex}");
+                    LastPlayedSlotIndex = slot.slotIndex;
                     SendPlayRequestToClient(_currentCard, slot.slotIndex);
                     requestSent = true;
                 }
             }
-            else Debug.Log("FieldSlotÀÌ ºñ¾îÀÖ°Å³ª ÇÏ¼öÀÎÀÌ ÀÌ¹ÌÀÖÀ½");
         }
+        // 2. ì£¼ë¬¸ ì¹´ë“œì¸ ê²½ìš°
+        else
+        {
+            if (!IsMouseInHandZone())
+            {
+                if (requiresTargeting)
+                {
+                    Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+                    if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
+                    {
+                        GameCardDisplay targetCard = hit.collider.GetComponentInParent<GameCardDisplay>();
+                        if (targetCard != null)
+                        {
+                            Debug.Log($"ì£¼ë¬¸ìœ¼ë¡œ íƒ€ê²ŸíŒ…í•œ ì¹´ë“œ : {targetCard.EntityId}");
+                        }
+
+                        // ì´ì œ ì„œë²„ ëª©ë¡ì´ ì‚´ì•„ìˆìœ¼ë¯€ë¡œ ì •ìƒ í†µê³¼í•©ë‹ˆë‹¤!
+                        if (targetCard != null && BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(targetCard.EntityId))
+                        {
+                            GameClient.Instance.SendPlayCardRequest(cardDisplay.InstanceId, -1, targetCard.EntityId);
+                            requestSent = true;
+                        }
+                    }
+                }
+                else
+                {
+                    SendPlayRequestToClient(_currentCard, -1);
+                    requestSent = true;
+                }
+            }
+        }
+
+        // ê²€ì¦ê³¼ ìš”ì²­ì´ ëª¨ë‘ ëë‚œ ë’¤ í•˜ì´ë¼ì´íŠ¸ ì •ë¦¬
+        if (BattleManager.Instance != null) BattleManager.Instance.ResetHighlights();
 
         if (requestSent)
         {
             _waitingCard = _currentCard;
-            // ¼­¹ö ÀÀ´ä ´ë±â Áß Ä«µåÀÇ È¸ÀüÀ» ´Ù½Ã ¹İµíÇÏ°Ô ¸¸µê
-            _waitingCard.GetComponent<RectTransform>().DOLocalRotateQuaternion(Quaternion.identity, 0.2f);
+            _currentCard.SetActive(false);
         }
         else
         {
-            // Çã°ø¿¡ ³õÀ½ -> Áï½Ã Ãë¼Ò ÈÄ ¼ÕÆĞ·Î º¹±Í
             if (!_currentCard.activeSelf) _currentCard.SetActive(true);
             handManager.SetDraggedCard(null);
             handManager.AlignHand();
@@ -342,41 +339,25 @@ public class CardDragManager : MonoBehaviour
         _isDragging = false;
     }
 
-    //  Å¸°ÙÆÃ Å¬¸¯ ´ë±â ·ÎÁ÷ ---
+    //  íƒ€ê²ŸíŒ… í´ë¦­ ëŒ€ê¸° ë¡œì§ ---
     private void HandleTargetingPhase()
     {
-        // ÁÂÅ¬¸¯: ´ë»ó È®Á¤
+        // ì¢Œí´ë¦­: ëŒ€ìƒ í™•ì •
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
 
-            // ÇÏ¼öÀÎ/¿µ¿õ(Entity)ÀÌ ¸Â¾Ò´ÂÁö È®ÀÎ
+            // í•˜ìˆ˜ì¸/ì˜ì›…(Entity)ì´ ë§ì•˜ëŠ”ì§€ í™•ì¸
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
             {
-                GameCardDisplay targetCard = hit.collider.GetComponentInParent<GameCardDisplay>();
-                GameCardDisplay sourceCard = _currentCard.GetComponent<GameCardDisplay>();
-
-                // À¯È¿ÇÑ ´ë»óÀÎÁö °Ë»ç
-                if (CardTargetingManager.Instance.IsValidTarget(sourceCard, targetCard))
-                {
-                    // À¯È¿ÇÑ ´ë»óÀÌ¸é ¸¶Ä§³» ¼­¹ö·Î [Ä«µå + ½½·Ô + Å¸°Ù] Àü¼Û
-                    CardTargetingManager.Instance.SendPlayTargetCardRequest(_currentCard, _pendingSlotIndex, targetCard);
-
-                    _waitingCard = _currentCard;
-                    if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
-
-                    ResetTargetingState();
-                    return;
-                }
-                else
-                    Debug.Log("´ë»óÀÌ ÀûÀıÇÏÁö ¾Ê½À´Ï´Ù");
+                // ì„œë²„ì— íƒ€ê²ŸíŒ…í•œ ëŒ€ìƒ ì „ì†¡í•´ì•¼í•¨
             }
 
-            // ´ë»óÀÌ À¯È¿ÇÏÁö ¾Ê°Å³ª Çã°øÀ» Å¬¸¯ÇÏ¸é Ãë¼Ò
+            // ëŒ€ìƒì´ ìœ íš¨í•˜ì§€ ì•Šê±°ë‚˜ í—ˆê³µì„ í´ë¦­í•˜ë©´ ì·¨ì†Œ
             CancelCardPlay();
             ResetTargetingState();
         }
-        // ¿ìÅ¬¸¯: »ç¿ë ÀÚÃ¼¸¦ Ãë¼Ò
+        // ìš°í´ë¦­: ì‚¬ìš© ìì²´ë¥¼ ì·¨ì†Œ
         else if (Input.GetMouseButtonDown(1))
         {
             CancelCardPlay();
@@ -394,7 +375,7 @@ public class CardDragManager : MonoBehaviour
     }
 
 
-    // Å¸°ÙÆÃÁ¾·á ÇÔ¼ö¸¦ ÄÚ·çÆ¾À¸·Î ¸¸µé¾î ÇÊµå Å¬¸¯½Ã ¼ÕÆĞ°¡ Á¢È÷´Â°É ¹æÁö
+    // íƒ€ê²ŸíŒ…ì¢…ë£Œ í•¨ìˆ˜ë¥¼ ì½”ë£¨í‹´ìœ¼ë¡œ ë§Œë“¤ì–´ í•„ë“œ í´ë¦­ì‹œ ì†íŒ¨ê°€ ì ‘íˆëŠ”ê±¸ ë°©ì§€
     private void ResetTargetingState()
     {
         StartCoroutine(ResetTargetingCoroutine());
@@ -432,306 +413,3 @@ public class CardDragManager : MonoBehaviour
 }
 
 
-/*
-using UnityEngine;
-using DG.Tweening; // ¾Ö´Ï¸ŞÀÌ¼Ç ¶óÀÌºê·¯¸® (DOTween)
-using System.Collections;
-
-/// <summary>
-/// ¼ÕÆĞ¿¡ ÀÖ´Â Ä«µå¸¦ ¸¶¿ì½º·Î Áı¾î¼­ ¿òÁ÷ÀÌ°í, 
-/// ÇÊµå¿¡ ³»·Á³õ°Å³ª(¼ÒÈ¯), µÇµ¹·Á³õ´Â ±â´ÉÀ» ´ã´çÇÕ´Ï´Ù.
-/// </summary>
-public class CardDragManager : MonoBehaviour
-{
-    public static CardDragManager instance;
-
-    [Header("¿¬°á")]
-    public HandInteractionManager handManager; // ¼ÕÆĞ °ü¸®ÀÚ
-    public Camera mainCamera; // ¸ŞÀÎ Ä«¸Ş¶ó
-
-    [Header("µå·¡±× ¼³Á¤")]
-    public float dragHeight = 0.5f; // µå·¡±×ÇÒ ¶§ Ä«µå°¡ ¶ß´Â ³ôÀÌ
-    public float dragFollowSpeed = 10f; // ¸¶¿ì½º¸¦ µû¶ó°¡´Â ¼Óµµ
-
-    [Header("Æ¿Æ®(±â¿ï±â) È¿°ú")]
-    public float tiltStrength = 20f; // ¿òÁ÷ÀÏ ¶§ ¾ó¸¶³ª ±â¿ï¾îÁúÁö
-    public float maxTiltAngle = 20f; // ÃÖ´ë ±â¿ï±â °¢µµ
-    public float tiltReturnSpeed = 5f; // ¿ø·¡´ë·Î µ¹¾Æ¿À´Â ¼Óµµ
-
-    [Header("¿µ¿ª ¹× ·¹ÀÌ¾î")]
-    public float handZoneHeightRatio = 0.35f; // È­¸é ¾Æ·¡ÂÊ 35%´Â '¼ÕÆĞ ¿µ¿ª'À¸·Î Ãë±Ş
-    public LayerMask cardLayer;
-    public LayerMask fieldSlotLayer; // Ä«µå¸¦ ³»·Á³õÀ» ¼ö ÀÖ´Â 'ÇÊµå ½½·Ô' ·¹ÀÌ¾î
-    public LayerMask gameBoardLayer; // °ÔÀÓ º¸µåÀÇ ·¹ÀÌ¾î
-
-    [Header("Å¸°ÙÆÃ")]
-    public bool temp_CardIsTargeted = true; // (Å×½ºÆ®¿ë) Å¸°ÙÆÃ ±â´É ÄÑ±â/²ô±â
-    public Transform targetingSourceTransform; // È­»ìÇ¥°¡ ½ÃÀÛµÉ À§Ä¡
-
-    [Header("¼ÒÈ¯ Å×½ºÆ®")]
-    public GameObject testMinionPrefab; // ¼ÒÈ¯µÉ ÇÏ¼öÀÎ ÇÁ¸®ÆÕ
-
-    // ³»ºÎ º¯¼öµé
-    private GameObject _currentCard; // Áö±İ Àâ°í ÀÖ´Â Ä«µå
-    private GameObject _waitingCard; // ¼­¹ö ÀÀ´äÀ» ±â´Ù¸®´Â Ä«µå (°øÁß¿¡ ¸ØÃçÀÖ´Â Ä«µå)
-    private bool _isDragging = false; // µå·¡±× ÁßÀÎ°¡?
-    private Plane _handMathPlane; // Ä«µå ÀÌµ¿ °è»ê¿ë °¡»ó Æò¸é
-    private Plane _playfieldMathPlane;
-    private Vector3 _lastPosition; // ±â¿ï±â °è»ê¿ë ÀÌÀü À§Ä¡
-
-    private bool _isSpawning = false; // ¼ÒÈ¯ ¿¬Ãâ ÁßÀÎ°¡?
-
-    private void Awake()
-    {
-        instance = this;
-    }
-
-    private void Start()
-    {
-        if (mainCamera == null) mainCamera = Camera.main;
-        _playfieldMathPlane = new Plane(Vector3.up, Vector3.zero); // ¹Ù´Ú Æò¸é Á¤ÀÇ
-        if (targetingSourceTransform == null && handManager != null)
-            targetingSourceTransform = handManager.handAnchor;
-
-        // GameClient ÀÌº¥Æ® ±¸µ¶ (¼º°ø/½ÇÆĞ °¨Áö¿ë)
-        if (GameClient.Instance != null)
-        {
-            GameClient.Instance.OnPlayCardFailedEvent += OnServerFailResponse;
-            // ¼º°ø ½Ã ¸¶³ª³ª ¿£Æ¼Æ¼°¡ ¾÷µ¥ÀÌÆ®µÇ¹Ç·Î ÀÌ¸¦ ¼º°ø ½ÅÈ£·Î »ç¿ë
-            GameClient.Instance.OnPlayCardSuccessEvent += OnServerSuccessResponse;
-        }
-    }
-
-    private void Update()
-    {
-        if (handManager == null) return;
-
-        // ¼ÕÆĞ ±âÁØ Æò¸é Á¤ÀÇ (Ä«µå°¡ ÀÌ À§¿¡¼­ ¿òÁ÷ÀÓ)
-        _handMathPlane = new Plane(handManager.handAnchor.up, handManager.handAnchor.position);
-
-        // [¼öÁ¤µÊ] µå·¡±× ÁßÀÌ¸é Ä«µå À§Ä¡¸¦ ¾÷µ¥ÀÌÆ®ÇÏ°í Å¸°ÙÆÃ »óÅÂ¸¦ °»½ÅÇÕ´Ï´Ù.
-        if (_isDragging && _currentCard != null)
-        {
-            CheckZoneAndToggleTargeting(); // ±âÁ¸ HandleInput¿¡ ÀÖ´ø µå·¡±× Áß ¿µ¿ª Ã¼Å©¸¦ ¿©±â·Î ÀÌµ¿
-            UpdateCardPositionAndTilt();
-        }
-    }
-
-    // --- ¼­¹ö ÀÀ´ä Ã³¸® ÇÚµé·¯ ---
-
-    // Ä«µå »ç¿ë ¼º°ø
-    private void OnServerSuccessResponse(string instanceId)
-    {
-        if (_waitingCard != null)
-        {
-            var display = _waitingCard.GetComponent<GameCardDisplay>();
-            // ³»°¡ ±â´Ù¸®´ø ±× Ä«µå°¡ ¸Â´ÂÁö ¾ÆÀÌµğ·Î ÇÑ ¹ø ´õ È®ÀÎÇÏ¸é ¾ÆÁÖ ¾ÈÀüÇÕ´Ï´Ù.
-            if (display != null && display.InstanceId == instanceId)
-            {
-                Debug.Log($"Ä«µå [{instanceId}] »ç¿ë ½ÂÀÎµÊ. ¼ÕÆĞ¿¡¼­ Á¦°Å.");
-                handManager.SetDraggedCard(null);
-                CardActionQueueManager.Instance.PreparePlay(_waitingCard, true);
-                // handManager.RemoveCardFromHand(_waitingCard);
-                _waitingCard = null;
-            }
-        }
-    }
-
-    // ½ÇÆĞ: ¼­¹ö¿¡¼­ ¸í½ÃÀûÀ¸·Î ½ÇÆĞ ¸Ş½ÃÁö¸¦ º¸³¿
-    private void OnServerFailResponse(string reason)
-    {
-        if (_waitingCard != null)
-        {
-            Debug.LogWarning($"Ä«µå »ç¿ë ½ÇÆĞ ({reason}). ¼ÕÆĞ·Î º¹±Í.");
-
-            // Ä«µå¸¦ ´Ù½Ã º¸ÀÌ°Ô ÇÏ°í (È¤½Ã ²¨Á³´Ù¸é)
-            _waitingCard.SetActive(true);
-
-            // HandManager¿¡°Ô "µå·¡±× ³¡³µ¾î"¶ó°í ¾Ë¸² -> ÀÚµ¿À¸·Î ¿ø·¡ ÀÚ¸®·Î Á¤·ÄµÊ
-            handManager.SetDraggedCard(null);
-            handManager.AlignHand();
-
-            _waitingCard = null;
-        }
-    }
-
-    // µå·¡±× ½ÃÀÛ
-    public void StartDrag(GameObject card)
-    {
-        _currentCard = card;
-        _isDragging = true;
-        _lastPosition = card.transform.position;
-
-        handManager.SetDraggedCard(_currentCard); // ¼ÕÆĞ ¸Å´ÏÀú¿¡°Ô "ÀÌ°Å ³»°¡ °¡Á®°£´Ù"°í ¾Ë¸² È£¹ö»óÅÂ ÇØÁ¦
-        handManager.CreatePhantomCard(_currentCard);
-
-        // Ä«µå Å©±â¸¦ ¿ø·¡´ë·Î(È®´ë ¾øÀÌ) µ¹¸®°í Àâ±â
-        _currentCard.transform.DOKill();
-        _currentCard.transform.DOScale(handManager.OriginalCardScale, 0.2f).SetEase(Ease.OutQuad);
-        _currentCard.transform.rotation = handManager.handAnchor.rotation;
-    }
-
-    // Ä«µå À§Ä¡ ¹× ±â¿ï±â ¾÷µ¥ÀÌÆ®
-    private void UpdateCardPositionAndTilt()
-    {
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        float enter;
-        Vector3 targetPos = _currentCard.transform.position;
-
-        // ¸¶¿ì½º°¡ °¡¸®Å°´Â Æò¸é»óÀÇ À§Ä¡ °è»ê
-        if (IsMouseInHandZone())
-        {
-            if (_handMathPlane.Raycast(ray, out enter))
-            {
-                Vector3 hitPoint = ray.GetPoint(enter);
-                // ¼ÕÆĞ ¿µ¿ª¿¡¼­´Â ¾ŞÄ¿ ±âÁØÀ¸·Î ¿òÁ÷ÀÓ
-                Vector3 localHit = handManager.handAnchor.InverseTransformPoint(hitPoint);
-                Vector3 targetLocal = new Vector3(localHit.x, dragHeight, localHit.z);
-                targetPos = handManager.handAnchor.TransformPoint(targetLocal);
-            }
-        }
-        else // ÇÊµå ¿µ¿ª
-        {
-            // Physics.Raycast·Î Ä«¸Ş¶ó¿¡¼­ ½ğ ±¤¼±ÀÌ gameBoardLayer¿Í ºÎµúÈ÷´ÂÁö °Ë»ç
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f, gameBoardLayer))
-            {
-                // hit.point´Â ¸¶¿ì½º°¡ ½ÇÁ¦ GameBoard Ç¥¸é¿¡ ´êÀº Á¤È®ÇÑ 3D ÁÂÇ¥ÀÔ´Ï´Ù.
-                // º¸µåÀÇ Y ³ôÀÌ(hit.point.y)¿¡ dragHeight¸¦ ´õÇØ¼­ ¶ç¿öÁİ´Ï´Ù.
-                targetPos = new Vector3(hit.point.x, hit.point.y + dragHeight, hit.point.z);
-            }
-            else
-            {
-                // (¿¹¿Ü Ã³¸®) ¸¶¿ì½º°¡ °ÔÀÓ º¸µå ¹ÛÀ¸·Î ³ª°¬À» ¶§´Â 
-                // ±âÁ¸ÀÇ °¡»ó Æò¸é(Y=0)À» ¹é¾÷À¸·Î »ç¿ëÇØ Ä«µå°¡ Çã°øÀ¸·Î »ç¶óÁö´Â °É ¸·½À´Ï´Ù.
-                if (_playfieldMathPlane.Raycast(ray, out enter))
-                {
-                    Vector3 backupHitPoint = ray.GetPoint(enter);
-                    targetPos = new Vector3(backupHitPoint.x, dragHeight, backupHitPoint.z);
-                }
-            }
-        }
-
-        // ºÎµå·´°Ô ÀÌµ¿ (Lerp)
-        _currentCard.transform.position = Vector3.Lerp(_currentCard.transform.position, targetPos, Time.deltaTime * dragFollowSpeed);
-
-        // ÀÌµ¿ ¹æÇâ¿¡ µû¶ó Ä«µå ±â¿ïÀÌ±â
-        ApplyDragTilt();
-        _lastPosition = _currentCard.transform.position;
-    }
-
-    // Ä«µå ±â¿ï±â È¿°ú
-    private void ApplyDragTilt()
-    {
-        Vector3 velocity = (_currentCard.transform.position - _lastPosition) / Time.deltaTime;
-        Vector3 localVelocity = handManager.handAnchor.InverseTransformDirection(velocity);
-
-        float targetRotX = localVelocity.z * tiltStrength;
-        float targetRotZ = -localVelocity.x * tiltStrength;
-
-        targetRotX = Mathf.Clamp(targetRotX, -maxTiltAngle, maxTiltAngle);
-        targetRotZ = Mathf.Clamp(targetRotZ, -maxTiltAngle, maxTiltAngle);
-
-        Quaternion targetRotation = handManager.handAnchor.rotation * Quaternion.Euler(targetRotX, 0, targetRotZ);
-        _currentCard.transform.rotation = Quaternion.Slerp(_currentCard.transform.rotation, targetRotation, Time.deltaTime * tiltReturnSpeed);
-    }
-
-    // ¼ÕÆĞ ¿µ¿ª ¾ÈÀÎÁö ¹ÛÀÎÁö Ã¼Å©
-    private void CheckZoneAndToggleTargeting()
-    {
-        bool inHandZone = IsMouseInHandZone();
-
-        if (inHandZone)
-        {
-            // ¼ÕÆĞ ¾È: Ä«µå¸¦ º¸¿©ÁÜ, Å¸°ÙÆÃ ²û
-            if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-            if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
-        }
-        else
-        {
-            // ÇÊµå(¼ÕÆĞ ¹Û):
-            if (temp_CardIsTargeted) // Å¸°ÙÆÃÀÌ ÇÊ¿äÇÑ ÁÖ¹®ÀÌ¶ó¸é
-            {
-                // Ä«µå´Â ¼û±â°í È­»ìÇ¥¸¸ º¸¿©ÁÜ
-                if (_currentCard.activeSelf) _currentCard.SetActive(false);
-                if (TargetingReticle.Instance != null)
-                    TargetingReticle.Instance.StartTargeting(targetingSourceTransform);
-            }
-            else // ÇÏ¼öÀÎÀÌ¶ó¸é
-            {
-                // Ä«µå °è¼Ó º¸¿©ÁÜ
-                if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-                if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
-            }
-        }
-    }
-
-    // µå·¡±× Á¾·á (¸¶¿ì½º ¶À)
-    public void EndDrag()
-    {
-        if (_currentCard == null) return;
-
-        handManager.RemovePhantomCard(_currentCard);
-        bool requestSent = false;
-
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
-        {
-            FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
-            if (slot != null)
-            {
-                Debug.Log($"½½·Ô °¨ÁöµÊ: {slot.slotIndex}");
-
-                // ¼­¹ö Àü¼Û
-                SendPlayRequestToClient(_currentCard, slot.slotIndex);
-                requestSent = true;
-            }
-        }
-
-        if (requestSent)
-        {
-            // ¿äÃ»À» º¸³ÂÀ¸¸é, HandManager¿¡°Ô Á¤·ÄÀ» 'º¹±¸ÇÏÁö ¸»¶ó'°í À¯ÁöÇØ¾ß ÇÔ
-            // Áï, SetDraggedCard(null)À» È£ÃâÇÏÁö ¾Ê°í _waitingCard¿¡ ÀúÀåÇØµÒ
-            _waitingCard = _currentCard;
-
-            // ÇöÀç Ä«µå´Â ÀÌÁ¦ µå·¡±× »óÅÂ°¡ ¾Æ´ÏÁö¸¸, ´ë±â »óÅÂ°¡ µÊ
-            // À§Ä¡´Â ÇöÀç µå¶øÇÑ À§Ä¡¿¡ ±×´ë·Î °íÁ¤µÊ (UpdateDrag°¡ ¾Èµµ´Ï±î)
-        }
-        else
-        {
-            // Çã°ø¿¡ ³õ¾ÒÀ½ -> Áï½Ã Ãë¼Ò
-            if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-            handManager.SetDraggedCard(null); // µå·¡±× ÇØÁ¦ ¾Ë¸²
-            handManager.AlignHand();          // Áï½Ã Á¤·Ä
-        }
-
-        _currentCard = null;
-        _isDragging = false;
-    }
-
-    // ¼ÒÈ¯ ¿¬Ãâ (Ä«µå°¡ ÇÏ¼öÀÎÀ¸·Î º¯½Å!) - *ÇöÀç´Â »ç¿ë ¾È ÇÔ, ¼­¹ö ÀÀ´ä ÈÄ º°µµ Ã³¸® ±ÇÀå*
-    private IEnumerator PlaySpawnSequence(GameObject cardObj, Vector3 slotPos, FieldSlot slot)
-    {
-        _isSpawning = true;
-        // ... (»ı·«: ÀÌÀü ÄÚµå¿Í µ¿ÀÏ) ...
-        yield return null;
-        _isSpawning = false;
-    }
-
-    private void SendPlayRequestToClient(GameObject cardObj, int slotIndex)
-    {
-        GameCardDisplay cardDisplay = cardObj.GetComponent<GameCardDisplay>();
-        if (cardDisplay != null && GameClient.Instance != null)
-        {
-            // ¼­¹ö Åë½Å ¸Å´ÏÀú(GameClient)¿¡°Ô ÀÏÀ» ¶°³Ñ±é´Ï´Ù.
-            GameClient.Instance.SendPlayCardRequest(cardDisplay.InstanceId, slotIndex);
-        }
-    }
-
-    // ¸¶¿ì½º°¡ È­¸é ¾Æ·¡ÂÊ¿¡ ÀÖ´ÂÁö È®ÀÎ
-    private bool IsMouseInHandZone()
-    {
-        return (Input.mousePosition.y / Screen.height) <= handZoneHeightRatio;
-    }
-}
-
-*/

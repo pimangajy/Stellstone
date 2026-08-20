@@ -1,5 +1,6 @@
+using System;
 using System.Collections;
-using System.Collections.Generic;
+using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -7,93 +8,154 @@ using UnityEngine.UI;
 
 public class ShopSlotUI : MonoBehaviour
 {
-    // --- UI ¿ä¼Ò ÂüÁ¶ ---
-    // ÀÎ½ºÆåÅÍ¿¡¼­ µå·¡±×ÇÏ¿© ÇÒ´çÇÒ UI Image ÄÄÆ÷³ÍÆ®
-    public Image productImage;
-    // ÀÎ½ºÆåÅÍ¿¡¼­ µå·¡±×ÇÏ¿© ÇÒ´çÇÒ UI Text ÄÄÆ÷³ÍÆ® (»óÇ° ÀÌ¸§ Ç¥½Ã¿ë)
-    public TextMeshProUGUI productNameText;
-    public Button button;
+    [Header("UI ìš”ì†Œ ì°¸ì¡°")]
+    public Image productImage;              // ìƒí’ˆ ì´ë¯¸ì§€ Image ì»´í¬ë„ŒíŠ¸
+    public TextMeshProUGUI productNameText; // ìƒí’ˆ ì´ë¦„ TextMeshProUGUI ì»´í¬ë„ŒíŠ¸
+    public Button button;                   // ìŠ¬ë¡¯ ë²„íŠ¼
 
-    // --- µ¥ÀÌÅÍ ÀúÀå ---
-    // ÀÌ ½½·ÔÀÌ ³ªÅ¸³»´Â »óÇ°ÀÇ ¸ğµç µ¥ÀÌÅÍ¸¦ ÀúÀåÇÒ º¯¼ö
+    // ì´ ìŠ¬ë¡¯ì´ ë‚˜íƒ€ë‚´ëŠ” ìƒí’ˆ ë°ì´í„°
     private ProductData currentProductData;
 
-    // --- µ¥ÀÌÅÍ ¼³Á¤ ÇÔ¼ö ---
-    // ShopManager¿¡¼­ ÀÌ ½½·ÔÀ» »ı¼ºÇÒ ¶§ È£ÃâÇÏ¿© »óÇ° µ¥ÀÌÅÍ¸¦ Àü´ŞÇÕ´Ï´Ù.
+    /// <summary>
+    /// ShopManagerì—ì„œ ìŠ¬ë¡¯ ìƒì„± ì‹œ í˜¸ì¶œí•˜ì—¬ ìƒí’ˆ ë°ì´í„°ë¥¼ ë°”ì¸ë”©í•©ë‹ˆë‹¤.
+    /// </summary>
     public void SetProductData(ProductData product)
     {
-        button.onClick.AddListener(ShopPopupManager.Instance.uIPanelToggler.ShowPanel);
+        currentProductData = product;
 
-        currentProductData = product; // ¸ğµç »óÇ° µ¥ÀÌÅÍ¸¦ ³»ºÎ º¯¼ö¿¡ ÀúÀå
+        // ìŠ¬ë¡¯ í´ë¦­ ì‹œ íŒì—… ì—´ê¸° ì´ë²¤íŠ¸ ì—°ê²°
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(OnSlotClicked);
+        }
 
-        // »óÇ° ÀÌ¸§ Ç¥½Ã
+        // ìƒí’ˆ ì´ë¦„ í‘œì‹œ
         if (productNameText != null)
         {
-            productNameText.text = product.name;
-        }
-        else
-        {
-            Debug.LogWarning("Product Name Text°¡ ÇÒ´çµÇÁö ¾Ê¾Ò½À´Ï´Ù.", this);
+            productNameText.text = product.productName;
         }
 
-        // ÀÌ¹ÌÁö ·Îµå ¹× Ç¥½Ã (image_url »ç¿ë)
+        // ë¡œì»¬ ì—ì…‹ ê²½ë¡œ ë˜ëŠ” ì›¹ URLì—ì„œ ì´ë¯¸ì§€ ë¡œë“œ
         if (productImage != null && !string.IsNullOrEmpty(product.image_url))
         {
-            StartCoroutine(LoadImage(product.image_url));
+            LoadProductImage(product.image_url);
         }
-        else if (productImage == null)
+        else if (productImage != null && string.IsNullOrEmpty(product.image_url))
         {
-            Debug.LogWarning("Product Image°¡ ÇÒ´çµÇÁö ¾Ê¾Ò½À´Ï´Ù.", this);
-        }
-        else if (string.IsNullOrEmpty(product.image_url))
-        {
-            Debug.LogWarning($"»óÇ° ID {product.id}ÀÇ image_urlÀÌ ºñ¾î ÀÖ½À´Ï´Ù.", this);
+            Debug.LogWarning($"[ShopSlot] ìƒí’ˆ ID {product.productId}ì˜ image_urlì´ ë¹„ì–´ ìˆìŠµë‹ˆë‹¤.", this);
         }
     }
 
-    // URL¿¡¼­ ÀÌ¹ÌÁö¸¦ ·ÎµåÇÏ¿© Image ÄÄÆ÷³ÍÆ®¿¡ ÇÒ´çÇÏ´Â ÄÚ·çÆ¾
-    private IEnumerator LoadImage(string imageUrl)
+    /// <summary>
+    /// ë¡œì»¬ ì—ì…‹ ê²½ë¡œ(Assets/Sprite/Shop/...)ì—ì„œ ì´ë¯¸ì§€ë¥¼ ë¡œë“œí•˜ì—¬ Imageì— í‘œì‹œ
+    /// </summary>
+    private void LoadProductImage(string imagePath)
+    {
+        if (productImage == null || string.IsNullOrWhiteSpace(imagePath)) return;
+
+        // 1. ì›¹ URLì¸ ê²½ìš° ë¹„ë™ê¸° ë‹¤ìš´ë¡œë“œ ì²˜ë¦¬
+        if (imagePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            imagePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            StartCoroutine(LoadImageFromWeb(imagePath));
+            return;
+        }
+
+        // 2. ë¡œì»¬ íŒŒì¼ ê²½ë¡œ ì¡°í•© (ê¸°ë³¸: Assets/Sprite/Shop/)
+        // imagePath ì˜ˆ: "Items/Skins/YuniNyang.png" ë˜ëŠ” "Items/CardPack/Yuni_001.png"
+        string cleanPath = imagePath.TrimStart('/', '\\');
+        
+        // ì‹œë„ ê²½ë¡œ 1: Assets/Sprite/Shop/ + imagePath
+        string fullPath = Path.Combine(Application.dataPath, "Sprite", "Shop", cleanPath);
+
+        // ì‹œë„ ê²½ë¡œ 2: Assets/Sprite/Shop/Items/ + imagePath (ê²½ë¡œì— Itemsê°€ ì¤‘ë³µë˜ì§€ ì•Šì€ ê²½ìš°)
+        if (!File.Exists(fullPath))
+        {
+            fullPath = Path.Combine(Application.dataPath, "Sprite", "Shop", "Items", cleanPath);
+        }
+
+        // íŒŒì¼ì´ ì¡´ì¬í•˜ë©´ ë¡œì»¬ ë°”ì´íŠ¸ë¥¼ ì½ì–´ ìŠ¤í”„ë¼ì´íŠ¸ ìƒì„±
+        if (File.Exists(fullPath))
+        {
+            try
+            {
+                byte[] fileData = File.ReadAllBytes(fullPath);
+                Texture2D texture = new Texture2D(2, 2);
+                if (texture.LoadImage(fileData))
+                {
+                    Rect rect = new Rect(0, 0, texture.width, texture.height);
+                    Vector2 pivot = new Vector2(0.5f, 0.5f);
+                    productImage.sprite = Sprite.Create(texture, rect, pivot);
+                    productImage.preserveAspect = true;
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ShopSlot] ë¡œì»¬ ì´ë¯¸ì§€ ë¡œë“œ ì¤‘ ì˜¤ë¥˜ ({fullPath}): {ex.Message}");
+            }
+        }
+
+        // 3. Resources í´ë” ë¡œë“œ ì‹œë„ (í™•ì¥ì ì œê±°)
+        string resPath = cleanPath;
+        int dotIndex = resPath.LastIndexOf('.');
+        if (dotIndex > 0)
+        {
+            resPath = resPath.Substring(0, dotIndex);
+        }
+
+        Sprite resSprite = Resources.Load<Sprite>(resPath);
+        if (resSprite != null)
+        {
+            productImage.sprite = resSprite;
+            productImage.preserveAspect = true;
+            return;
+        }
+
+        Debug.LogWarning($"[ShopSlot] ì´ë¯¸ì§€ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤: '{imagePath}' (í™•ì¸í•œ ê²½ë¡œ: {fullPath})", this);
+    }
+
+    /// <summary>
+    /// ì›¹ URLì¸ ê²½ìš° ë°±ì—…ìœ¼ë¡œ ë‹¤ìš´ë¡œë“œí•˜ì—¬ í‘œì‹œ
+    /// </summary>
+    private IEnumerator LoadImageFromWeb(string imageUrl)
     {
         using (UnityWebRequest webRequest = UnityWebRequestTexture.GetTexture(imageUrl))
         {
             yield return webRequest.SendWebRequest();
 
-            if (webRequest.result == UnityWebRequest.Result.ConnectionError ||
-                webRequest.result == UnityWebRequest.Result.ProtocolError)
-            {
-                Debug.LogError($"ÀÌ¹ÌÁö ·Îµå ¿À·ù (URL: {imageUrl}): {webRequest.error}");
-            }
-            else if (webRequest.result == UnityWebRequest.Result.Success)
+            if (webRequest.result == UnityWebRequest.Result.Success)
             {
                 Texture2D texture = DownloadHandlerTexture.GetContent(webRequest);
-                if (texture != null)
+                if (texture != null && productImage != null)
                 {
-                    // Texture2D¸¦ Sprite·Î º¯È¯ÇÏ¿© Image ÄÄÆ÷³ÍÆ®¿¡ ÇÒ´ç
                     Rect rect = new Rect(0, 0, texture.width, texture.height);
-                    Vector2 pivot = new Vector2(0.5f, 0.5f); // Áß¾Ó ÇÇº¿
+                    Vector2 pivot = new Vector2(0.5f, 0.5f);
                     productImage.sprite = Sprite.Create(texture, rect, pivot);
-                    productImage.preserveAspect = true; // ÀÌ¹ÌÁö ºñÀ² À¯Áö
+                    productImage.preserveAspect = true;
                 }
-                else
-                {
-                    Debug.LogError($"ÀÌ¹ÌÁö ·Îµå ½ÇÆĞ: ÅØ½ºÃ³¸¦ °¡Á®¿Ã ¼ö ¾ø½À´Ï´Ù. (URL: {imageUrl})");
-                }
+            }
+            else
+            {
+                Debug.LogError($"[ShopSlot] ì›¹ ì´ë¯¸ì§€ ë‹¤ìš´ë¡œë“œ ì‹¤íŒ¨ (URL: {imageUrl}): {webRequest.error}");
             }
         }
     }
 
-    // --- ½½·Ô Å¬¸¯ ½Ã È£ÃâµÉ ÇÔ¼ö (¹öÆ°¿¡ ¿¬°á) ---
-    // ÀÌ ÇÔ¼ö´Â ½½·Ô ÇÁ¸®ÆÕ ³»ÀÇ Button ÄÄÆ÷³ÍÆ®ÀÇ OnClick() ÀÌº¥Æ®¿¡ ¿¬°áµÇ¾î¾ß ÇÕ´Ï´Ù.
+    /// <summary>
+    /// ìŠ¬ë¡¯ í´ë¦­ ì‹œ ShopManagerë¥¼ í†µí•´ ìƒí’ˆ ìƒì„¸ íŒì—… ì˜¤í”ˆ
+    /// </summary>
     public void OnSlotClicked()
     {
         if (currentProductData != null)
         {
-            Debug.Log($"½½·Ô Å¬¸¯µÊ! »óÇ° ID: {currentProductData.id}, ÀÌ¸§: {currentProductData.name}");
-            ShopPopupManager.Instance.ShowProductDetails(currentProductData);
+            Debug.Log($"[ShopSlot] ìŠ¬ë¡¯ í´ë¦­ë¨: {currentProductData.productName} (ID: {currentProductData.productId})");
+            ShopManager.Instance.OpenProductPopup(currentProductData);
         }
         else
         {
-            Debug.LogWarning("Å¬¸¯µÈ ½½·Ô¿¡ »óÇ° µ¥ÀÌÅÍ°¡ ¾ø½À´Ï´Ù.");
+            Debug.LogWarning("[ShopSlot] í´ë¦­ëœ ìŠ¬ë¡¯ì— ìƒí’ˆ ë°ì´í„°ê°€ ì—†ìŠµë‹ˆë‹¤.");
         }
     }
 }

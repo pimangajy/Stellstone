@@ -1,33 +1,33 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 
 /// <summary>
-/// Å¥¿¡ µé¾î°¥ ¸ğµç ¿¬Ãâ ¹× »óÅÂ ¾÷µ¥ÀÌÆ®ÀÇ ±âº» ÇüÅÂ¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+/// íì— ë“¤ì–´ê°ˆ ëª¨ë“  ì—°ì¶œ ë° ìƒíƒœ ì—…ë°ì´íŠ¸ì˜ ê¸°ë³¸ í˜•íƒœë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
 /// </summary>
 public interface ISequenceAction
 {
     /// <summary>
-    /// ¾×¼ÇÀ» ½ÇÇàÇÕ´Ï´Ù. ¿¬ÃâÀÌ ³¡³¯ ¶§±îÁö ´ë±âÇÒ ¼ö ÀÖµµ·Ï UniTask¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
+    /// ì•¡ì…˜ì„ ì‹¤í–‰í•©ë‹ˆë‹¤. ì—°ì¶œì´ ëë‚  ë•Œê¹Œì§€ ëŒ€ê¸°í•  ìˆ˜ ìˆë„ë¡ UniTaskë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
     /// </summary>
     UniTask ExecuteAsync();
 }
 
 /// <summary>
-/// ¼­¹ö·ÎºÎÅÍ ¹ŞÀº ¸í·É(ÆĞÅ¶)µéÀ» Áï½Ã ½ÇÇàÇÏÁö ¾Ê°í, 
-/// ÁÙÀ» ¼¼¿ö(Queue) ¼øÂ÷ÀûÀ¸·Î ¾Ö´Ï¸ŞÀÌ¼ÇÀ» Àç»ıÇÏ´Â °üÁ¦Å¾ÀÔ´Ï´Ù.
+/// ì„œë²„ë¡œë¶€í„° ë°›ì€ ëª…ë ¹(íŒ¨í‚·)ë“¤ì„ ì¦‰ì‹œ ì‹¤í–‰í•˜ì§€ ì•Šê³ , 
+/// ì¤„ì„ ì„¸ì›Œ(Queue) ìˆœì°¨ì ìœ¼ë¡œ ì• ë‹ˆë©”ì´ì…˜ì„ ì¬ìƒí•˜ëŠ” ê´€ì œíƒ‘ì…ë‹ˆë‹¤.
 /// </summary>
 public class ActionQueueManager : MonoBehaviour
 {
-    // ½Ì±ÛÅæ ÆĞÅÏ (¾îµğ¼­µç ActionQueueManager.Instance·Î Á¢±Ù °¡´É)
+    // ì‹±ê¸€í†¤ íŒ¨í„´ (ì–´ë””ì„œë“  ActionQueueManager.Instanceë¡œ ì ‘ê·¼ ê°€ëŠ¥)
     public static ActionQueueManager Instance { get; private set; }
 
-    // ½ÇÇàÀ» ±â´Ù¸®´Â ÄÚ·çÆ¾(¿¬Ãâ)µéÀÇ ´ë±â¿­
+    // ì‹¤í–‰ì„ ê¸°ë‹¤ë¦¬ëŠ” ì½”ë£¨í‹´(ì—°ì¶œ)ë“¤ì˜ ëŒ€ê¸°ì—´
     private Queue<IEnumerator> _actionQueue = new Queue<IEnumerator>();
 
-    // ÇöÀç Å¥°¡ ÀÛµ¿(Àç»ı) ÁßÀÎÁö ¿©ºÎ
+    // í˜„ì¬ íê°€ ì‘ë™(ì¬ìƒ) ì¤‘ì¸ì§€ ì—¬ë¶€
     private bool _isPlaying = false;
 
     private void Awake()
@@ -43,14 +43,14 @@ public class ActionQueueManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ¼­¹ö¿¡¼­ ÆĞÅ¶À» ¹ŞÀ» ¶§¸¶´Ù ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÏ¿© ÇÒ ÀÏÀ» Ãß°¡ÇÕ´Ï´Ù.
+    /// ì„œë²„ì—ì„œ íŒ¨í‚·ì„ ë°›ì„ ë•Œë§ˆë‹¤ ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ì—¬ í•  ì¼ì„ ì¶”ê°€í•©ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="actionCoroutine">½ÇÇàÇÒ ¿¬Ãâ ÄÚ·çÆ¾</param>
+    /// <param name="actionCoroutine">ì‹¤í–‰í•  ì—°ì¶œ ì½”ë£¨í‹´</param>
     public void EnqueueAction(IEnumerator actionCoroutine)
     {
         _actionQueue.Enqueue(actionCoroutine);
 
-        // ¸¸¾à ÇöÀç ½¬°í ÀÖ´Ù¸é, Áï½Ã Å¥ Ã³¸®¸¦ ½ÃÀÛÇÕ´Ï´Ù.
+        // ë§Œì•½ í˜„ì¬ ì‰¬ê³  ìˆë‹¤ë©´, ì¦‰ì‹œ í ì²˜ë¦¬ë¥¼ ì‹œì‘í•©ë‹ˆë‹¤.
         if (!_isPlaying)
         {
             StartCoroutine(ProcessQueue());
@@ -58,7 +58,7 @@ public class ActionQueueManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Å¥¿¡ ½×ÀÎ ¿¬ÃâµéÀ» ÇÏ³ª¾¿ ²¨³»¼­ ½ÇÇàÇÏ´Â ÇÙ½É ·çÇÁÀÔ´Ï´Ù.
+    /// íì— ìŒ“ì¸ ì—°ì¶œë“¤ì„ í•˜ë‚˜ì”© êº¼ë‚´ì„œ ì‹¤í–‰í•˜ëŠ” í•µì‹¬ ë£¨í”„ì…ë‹ˆë‹¤.
     /// </summary>
     private IEnumerator ProcessQueue()
     {
@@ -66,20 +66,20 @@ public class ActionQueueManager : MonoBehaviour
 
         while (_actionQueue.Count > 0)
         {
-            // 1. ´ë±â¿­¿¡¼­ °¡Àå ¿À·¡µÈ ¿¬ÃâÀ» ÇÏ³ª ²¨³À´Ï´Ù.
+            // 1. ëŒ€ê¸°ì—´ì—ì„œ ê°€ì¥ ì˜¤ë˜ëœ ì—°ì¶œì„ í•˜ë‚˜ êº¼ëƒ…ë‹ˆë‹¤.
             IEnumerator currentAction = _actionQueue.Dequeue();
 
-            // 2. ÇØ´ç ¿¬ÃâÀ» ½ÇÇàÇÏ°í, ¿ÏÀüÈ÷ ³¡³¯ ¶§±îÁö ¿©±â¼­ ´ë±â(Wait)ÇÕ´Ï´Ù.
-            // (currentAction ³»ºÎ¿¡ ÀÖ´Â WaitForSeconds ½Ã°£¸¸Å­ ¾Ë¾Æ¼­ ±â´Ù·ÁÁİ´Ï´Ù)
+            // 2. í•´ë‹¹ ì—°ì¶œì„ ì‹¤í–‰í•˜ê³ , ì™„ì „íˆ ëë‚  ë•Œê¹Œì§€ ì—¬ê¸°ì„œ ëŒ€ê¸°(Wait)í•©ë‹ˆë‹¤.
+            // (currentAction ë‚´ë¶€ì— ìˆëŠ” WaitForSeconds ì‹œê°„ë§Œí¼ ì•Œì•„ì„œ ê¸°ë‹¤ë ¤ì¤ë‹ˆë‹¤)
             yield return StartCoroutine(currentAction);
         }
 
-        // Å¥°¡ ´Ù ºñ¿öÁö¸é ´Ù½Ã ´ë±â »óÅÂ·Î µé¾î°©´Ï´Ù.
+        // íê°€ ë‹¤ ë¹„ì›Œì§€ë©´ ë‹¤ì‹œ ëŒ€ê¸° ìƒíƒœë¡œ ë“¤ì–´ê°‘ë‹ˆë‹¤.
         _isPlaying = false;
     }
 
     /// <summary>
-    /// (¼±ÅÃ»çÇ×) °ÔÀÓÀÌ °­Á¦·Î Á¾·áµÇ°Å³ª ¸®¼ÂµÉ ¶§ Å¥¸¦ ºñ¿ì´Â ÇÔ¼ö
+    /// (ì„ íƒì‚¬í•­) ê²Œì„ì´ ê°•ì œë¡œ ì¢…ë£Œë˜ê±°ë‚˜ ë¦¬ì…‹ë  ë•Œ íë¥¼ ë¹„ìš°ëŠ” í•¨ìˆ˜
     /// </summary>
     public void ClearQueue()
     {

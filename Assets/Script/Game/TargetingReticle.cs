@@ -1,31 +1,31 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// ÇÏ¼öÀÎÀÌ ´ë»óÀ» °ø°İÇÏ°Å³ª ÁÖ¹®À» ¾µ ¶§ ³ª¿À´Â 'È­»ìÇ¥(Á¶ÁØ¼±)'¸¦ ±×¸³´Ï´Ù.
-/// Æ÷¹°¼±(°î¼±) ÇüÅÂ·Î ¿¹»Ú°Ô ³¯¾Æ°¡´Â ÀÛÀº ¹°Ã¼µéÀ» ³ª¿­ÇØ¼­ Ç¥ÇöÇÕ´Ï´Ù.
+/// í•˜ìˆ˜ì¸ì´ ëŒ€ìƒì„ ê³µê²©í•˜ê±°ë‚˜ ì£¼ë¬¸ì„ ì“¸ ë•Œ ë‚˜ì˜¤ëŠ” 'í™”ì‚´í‘œ(ì¡°ì¤€ì„ )'ë¥¼ ê·¸ë¦½ë‹ˆë‹¤.
+/// í¬ë¬¼ì„ (ê³¡ì„ ) í˜•íƒœë¡œ ì˜ˆì˜ê²Œ ë‚ ì•„ê°€ëŠ” ì‘ì€ ë¬¼ì²´ë“¤ì„ ë‚˜ì—´í•´ì„œ í‘œí˜„í•©ë‹ˆë‹¤.
 /// </summary>
 public class TargetingReticle : MonoBehaviour
 {
     public static TargetingReticle Instance { get; private set; }
 
-    [Header("¼³Á¤")]
-    public GameObject pathObjectPrefab; // °æ·Î¸¦ ÀÌ·ç´Â Á¡(ÀÛÀº È­»ìÇ¥ µî)
-    public int maxPoolSize = 50; // ¹Ì¸® ¸¸µé¾îµÑ °³¼ö
-    public float objectSpacing = 0.5f; // Á¡ »çÀÌ °£°İ
-    public float animationSpeed = 5.0f; // Á¡µéÀÌ Èê·¯°¡´Â ¼Óµµ
-    public float arcHeight = 2.0f; // Æ÷¹°¼± ³ôÀÌ
-    public float targetHeightOffset = 0.0f; // ¸ñÇ¥ ÁöÁ¡ ³ôÀÌ º¸Á¤
-    public Transform arrowHead; // ¸Ç ³¡¿¡ ´Ş¸± Å« È­»ìÃË
-    public Vector3 arrowHeadRotationOffset; // È­»ìÃË °¢µµ º¸Á¤
+    [Header("ì„¤ì •")]
+    public GameObject pathObjectPrefab; // ê²½ë¡œë¥¼ ì´ë£¨ëŠ” ì (ì‘ì€ í™”ì‚´í‘œ ë“±)
+    public int maxPoolSize = 50; // ë¯¸ë¦¬ ë§Œë“¤ì–´ë‘˜ ê°œìˆ˜
+    public float objectSpacing = 0.5f; // ì  ì‚¬ì´ ê°„ê²©
+    public float animationSpeed = 5.0f; // ì ë“¤ì´ í˜ëŸ¬ê°€ëŠ” ì†ë„
+    public float arcHeight = 2.0f; // í¬ë¬¼ì„  ë†’ì´
+    public float targetHeightOffset = 0.0f; // ëª©í‘œ ì§€ì  ë†’ì´ ë³´ì •
+    public Transform arrowHead; // ë§¨ ëì— ë‹¬ë¦´ í° í™”ì‚´ì´‰
+    public Vector3 arrowHeadRotationOffset; // í™”ì‚´ì´‰ ê°ë„ ë³´ì •
 
-    [Header("·¹ÀÌ¾î")]
-    public LayerMask playfieldPlaneLayer; // ¹Ù´Ú ÀÎ½Ä¿ë
+    [Header("ë ˆì´ì–´")]
+    public LayerMask playfieldPlaneLayer; // ë°”ë‹¥ ì¸ì‹ìš©
 
-    private Transform _startTransform; // ½ÃÀÛÁ¡ (³» ÇÏ¼öÀÎ/Ä«µå)
+    private Transform _startTransform; // ì‹œì‘ì  (ë‚´ í•˜ìˆ˜ì¸/ì¹´ë“œ)
     private Camera _mainCamera;
     private bool _isTargeting = false;
-    private List<GameObject> _pooledPathObjects = new List<GameObject>(); // ¿ÀºêÁ§Æ® Ç®
+    private List<GameObject> _pooledPathObjects = new List<GameObject>(); // ì˜¤ë¸Œì íŠ¸ í’€
 
     void Awake()
     {
@@ -33,11 +33,11 @@ public class TargetingReticle : MonoBehaviour
         else Instance = this;
 
         _mainCamera = Camera.main;
-        CreateObjectPool(); // Ç®¸µ ÃÊ±âÈ­
+        CreateObjectPool(); // í’€ë§ ì´ˆê¸°í™”
         gameObject.SetActive(false);
     }
 
-    // ¹Ì¸® ¿ÀºêÁ§Æ®µéÀ» ÀÜ¶à ¸¸µé¾îµÓ´Ï´Ù. (¼º´É ÃÖÀûÈ­)
+    // ë¯¸ë¦¬ ì˜¤ë¸Œì íŠ¸ë“¤ì„ ì”ëœ© ë§Œë“¤ì–´ë‘¡ë‹ˆë‹¤. (ì„±ëŠ¥ ìµœì í™”)
     private void CreateObjectPool()
     {
         if (pathObjectPrefab == null) return;
@@ -52,7 +52,7 @@ public class TargetingReticle : MonoBehaviour
         }
     }
 
-    // Á¶ÁØ ½ÃÀÛ
+    // ì¡°ì¤€ ì‹œì‘
     public void StartTargeting(Transform start)
     {
         _startTransform = start;
@@ -61,7 +61,7 @@ public class TargetingReticle : MonoBehaviour
         if (arrowHead != null) arrowHead.gameObject.SetActive(true);
     }
 
-    // Á¶ÁØ ³¡ (¼û±è)
+    // ì¡°ì¤€ ë (ìˆ¨ê¹€)
     public void StopTargeting()
     {
         _isTargeting = false;
@@ -78,10 +78,10 @@ public class TargetingReticle : MonoBehaviour
         UpdateArcAnimation();
     }
 
-    // ¸Å ÇÁ·¹ÀÓ Æ÷¹°¼±À» ´Ù½Ã ±×¸³´Ï´Ù.
+    // ë§¤ í”„ë ˆì„ í¬ë¬¼ì„ ì„ ë‹¤ì‹œ ê·¸ë¦½ë‹ˆë‹¤.
     private void UpdateArcAnimation()
     {
-        // 1. ½ÃÀÛÁ¡(P0)°ú ³¡Á¡(P2) °è»ê
+        // 1. ì‹œì‘ì (P0)ê³¼ ëì (P2) ê³„ì‚°
         Vector3 p0 = _startTransform.position;
         Vector3 p2;
 
@@ -92,21 +92,21 @@ public class TargetingReticle : MonoBehaviour
         }
         else
         {
-            // ¹Ù´ÚÀÌ ¾øÀ¸¸é Çã°øÀ¸·Î
+            // ë°”ë‹¥ì´ ì—†ìœ¼ë©´ í—ˆê³µìœ¼ë¡œ
             p2 = ray.GetPoint(10f);
             p2.y = targetHeightOffset;
         }
 
-        // 2. Áß°£Á¡(P1) °è»ê (Æ÷¹°¼± ²À´ë±â)
+        // 2. ì¤‘ê°„ì (P1) ê³„ì‚° (í¬ë¬¼ì„  ê¼­ëŒ€ê¸°)
         Vector3 midPoint = (p0 + p2) / 2f;
         float directDist = Vector3.Distance(p0, p2);
         Vector3 p1 = midPoint + Vector3.up * (arcHeight + (directDist * 0.1f));
 
-        // 3. È­»ìÃË ¹èÄ¡
+        // 3. í™”ì‚´ì´‰ ë°°ì¹˜
         if (arrowHead != null)
         {
             arrowHead.position = p2;
-            // ³¡ºÎºĞÀÇ ¹æÇâ(Á¢¼±)À» ±¸ÇØ¼­ È¸Àü½ÃÅ´
+            // ëë¶€ë¶„ì˜ ë°©í–¥(ì ‘ì„ )ì„ êµ¬í•´ì„œ íšŒì „ì‹œí‚´
             Vector3 preEndPos = CalculateBezierPoint(0.99f, p0, p1, p2);
             Vector3 direction = (p2 - preEndPos).normalized;
             if (direction != Vector3.zero)
@@ -115,28 +115,28 @@ public class TargetingReticle : MonoBehaviour
             }
         }
 
-        // 4. °æ·Î¸¦ µû¶ó Á¡µéÀ» ¹èÄ¡
+        // 4. ê²½ë¡œë¥¼ ë”°ë¼ ì ë“¤ì„ ë°°ì¹˜
         float curveLength = EstimateCurveLength(p0, p1, p2, 30);
-        float currentDist = (Time.time * animationSpeed) % objectSpacing; // Èê·¯°¡´Â È¿°ú
+        float currentDist = (Time.time * animationSpeed) % objectSpacing; // í˜ëŸ¬ê°€ëŠ” íš¨ê³¼
 
         int activeCount = 0;
         while (currentDist < curveLength)
         {
             if (activeCount >= _pooledPathObjects.Count) break;
 
-            float t = currentDist / curveLength; // 0~1 »çÀÌ °ª
+            float t = currentDist / curveLength; // 0~1 ì‚¬ì´ ê°’
             Vector3 position = CalculateBezierPoint(t, p0, p1, p2);
 
             GameObject obj = _pooledPathObjects[activeCount];
             if (!obj.activeSelf) obj.SetActive(true);
             obj.transform.position = position;
 
-            // ÁøÇà ¹æÇâ º¸±â
+            // ì§„í–‰ ë°©í–¥ ë³´ê¸°
             Vector3 nextPos = CalculateBezierPoint(Mathf.Min(t + 0.01f, 1.0f), p0, p1, p2);
             Vector3 dir = (nextPos - position).normalized;
             if (dir != Vector3.zero) obj.transform.rotation = Quaternion.LookRotation(dir);
 
-            // ½ºÄÉÀÏ È¿°ú: ½ÃÀÛ/³¡¿¡¼­ ÀÛ¾ÆÁü
+            // ìŠ¤ì¼€ì¼ íš¨ê³¼: ì‹œì‘/ëì—ì„œ ì‘ì•„ì§
             float scale = 1.0f;
             if (t > 0.9f) scale = (1.0f - t) * 10f;
             else if (t < 0.1f) scale = t * 10f;
@@ -146,21 +146,21 @@ public class TargetingReticle : MonoBehaviour
             activeCount++;
         }
 
-        // ³²Àº ¿ÀºêÁ§Æ® ²ô±â
+        // ë‚¨ì€ ì˜¤ë¸Œì íŠ¸ ë„ê¸°
         for (int i = activeCount; i < _pooledPathObjects.Count; i++)
         {
             if (_pooledPathObjects[i].activeSelf) _pooledPathObjects[i].SetActive(false);
         }
     }
 
-    // º£Áö¾î °î¼± °ø½Ä (P0 -> P1 -> P2)
+    // ë² ì§€ì–´ ê³¡ì„  ê³µì‹ (P0 -> P1 -> P2)
     private Vector3 CalculateBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
     {
         float u = 1 - t;
         return (u * u * p0) + (2 * u * t * p1) + (t * t * p2);
     }
 
-    // °î¼± ±æÀÌ ´ë·« °è»ê
+    // ê³¡ì„  ê¸¸ì´ ëŒ€ëµ ê³„ì‚°
     private float EstimateCurveLength(Vector3 p0, Vector3 p1, Vector3 p2, int segments)
     {
         float length = 0f;

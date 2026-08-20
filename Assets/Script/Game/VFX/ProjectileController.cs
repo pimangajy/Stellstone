@@ -1,27 +1,27 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
 using System;
 
 /// <summary>
-/// ¿ø°Å¸® ÇÏ¼öÀÎÀÌ °ø°İÇÒ ¶§ ³¯¾Æ°¡´Â Åõ»çÃ¼(È­»ì, ¸¶¹ı µî)¸¦ Á¦¾îÇÕ´Ï´Ù.
-/// °î¼±(Æ÷¹°¼±) ºñÇà°ú ¸ñÇ¥ µµ´Ş ½Ã Æø¹ß È¿°ú¸¦ ´ã´çÇÕ´Ï´Ù.
-/// [¾÷µ¥ÀÌÆ®] À§¾Æ·¡ Æ÷¹°¼±»Ó¸¸ ¾Æ´Ï¶ó, ÁÂ¿ì(´ë°¢¼±) Æ÷¹°¼± ºñÇà ±â´ÉÀÌ Ãß°¡µÇ¾ú½À´Ï´Ù.
+/// ì›ê±°ë¦¬ í•˜ìˆ˜ì¸ì´ ê³µê²©í•  ë•Œ ë‚ ì•„ê°€ëŠ” íˆ¬ì‚¬ì²´(í™”ì‚´, ë§ˆë²• ë“±)ë¥¼ ì œì–´í•©ë‹ˆë‹¤.
+/// ê³¡ì„ (í¬ë¬¼ì„ ) ë¹„í–‰ê³¼ ëª©í‘œ ë„ë‹¬ ì‹œ í­ë°œ íš¨ê³¼ë¥¼ ë‹´ë‹¹í•©ë‹ˆë‹¤.
+/// [ì—…ë°ì´íŠ¸] ìœ„ì•„ë˜ í¬ë¬¼ì„ ë¿ë§Œ ì•„ë‹ˆë¼, ì¢Œìš°(ëŒ€ê°ì„ ) í¬ë¬¼ì„  ë¹„í–‰ ê¸°ëŠ¥ì´ ì¶”ê°€ë˜ì—ˆìŠµë‹ˆë‹¤.
 /// </summary>
 public class ProjectileController : MonoBehaviour
 {
-    [Header("ºñÇà ±ËÀû Ãß°¡ ¼³Á¤")]
-    [Tooltip("ÁÂ¿ì·Î ÈÖ¾îÁö´Â Á¤µµ. ¾ç¼ö(+)¸é ¿À¸¥ÂÊ, À½¼ö(-)¸é ¿ŞÂÊÀ¸·Î ÈÖ¾îÁı´Ï´Ù.")]
+    [Header("ë¹„í–‰ ê¶¤ì  ì¶”ê°€ ì„¤ì •")]
+    [Tooltip("ì¢Œìš°ë¡œ íœ˜ì–´ì§€ëŠ” ì •ë„. ì–‘ìˆ˜(+)ë©´ ì˜¤ë¥¸ìª½, ìŒìˆ˜(-)ë©´ ì™¼ìª½ìœ¼ë¡œ íœ˜ì–´ì§‘ë‹ˆë‹¤.")]
     public float horizontalArc = 0f;
-    [Tooltip("Åõ»çÃ¼°¡ ³¯¾Æ°¡´Â ¼Óµµ")]
+    [Tooltip("íˆ¬ì‚¬ì²´ê°€ ë‚ ì•„ê°€ëŠ” ì†ë„")]
     public float projectileSpeed = 15f;
-    [Tooltip("Åõ»çÃ¼ÀÇ Æ÷¹°¼± ³ôÀÌ (0ÀÌ¸é Á÷¼±À¸·Î ³¯¾Æ°¨)")]
+    [Tooltip("íˆ¬ì‚¬ì²´ì˜ í¬ë¬¼ì„  ë†’ì´ (0ì´ë©´ ì§ì„ ìœ¼ë¡œ ë‚ ì•„ê°)")]
     public float projectileArcHeight = 1.5f;
 
-    [Header("µµÂø ¿¬Ãâ")]
-    [Tooltip("¸ñÇ¥¿¡ ¸Â¾ÒÀ» ¶§ ÅÍÁú ÀÌÆåÆ® (ºñ¿öµÖµµ µÊ)")]
+    [Header("ë„ì°© ì—°ì¶œ")]
+    [Tooltip("ëª©í‘œì— ë§ì•˜ì„ ë•Œ í„°ì§ˆ ì´í™íŠ¸ (ë¹„ì›Œë‘¬ë„ ë¨)")]
     public GameObject hitEffectPrefab;
 
-    [Tooltip("ÀÌÆåÆ®°¡ »ı¼ºµÉ À§Ä¡ÀÇ ¿ÀÇÁ¼Â (±âº»°ª: À§·Î 0.5, Ä«¸Ş¶ó ÂÊÀ¸·Î -0.5)")]
+    [Tooltip("ì´í™íŠ¸ê°€ ìƒì„±ë  ìœ„ì¹˜ì˜ ì˜¤í”„ì…‹ (ê¸°ë³¸ê°’: ìœ„ë¡œ 0.5, ì¹´ë©”ë¼ ìª½ìœ¼ë¡œ -0.5)")]
     public Vector3 hitEffectOffset = new Vector3(0f, 0.5f, 0f);
 
     public void Fire(Vector3 startPos, Vector3 targetPos, Action onHitCallback)
@@ -32,10 +32,10 @@ public class ProjectileController : MonoBehaviour
 
     private IEnumerator FlyRoutine(Vector3 start, Vector3 target, float speed, float arcHeight, Action onHit)
     {
-        // µÎ Á¡ »çÀÌÀÇ °Å¸®¸¦ ±â¹İÀ¸·Î ÃÑ ºñÇà ½Ã°£ °è»ê
+        // ë‘ ì  ì‚¬ì´ì˜ ê±°ë¦¬ë¥¼ ê¸°ë°˜ìœ¼ë¡œ ì´ ë¹„í–‰ ì‹œê°„ ê³„ì‚°
         float distance = Vector3.Distance(start, target);
 
-        // (¾ÈÀüÀåÄ¡) °Å¸®°¡ ³Ê¹« °¡±õ°Å³ª ¼Óµµ°¡ 0ÀÌ¸é Áï½Ã µµÂø Ã³¸®
+        // (ì•ˆì „ì¥ì¹˜) ê±°ë¦¬ê°€ ë„ˆë¬´ ê°€ê¹ê±°ë‚˜ ì†ë„ê°€ 0ì´ë©´ ì¦‰ì‹œ ë„ì°© ì²˜ë¦¬
         if (distance <= 0.01f || speed <= 0f)
         {
             CompleteFlight(target, onHit);
@@ -45,16 +45,16 @@ public class ProjectileController : MonoBehaviour
         float duration = distance / speed;
         float elapsedTime = 0f;
 
-        // 1. Åõ»çÃ¼°¡ ³¯¾Æ°¡´Â Á¤¸é(Forward) ¹æÇâ °è»ê
+        // 1. íˆ¬ì‚¬ì²´ê°€ ë‚ ì•„ê°€ëŠ” ì •ë©´(Forward) ë°©í–¥ ê³„ì‚°
         Vector3 forwardDir = (target - start).normalized;
 
-        // 2. Á¤¸éÀ» ±âÁØÀ¸·Î '¿À¸¥ÂÊ(Right)' ¹æÇâ °è»ê (¼öÁ÷ À§ º¤ÅÍ¿Í ¿ÜÀû)
+        // 2. ì •ë©´ì„ ê¸°ì¤€ìœ¼ë¡œ 'ì˜¤ë¥¸ìª½(Right)' ë°©í–¥ ê³„ì‚° (ìˆ˜ì§ ìœ„ ë²¡í„°ì™€ ì™¸ì )
         Vector3 rightDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
 
-        // (¾ÈÀüÀåÄ¡) ¸¸¾à ¿Ïº®ÇÏ°Ô ¼öÁ÷(À§/¾Æ·¡)À¸·Î ³¯¾Æ°¡´Â °æ¿ì¸¦ ´ëºñ
+        // (ì•ˆì „ì¥ì¹˜) ë§Œì•½ ì™„ë²½í•˜ê²Œ ìˆ˜ì§(ìœ„/ì•„ë˜)ìœ¼ë¡œ ë‚ ì•„ê°€ëŠ” ê²½ìš°ë¥¼ ëŒ€ë¹„
         if (rightDir == Vector3.zero) rightDir = Vector3.right;
 
-        // ÀÌÀü À§Ä¡¸¦ ±â¾ïÇØ¼­ Åõ»çÃ¼°¡ ³¯¾Æ°¡´Â ¹æÇâÀ» ¹Ù¶óº¸°Ô ¸¸µì´Ï´Ù.
+        // ì´ì „ ìœ„ì¹˜ë¥¼ ê¸°ì–µí•´ì„œ íˆ¬ì‚¬ì²´ê°€ ë‚ ì•„ê°€ëŠ” ë°©í–¥ì„ ë°”ë¼ë³´ê²Œ ë§Œë“­ë‹ˆë‹¤.
         Vector3 previousPos = start;
 
         while (elapsedTime < duration)
@@ -62,26 +62,26 @@ public class ProjectileController : MonoBehaviour
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / duration;
 
-            // 1. Á÷¼± À§Ä¡ °è»ê (Lerp)
+            // 1. ì§ì„  ìœ„ì¹˜ ê³„ì‚° (Lerp)
             Vector3 currentPos = Vector3.Lerp(start, target, t);
 
-            // 2. Æ÷¹°¼± °î·ü °è»ê (Mathf.SinÀ» ÀÌ¿ëÇØ 0 -> 1 -> 0 ÇüÅÂÀÇ ºÎµå·¯¿î °î¼±)
+            // 2. í¬ë¬¼ì„  ê³¡ë¥  ê³„ì‚° (Mathf.Sinì„ ì´ìš©í•´ 0 -> 1 -> 0 í˜•íƒœì˜ ë¶€ë“œëŸ¬ìš´ ê³¡ì„ )
             float arcMultiplier = Mathf.Sin(t * Mathf.PI);
 
-            // 3. À§/¾Æ·¡ Æ÷¹°¼± Àû¿ë (±âÁ¸ ±â´É)
+            // 3. ìœ„/ì•„ë˜ í¬ë¬¼ì„  ì ìš© (ê¸°ì¡´ ê¸°ëŠ¥)
             currentPos.y += arcMultiplier * arcHeight;
 
-            // 4. [½Å±Ô] ÁÂ/¿ì Æ÷¹°¼± Àû¿ë (´ë°¢¼± ºñÇà)
+            // 4. [ì‹ ê·œ] ì¢Œ/ìš° í¬ë¬¼ì„  ì ìš© (ëŒ€ê°ì„  ë¹„í–‰)
             currentPos += rightDir * (arcMultiplier * horizontalArc);
 
-            // 5. Åõ»çÃ¼°¡ ³¯¾Æ°¡´Â ±ËÀû ¹æÇâ ¹Ù¶óº¸±â
+            // 5. íˆ¬ì‚¬ì²´ê°€ ë‚ ì•„ê°€ëŠ” ê¶¤ì  ë°©í–¥ ë°”ë¼ë³´ê¸°
             Vector3 moveDirection = currentPos - previousPos;
             if (moveDirection != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(moveDirection);
             }
 
-            // À§Ä¡ Àû¿ë ¹× ÀÌÀü À§Ä¡ °»½Å
+            // ìœ„ì¹˜ ì ìš© ë° ì´ì „ ìœ„ì¹˜ ê°±ì‹ 
             transform.position = currentPos;
             previousPos = currentPos;
 
@@ -92,24 +92,24 @@ public class ProjectileController : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸ñÇ¥¿¡ µµ´ŞÇßÀ» ¶§ÀÇ Ã³¸®¸¦ ´ã´çÇÕ´Ï´Ù.
+    /// ëª©í‘œì— ë„ë‹¬í–ˆì„ ë•Œì˜ ì²˜ë¦¬ë¥¼ ë‹´ë‹¹í•©ë‹ˆë‹¤.
     /// </summary>
     private void CompleteFlight(Vector3 target, Action onHit)
     {
         transform.position = target;
 
-        // ÀûÁß ÀÌÆåÆ® ¼ÒÈ¯
+        // ì ì¤‘ ì´í™íŠ¸ ì†Œí™˜
         if (hitEffectPrefab != null)
         {
-            // Å¸°Ù(Àû ÇÏ¼öÀÎÀÇ ¹ß¹Ø) À§Ä¡¿¡ ¿ÀÇÁ¼ÂÀ» ´õÇØ¼­ »ı¼ºÇÕ´Ï´Ù.
+            // íƒ€ê²Ÿ(ì  í•˜ìˆ˜ì¸ì˜ ë°œë°‘) ìœ„ì¹˜ì— ì˜¤í”„ì…‹ì„ ë”í•´ì„œ ìƒì„±í•©ë‹ˆë‹¤.
             Vector3 spawnPos = target + hitEffectOffset;
             Instantiate(hitEffectPrefab, spawnPos, Quaternion.identity);
         }
 
-        // µµ´ŞÇßÀ½À» ¾Ë¸² (µ¥¹ÌÁö ¼ıÀÚ ¶ç¿ì±â, Ã¼·Â ±ğ±â µîÀÇ Å¸ÀÌ¹Ö¿ë)
+        // ë„ë‹¬í–ˆìŒì„ ì•Œë¦¼ (ë°ë¯¸ì§€ ìˆ«ì ë„ìš°ê¸°, ì²´ë ¥ ê¹ê¸° ë“±ì˜ íƒ€ì´ë°ìš©)
         onHit?.Invoke();
 
-        // Åõ»çÃ¼ ÀÚ½ÅÀº ÆÄ±«
+        // íˆ¬ì‚¬ì²´ ìì‹ ì€ íŒŒê´´
         Destroy(gameObject);
     }
 }

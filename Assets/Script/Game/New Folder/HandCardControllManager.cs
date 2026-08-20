@@ -1,91 +1,91 @@
-using UnityEngine;
-using UnityEngine.EventSystems; // 2D UI Å¬¸¯/È£¹ö ÆÇÁ¤À» À§ÇØ ÇÊ¼öÀûÀ¸·Î »ç¿ëÇÏ´Â ³×ÀÓ½ºÆäÀÌ½ºÀÔ´Ï´Ù.
+ï»¿using UnityEngine;
+using UnityEngine.EventSystems; // 2D UI í´ë¦­/í˜¸ë²„ íŒì •ì„ ìœ„í•´ í•„ìˆ˜ì ìœ¼ë¡œ ì‚¬ìš©í•˜ëŠ” ë„¤ì„ìŠ¤í˜ì´ìŠ¤ì…ë‹ˆë‹¤.
 using System.Collections.Generic;
-using DG.Tweening; // ºÎµå·¯¿î UI ÀÌµ¿ ¹× ¾Ö´Ï¸ŞÀÌ¼Ç(DOTween)À» À§ÇÑ ¶óÀÌºê·¯¸®ÀÔ´Ï´Ù.
+using DG.Tweening; // ë¶€ë“œëŸ¬ìš´ UI ì´ë™ ë° ì• ë‹ˆë©”ì´ì…˜(DOTween)ì„ ìœ„í•œ ë¼ì´ë¸ŒëŸ¬ë¦¬ì…ë‹ˆë‹¤.
 
 /// <summary>
-/// 2D UI Äµ¹ö½º ±â¹İ: ¼ÕÆĞ(Hand)¿¡ ÀÖ´Â Ä«µåµéÀ» ºÎÃ¤²Ã ¸ğ¾çÀ¸·Î ¿¹»Ú°Ô Á¤·ÄÇÏ°í,
-/// ¸¶¿ì½º¸¦ ¿Ã·ÈÀ» ¶§(Hover) Ä«µå°¡ À§·Î Æ¢¾î³ª¿À¸ç È®´ëµÇ´Â È¿°ú¸¦ Àü´ãÇÏ´Â ¸Å´ÏÀúÀÔ´Ï´Ù.
+/// 2D UI ìº”ë²„ìŠ¤ ê¸°ë°˜: ì†íŒ¨(Hand)ì— ìˆëŠ” ì¹´ë“œë“¤ì„ ë¶€ì±„ê¼´ ëª¨ì–‘ìœ¼ë¡œ ì˜ˆì˜ê²Œ ì •ë ¬í•˜ê³ ,
+/// ë§ˆìš°ìŠ¤ë¥¼ ì˜¬ë ¸ì„ ë•Œ(Hover) ì¹´ë“œê°€ ìœ„ë¡œ íŠ€ì–´ë‚˜ì˜¤ë©° í™•ëŒ€ë˜ëŠ” íš¨ê³¼ë¥¼ ì „ë‹´í•˜ëŠ” ë§¤ë‹ˆì €ì…ë‹ˆë‹¤.
 /// </summary>
 public class HandCardControllManager : MonoBehaviour
 {
     public static HandCardControllManager instance;
 
-    [Header("UI ¾À ¿¬°á")]
-    [Tooltip("¼ÕÆĞ Ä«µåµéÀÌ ¸ğÀÌ´Â Áß½ÉÃàÀÔ´Ï´Ù. (È­¸é ¾Æ·¡ Áß¾Ó¿¡ À§Ä¡ÇÑ ºó UI °´Ã¼¿©¾ß ÇÕ´Ï´Ù)")]
+    [Header("UI ì”¬ ì—°ê²°")]
+    [Tooltip("ì†íŒ¨ ì¹´ë“œë“¤ì´ ëª¨ì´ëŠ” ì¤‘ì‹¬ì¶•ì…ë‹ˆë‹¤. (í™”ë©´ ì•„ë˜ ì¤‘ì•™ì— ìœ„ì¹˜í•œ ë¹ˆ UI ê°ì²´ì—¬ì•¼ í•©ë‹ˆë‹¤)")]
     public RectTransform handAnchor;
     public GameMulliganManager mulliganManager;
 
-    [Header("»óÅÂ")]
-    [Tooltip("ÇöÀç °ÔÀÓÀÌ Ã¹ ÆĞ¸¦ ±³Ã¼ÇÏ´Â ¸Ö¸®°Ç ´Ü°èÀÎÁö È®ÀÎÇÏ´Â º¯¼öÀÔ´Ï´Ù.")]
+    [Header("ìƒíƒœ")]
+    [Tooltip("í˜„ì¬ ê²Œì„ì´ ì²« íŒ¨ë¥¼ êµì²´í•˜ëŠ” ë©€ë¦¬ê±´ ë‹¨ê³„ì¸ì§€ í™•ì¸í•˜ëŠ” ë³€ìˆ˜ì…ë‹ˆë‹¤.")]
     public bool isMulliganPhase = false;
     public bool isMulligan = false;
 
-    [Header("¼ÕÆĞ ·¹ÀÌ¾Æ¿ô (2D ºÎÃ¤²Ã ¿¬Ãâ)")]
-    [Tooltip("ºÎÃ¤²ÃÀ» ±×¸± °¡»óÀÇ ¿ø ¹İÁö¸§ÀÔ´Ï´Ù. 2D ÇÈ¼¿ ÇØ»óµµ¿¡ ¸ÂÃç 1500~3000 Á¤µµ·Î Å©°Ô ¼³Á¤ÇØ¾ß ¿Ï¸¸ÇÑ °î¼±ÀÌ ³ª¿É´Ï´Ù.")]
+    [Header("ì†íŒ¨ ë ˆì´ì•„ì›ƒ (2D ë¶€ì±„ê¼´ ì—°ì¶œ)")]
+    [Tooltip("ë¶€ì±„ê¼´ì„ ê·¸ë¦´ ê°€ìƒì˜ ì› ë°˜ì§€ë¦„ì…ë‹ˆë‹¤. 2D í”½ì…€ í•´ìƒë„ì— ë§ì¶° 1500~3000 ì •ë„ë¡œ í¬ê²Œ ì„¤ì •í•´ì•¼ ì™„ë§Œí•œ ê³¡ì„ ì´ ë‚˜ì˜µë‹ˆë‹¤.")]
     public float handArcRadius = 2000f;
-    [Tooltip("Ä«µå¿Í Ä«µå »çÀÌÀÇ ¹ú¾îÁö´Â ±âº» °¢µµÀÔ´Ï´Ù.")]
+    [Tooltip("ì¹´ë“œì™€ ì¹´ë“œ ì‚¬ì´ì˜ ë²Œì–´ì§€ëŠ” ê¸°ë³¸ ê°ë„ì…ë‹ˆë‹¤.")]
     public float baseCardSpacingAngle = 8.0f;
-    [Tooltip("Ä«µå°¡ ¸¹¾ÆÁú ¶§ ºÎÃ¤²ÃÀÌ ³Ê¹« ³Ğ¾îÁöÁö ¾Êµµ·Ï Á¶ÀıÇÏ´Â °è¼öÀÔ´Ï´Ù.")]
+    [Tooltip("ì¹´ë“œê°€ ë§ì•„ì§ˆ ë•Œ ë¶€ì±„ê¼´ì´ ë„ˆë¬´ ë„“ì–´ì§€ì§€ ì•Šë„ë¡ ì¡°ì ˆí•˜ëŠ” ê³„ìˆ˜ì…ë‹ˆë‹¤.")]
     public float handSpreadMultiplier = 1.0f;
-    [Tooltip("Ä«µå°¡ ¼¯ÀÌ°Å³ª Á¤·ÄµÉ ¶§ °É¸®´Â ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£ÀÔ´Ï´Ù.")]
+    [Tooltip("ì¹´ë“œê°€ ì„ì´ê±°ë‚˜ ì •ë ¬ë  ë•Œ ê±¸ë¦¬ëŠ” ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„ì…ë‹ˆë‹¤.")]
     public float shuffleDuration = 0.3f;
-    [Tooltip("»õ·Î »ÌÀº Ä«µå°¡ ¼ÕÆĞ·Î ³¯¾Æ¿Ã ¶§ °É¸®´Â ½Ã°£ÀÔ´Ï´Ù.")]
+    [Tooltip("ìƒˆë¡œ ë½‘ì€ ì¹´ë“œê°€ ì†íŒ¨ë¡œ ë‚ ì•„ì˜¬ ë•Œ ê±¸ë¦¬ëŠ” ì‹œê°„ì…ë‹ˆë‹¤.")]
     public float newCardTravelDuration = 0.4f;
-    [Tooltip("»õ·Î »ÌÀº Ä«µå°¡ ¼ÕÆĞ·Î ³¯¾Æ¿Ã ¶§ °É¸®´Â ½Ã°£ÀÔ´Ï´Ù.")]
+    [Tooltip("ìƒˆë¡œ ë½‘ì€ ì¹´ë“œê°€ ì†íŒ¨ë¡œ ë‚ ì•„ì˜¬ ë•Œ ê±¸ë¦¬ëŠ” ì‹œê°„ì…ë‹ˆë‹¤.")]
     public float radius = 50f;
-    [Tooltip("»õ·Î »ÌÀº Ä«µå°¡ ¼ÕÆĞ·Î ³¯¾Æ¿Ã ¶§ °É¸®´Â ½Ã°£ÀÔ´Ï´Ù.")]
+    [Tooltip("ìƒˆë¡œ ë½‘ì€ ì¹´ë“œê°€ ì†íŒ¨ë¡œ ë‚ ì•„ì˜¬ ë•Œ ê±¸ë¦¬ëŠ” ì‹œê°„ì…ë‹ˆë‹¤.")]
     public float spacingAngle = 1f;
 
-    // Ä«µå°¡ Á¢ÇûÀ» ¶§ °¢µµ¸¦ ÁÙÀÌ±â À§ÇØ ¿ø·¡ °¢µµ¸¦ ÀÓ½Ã ÀúÀåÇÏ´Â º¯¼ö
+    // ì¹´ë“œê°€ ì ‘í˜”ì„ ë•Œ ê°ë„ë¥¼ ì¤„ì´ê¸° ìœ„í•´ ì›ë˜ ê°ë„ë¥¼ ì„ì‹œ ì €ì¥í•˜ëŠ” ë³€ìˆ˜
     public float temporaryBaseCardSpacingAngle;
 
-    [Header("¼ÕÆĞ »óÅÂ À§Ä¡ ¼³Á¤")]
-    [Tooltip("Ä«µå¸¦ Á¢¾îµÑ ¶§(¼û±æ ¶§) ÀÌµ¿ÇÒ ¿ìÃø ÇÏ´ÜÀÇ À§Ä¡/È¸Àü ±âÁØÁ¡ÀÔ´Ï´Ù.")]
+    [Header("ì†íŒ¨ ìƒíƒœ ìœ„ì¹˜ ì„¤ì •")]
+    [Tooltip("ì¹´ë“œë¥¼ ì ‘ì–´ë‘˜ ë•Œ(ìˆ¨ê¸¸ ë•Œ) ì´ë™í•  ìš°ì¸¡ í•˜ë‹¨ì˜ ìœ„ì¹˜/íšŒì „ ê¸°ì¤€ì ì…ë‹ˆë‹¤.")]
     public RectTransform foldAnchor;
-    [Tooltip("Ä«µå¸¦ ÆîÄ¥ ¶§ ÀÌµ¿ÇÒ È­¸é Áß¾Ó ÇÏ´ÜÀÇ ±âÁØÁ¡ÀÔ´Ï´Ù.")]
+    [Tooltip("ì¹´ë“œë¥¼ í¼ì¹  ë•Œ ì´ë™í•  í™”ë©´ ì¤‘ì•™ í•˜ë‹¨ì˜ ê¸°ì¤€ì ì…ë‹ˆë‹¤.")]
     public RectTransform spreadAnchor;
     public float foldDuration = 0.5f;
     public bool isFolded = false;
-    // ÇöÀç Á¢±â/ÆîÄ¡±â ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ÁøÇà ÁßÀÎÁö È®ÀÎÇÏ´Â º¯¼ö
+    // í˜„ì¬ ì ‘ê¸°/í¼ì¹˜ê¸° ì• ë‹ˆë©”ì´ì…˜ì´ ì§„í–‰ ì¤‘ì¸ì§€ í™•ì¸í•˜ëŠ” ë³€ìˆ˜
     private bool _isAnimatingFold = false;
-    // ¼ÕÆĞ°¡ Á¢ÇûÀ» ¶§ Ä«µåÀÇ Å©±â ºñÀ² (1.0 = ¿ø·¡ Å©±â, 0.7 = 70% Å©±â)
+    // ì†íŒ¨ê°€ ì ‘í˜”ì„ ë•Œ ì¹´ë“œì˜ í¬ê¸° ë¹„ìœ¨ (1.0 = ì›ë˜ í¬ê¸°, 0.7 = 70% í¬ê¸°)
     public float foldScaleMultiplier = 0.7f;
 
-    [Header("Ä«µå È£¹ö(Hover) È¿°ú")]
-    [Tooltip("¸¶¿ì½º¸¦ ¿Ã·ÈÀ» ¶§ Ä«µå°¡ Æ¢¾î ¿À¸£´Â UI ÁÂÇ¥»óÀÇ ÀÌµ¿ °ªÀÔ´Ï´Ù. (2DÀÌ¹Ç·Î ZÃà ´ë½Å YÃà ÇÈ¼¿ °ªÀ» 100~200 Á¤µµ·Î Å©°Ô Áİ´Ï´Ù)")]
+    [Header("ì¹´ë“œ í˜¸ë²„(Hover) íš¨ê³¼")]
+    [Tooltip("ë§ˆìš°ìŠ¤ë¥¼ ì˜¬ë ¸ì„ ë•Œ ì¹´ë“œê°€ íŠ€ì–´ ì˜¤ë¥´ëŠ” UI ì¢Œí‘œìƒì˜ ì´ë™ ê°’ì…ë‹ˆë‹¤. (2Dì´ë¯€ë¡œ Zì¶• ëŒ€ì‹  Yì¶• í”½ì…€ ê°’ì„ 100~200 ì •ë„ë¡œ í¬ê²Œ ì¤ë‹ˆë‹¤)")]
     public Vector2 hoverOffset = new Vector2(0, 150f);
-    [Tooltip("¸¶¿ì½º¸¦ ¿Ã·ÈÀ» ¶§ Ä¿Áö´Â ¹èÀ²ÀÔ´Ï´Ù.")]
+    [Tooltip("ë§ˆìš°ìŠ¤ë¥¼ ì˜¬ë ¸ì„ ë•Œ ì»¤ì§€ëŠ” ë°°ìœ¨ì…ë‹ˆë‹¤.")]
     public float hoverScaleMultiplier = 1.2f;
     public float hoverAnimDuration = 0.2f;
 
-    [Header("ÀÜ»ó Ä«µå ¼³Á¤")]
-    [Tooltip("Ä«µå¸¦ µå·¡±×ÇÒ ¶§ ¼ÕÆĞ¿¡ ¿ø·¡ ÀÖ´ø ÀÚ¸®¸¦ Ç¥½ÃÇØ ÁÖ´Â ¹İÅõ¸í Ä«µå ÇÁ¸®ÆÕÀÔ´Ï´Ù.")]
+    [Header("ì”ìƒ ì¹´ë“œ ì„¤ì •")]
+    [Tooltip("ì¹´ë“œë¥¼ ë“œë˜ê·¸í•  ë•Œ ì†íŒ¨ì— ì›ë˜ ìˆë˜ ìë¦¬ë¥¼ í‘œì‹œí•´ ì£¼ëŠ” ë°˜íˆ¬ëª… ì¹´ë“œ í”„ë¦¬íŒ¹ì…ë‹ˆë‹¤.")]
     public GameObject phantomCardPrefab;
     private GameObject _activePhantomCard;
 
-    // --- ³»ºÎ º¯¼öµé ---
-    [Tooltip("ÇöÀç ¼ÕÆĞ¿¡ Áã°í ÀÖ´Â ½ÇÁ¦ Ä«µåµéÀÇ ¸®½ºÆ®ÀÔ´Ï´Ù.")]
+    // --- ë‚´ë¶€ ë³€ìˆ˜ë“¤ ---
+    [Tooltip("í˜„ì¬ ì†íŒ¨ì— ì¥ê³  ìˆëŠ” ì‹¤ì œ ì¹´ë“œë“¤ì˜ ë¦¬ìŠ¤íŠ¸ì…ë‹ˆë‹¤.")]
     public List<GameObject> handCards = new List<GameObject>();
 
-    // Ä«µåÀÇ ¸ñÇ¥ À§Ä¡¿Í È¸Àü°ªÀ» ±â¾ïÇØ µÎ´Â »çÀü(Dictionary)ÀÔ´Ï´Ù. 
-    // È£¹ö¸µÀÌ ³¡³µÀ» ¶§ ÀÌ °ªÀ» Âü°íÇÏ¿© ¿ø·¡ ÀÚ¸®·Î µ¹¾Æ°©´Ï´Ù.
+    // ì¹´ë“œì˜ ëª©í‘œ ìœ„ì¹˜ì™€ íšŒì „ê°’ì„ ê¸°ì–µí•´ ë‘ëŠ” ì‚¬ì „(Dictionary)ì…ë‹ˆë‹¤. 
+    // í˜¸ë²„ë§ì´ ëë‚¬ì„ ë•Œ ì´ ê°’ì„ ì°¸ê³ í•˜ì—¬ ì›ë˜ ìë¦¬ë¡œ ëŒì•„ê°‘ë‹ˆë‹¤.
     private Dictionary<GameObject, (Vector2 position, Quaternion rotation)> _cardLayoutTargets = new Dictionary<GameObject, (Vector2, Quaternion)>();
 
-    private GameObject _currentlyHoveredCard = null; // ÇöÀç ¸¶¿ì½º°¡ ¿Ã¶ó°¡ ÀÖ´Â Ä«µå
-    private GameObject _currentlyDraggedCard = null; // ÇöÀç ¸¶¿ì½º·Î Àâ°í µå·¡±× ÁßÀÎ Ä«µå
+    private GameObject _currentlyHoveredCard = null; // í˜„ì¬ ë§ˆìš°ìŠ¤ê°€ ì˜¬ë¼ê°€ ìˆëŠ” ì¹´ë“œ
+    private GameObject _currentlyDraggedCard = null; // í˜„ì¬ ë§ˆìš°ìŠ¤ë¡œ ì¡ê³  ë“œë˜ê·¸ ì¤‘ì¸ ì¹´ë“œ
 
-    private Vector3 _originalCardScale = Vector3.one; // Ã³À½ »ı¼ºµÈ Ä«µåÀÇ ±âº» Å©±â ÀúÀå
+    private Vector3 _originalCardScale = Vector3.one; // ì²˜ìŒ ìƒì„±ëœ ì¹´ë“œì˜ ê¸°ë³¸ í¬ê¸° ì €ì¥
     private bool _isCardScaleSet = false;
-    private bool _isHandStable = true; // ÇöÀç ¼ÕÆĞ Á¤·Ä ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ³¡³ª°í ¾ÈÁ¤µÈ »óÅÂÀÎÁö È®ÀÎ
+    private bool _isHandStable = true; // í˜„ì¬ ì†íŒ¨ ì •ë ¬ ì• ë‹ˆë©”ì´ì…˜ì´ ëë‚˜ê³  ì•ˆì •ëœ ìƒíƒœì¸ì§€ í™•ì¸
 
-    // ¿ÜºÎ ½ºÅ©¸³Æ®¿¡¼­ ÂüÁ¶ÇÏ±â À§ÇÑ ÀĞ±â Àü¿ë ¼Ó¼º
+    // ì™¸ë¶€ ìŠ¤í¬ë¦½íŠ¸ì—ì„œ ì°¸ì¡°í•˜ê¸° ìœ„í•œ ì½ê¸° ì „ìš© ì†ì„±
     public Vector3 OriginalCardScale => _originalCardScale;
     public bool IsHandStable => _isHandStable;
 
     private void Awake()
     {
-        // ½Ì±ÛÅæ ÆĞÅÏ Àû¿ë (¾îµğ¼­µç Á¢±Ù °¡´ÉÇÏµµ·Ï)
+        // ì‹±ê¸€í†¤ íŒ¨í„´ ì ìš© (ì–´ë””ì„œë“  ì ‘ê·¼ ê°€ëŠ¥í•˜ë„ë¡)
         if (instance != null && instance != this) Destroy(gameObject);
         else instance = this;
     }
@@ -95,18 +95,18 @@ public class HandCardControllManager : MonoBehaviour
         if(GameClient.Instance != null)
             isMulliganPhase = true;
 
-        temporaryBaseCardSpacingAngle = baseCardSpacingAngle; // ½ÃÀÛ ½Ã ¿ø·¡ °¢µµ ±â¾ï
+        temporaryBaseCardSpacingAngle = baseCardSpacingAngle; // ì‹œì‘ ì‹œ ì›ë˜ ê°ë„ ê¸°ì–µ
     }
 
     void Update()
     {
-        // (Å×½ºÆ®¿ë) RÅ°¸¦ ´©¸£¸é ¼ÕÆĞ ¸Ç ³¡ Ä«µå¸¦ ¹ö¸² / FÅ°¸¦ ´©¸£¸é ¼ÕÆĞ¸¦ Á¢À½
+        // (í…ŒìŠ¤íŠ¸ìš©) Rí‚¤ë¥¼ ëˆ„ë¥´ë©´ ì†íŒ¨ ë§¨ ë ì¹´ë“œë¥¼ ë²„ë¦¼ / Fí‚¤ë¥¼ ëˆ„ë¥´ë©´ ì†íŒ¨ë¥¼ ì ‘ìŒ
         if (Input.GetKeyDown(KeyCode.R) && handCards.Count > 0) RemoveLastCardFromHand();
         if (Input.GetKeyDown(KeyCode.F)) ToggleHandFold();
     }
 
     // ==========================================================
-    // ¼ÕÆĞ Á¢±â / ÆîÄ¡±â ±â´É
+    // ì†íŒ¨ ì ‘ê¸° / í¼ì¹˜ê¸° ê¸°ëŠ¥
     // ==========================================================
     public void ToggleHandFold()
     {
@@ -130,11 +130,11 @@ public class HandCardControllManager : MonoBehaviour
 
         temporaryBaseCardSpacingAngle = baseCardSpacingAngle;
 
-        baseCardSpacingAngle = baseCardSpacingAngle / 2; // Ä«µå¸¦ °ãÄ¡±â À§ÇØ °£°İ Ãà¼Ò
+        baseCardSpacingAngle = baseCardSpacingAngle / 2; // ì¹´ë“œë¥¼ ê²¹ì¹˜ê¸° ìœ„í•´ ê°„ê²© ì¶•ì†Œ
         Sequence spreadSeq = DOTween.Sequence();
 
-        // [¼öÁ¤µÊ] DOAnchorPos -> DOMove, anchoredPosition -> position À¸·Î º¯°æ
-        // ¾ŞÄ¿ ±âÁØÁ¡ÀÌ ´Ş¶óµµ Á¤È®ÇÑ ¸ñÇ¥ ÁöÁ¡ÀÇ È­¸é ÁÂÇ¥·Î ÀÌµ¿ÇÕ´Ï´Ù.
+        // [ìˆ˜ì •ë¨] DOAnchorPos -> DOMove, anchoredPosition -> position ìœ¼ë¡œ ë³€ê²½
+        // ì•µì»¤ ê¸°ì¤€ì ì´ ë‹¬ë¼ë„ ì •í™•í•œ ëª©í‘œ ì§€ì ì˜ í™”ë©´ ì¢Œí‘œë¡œ ì´ë™í•©ë‹ˆë‹¤.
         spreadSeq.Append(handAnchor.DOMove(foldAnchor.position, foldDuration).SetEase(Ease.OutQuart));
         spreadSeq.Join(handAnchor.DORotateQuaternion(foldAnchor.rotation, foldDuration).SetEase(Ease.OutQuart));
 
@@ -152,10 +152,10 @@ public class HandCardControllManager : MonoBehaviour
         isFolded = false;
         _isAnimatingFold = true;
 
-        baseCardSpacingAngle = temporaryBaseCardSpacingAngle; // °£°İ ¿ø·¡´ë·Î º¹±¸
+        baseCardSpacingAngle = temporaryBaseCardSpacingAngle; // ê°„ê²© ì›ë˜ëŒ€ë¡œ ë³µêµ¬
         Sequence spreadSeq = DOTween.Sequence();
 
-        // [¼öÁ¤µÊ] ÆîÄ¥ ¶§µµ ¿ùµå ÁÂÇ¥(position)¿Í È¸Àü(rotation)À» »ç¿ëÇÕ´Ï´Ù.
+        // [ìˆ˜ì •ë¨] í¼ì¹  ë•Œë„ ì›”ë“œ ì¢Œí‘œ(position)ì™€ íšŒì „(rotation)ì„ ì‚¬ìš©í•©ë‹ˆë‹¤.
         spreadSeq.Append(handAnchor.DOMove(spreadAnchor.position, foldDuration).SetEase(Ease.OutQuart));
         spreadSeq.Join(handAnchor.DORotateQuaternion(spreadAnchor.rotation, foldDuration).SetEase(Ease.OutQuart));
         AlignHand();
@@ -165,14 +165,14 @@ public class HandCardControllManager : MonoBehaviour
     }
 
     /// <summary>
-    /// [GameInputManager°¡ È£Ãâ] ¸Ö¸®°Ç ´Ü°è¿¡¼­ Æ¯Á¤ Ä«µå°¡ Å¬¸¯µÇ¾úÀ» ¶§ ½ÇÇàµË´Ï´Ù.
+    /// [GameInputManagerê°€ í˜¸ì¶œ] ë©€ë¦¬ê±´ ë‹¨ê³„ì—ì„œ íŠ¹ì • ì¹´ë“œê°€ í´ë¦­ë˜ì—ˆì„ ë•Œ ì‹¤í–‰ë©ë‹ˆë‹¤.
     /// </summary>
     public void OnMulliganCardClicked(GameObject clickedCard)
     {
-        // 1. ¸Ö¸®°Ç ÆäÀÌÁî°¡ ¾Æ´Ï¸é ¹«½Ã
+        // 1. ë©€ë¦¬ê±´ í˜ì´ì¦ˆê°€ ì•„ë‹ˆë©´ ë¬´ì‹œ
         if (!isMulliganPhase) return;
 
-        // 2. ³» ¼ÕÆĞ¿¡ ÀÖ°Å³ª, 'ÀÌ¹Ì ¸Ö¸®°Ç ´ë»óÀ¸·Î ¼±ÅÃµÈ' Ä«µå¶ó¸é ¸Ö¸®°Ç ¸Å´ÏÀú¿¡°Ô ¾Ë¸²
+        // 2. ë‚´ ì†íŒ¨ì— ìˆê±°ë‚˜, 'ì´ë¯¸ ë©€ë¦¬ê±´ ëŒ€ìƒìœ¼ë¡œ ì„ íƒëœ' ì¹´ë“œë¼ë©´ ë©€ë¦¬ê±´ ë§¤ë‹ˆì €ì—ê²Œ ì•Œë¦¼
         bool isHandCard = handCards.Contains(clickedCard);
         bool isSelectedCard = mulliganManager._selectedCards.Contains(clickedCard);
 
@@ -183,18 +183,18 @@ public class HandCardControllManager : MonoBehaviour
     }
 
     // ==========================================================
-    // UI È£¹ö¸µ (¸¶¿ì½º ¿Ã¸®±â) Ã³¸® 
+    // UI í˜¸ë²„ë§ (ë§ˆìš°ìŠ¤ ì˜¬ë¦¬ê¸°) ì²˜ë¦¬ 
     // ==========================================================
     public void ProcessHover(Vector2 mousePosition)
     {
-        // ¸Ö¸®°Ç ÁßÀÌ°Å³ª Ä«µå¸¦ Áı¾î µç »óÅÂ, È¤Àº ¾Ö´Ï¸ŞÀÌ¼Ç ÁßÀÌ¸é È£¹ö ¹İÀÀÀ» ¹«½ÃÇÕ´Ï´Ù.
+        // ë©€ë¦¬ê±´ ì¤‘ì´ê±°ë‚˜ ì¹´ë“œë¥¼ ì§‘ì–´ ë“  ìƒíƒœ, í˜¹ì€ ì• ë‹ˆë©”ì´ì…˜ ì¤‘ì´ë©´ í˜¸ë²„ ë°˜ì‘ì„ ë¬´ì‹œí•©ë‹ˆë‹¤.
         if (isMulliganPhase || _currentlyDraggedCard != null || !_isHandStable)
         {
             ClearHover();
             return;
         }
 
-        // ¸¶¿ì½º°¡ È­¸é ³ôÀÌÀÇ 40% À§·Î ³Ñ¾î°¡¸é(ÇÊµå ÂÊÀ¸·Î °¡¸é) Áï½Ã È£¹ö¸¦ Ç±´Ï´Ù.
+        // ë§ˆìš°ìŠ¤ê°€ í™”ë©´ ë†’ì´ì˜ 40% ìœ„ë¡œ ë„˜ì–´ê°€ë©´(í•„ë“œ ìª½ìœ¼ë¡œ ê°€ë©´) ì¦‰ì‹œ í˜¸ë²„ë¥¼ í’‰ë‹ˆë‹¤.
         float handZoneLimit = 0.4f;
         if (mousePosition.y / Screen.height > handZoneLimit)
         {
@@ -202,9 +202,9 @@ public class HandCardControllManager : MonoBehaviour
             return;
         }
 
-        // [Áß¿ä] 2D UI ÀÌº¥Æ® ½Ã½ºÅÛ ·¹ÀÌÄ³½ºÆ®
-        // Ä«¸Ş¶ó¿¡¼­ ±¤¼±À» ½î´Â 3D Physics.Raycast ´ë½Å, 
-        // Äµ¹ö½º ³» ¸¶¿ì½º À§Ä¡¿¡ Á¸ÀçÇÏ´Â ¸ğµç UI ¿ä¼Ò¸¦ Ã£¾Æ³»´Â EventSystemÀ» È°¿ëÇÕ´Ï´Ù.
+        // [ì¤‘ìš”] 2D UI ì´ë²¤íŠ¸ ì‹œìŠ¤í…œ ë ˆì´ìºìŠ¤íŠ¸
+        // ì¹´ë©”ë¼ì—ì„œ ê´‘ì„ ì„ ì˜ëŠ” 3D Physics.Raycast ëŒ€ì‹ , 
+        // ìº”ë²„ìŠ¤ ë‚´ ë§ˆìš°ìŠ¤ ìœ„ì¹˜ì— ì¡´ì¬í•˜ëŠ” ëª¨ë“  UI ìš”ì†Œë¥¼ ì°¾ì•„ë‚´ëŠ” EventSystemì„ í™œìš©í•©ë‹ˆë‹¤.
         PointerEventData pointerData = new PointerEventData(EventSystem.current) { position = mousePosition };
         List<RaycastResult> results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(pointerData, results);
@@ -212,10 +212,10 @@ public class HandCardControllManager : MonoBehaviour
         GameObject hitCard = null;
         foreach (var hit in results)
         {
-            // UI¿¡ ¸ÂÀº ¿ä¼Ò Áß ÃÖ»óÀ§ Ä«µå ½ºÅ©¸³Æ®(GameCardDisplay)¸¦ Ã£½À´Ï´Ù.
+            // UIì— ë§ì€ ìš”ì†Œ ì¤‘ ìµœìƒìœ„ ì¹´ë“œ ìŠ¤í¬ë¦½íŠ¸(GameCardDisplay)ë¥¼ ì°¾ìŠµë‹ˆë‹¤.
             GameCardDisplay cardDisplay = hit.gameObject.GetComponentInParent<GameCardDisplay>();
 
-            // ±× Ä«µå°¡ ÇöÀç ¼ÕÆĞ ¸®½ºÆ®¿¡ µé¾îÀÖ´Â Ä«µå¶ó¸é Å¸°ÙÀ¸·Î È®Á¤
+            // ê·¸ ì¹´ë“œê°€ í˜„ì¬ ì†íŒ¨ ë¦¬ìŠ¤íŠ¸ì— ë“¤ì–´ìˆëŠ” ì¹´ë“œë¼ë©´ íƒ€ê²Ÿìœ¼ë¡œ í™•ì •
             if (cardDisplay != null && handCards.Contains(cardDisplay.gameObject))
             {
                 hitCard = cardDisplay.gameObject;
@@ -223,21 +223,21 @@ public class HandCardControllManager : MonoBehaviour
             }
         }
 
-        // »õ·Î¿î Ä«µå¿¡ ¸¶¿ì½º°¡ ¿Ã¶ó°£ °æ¿ì
+        // ìƒˆë¡œìš´ ì¹´ë“œì— ë§ˆìš°ìŠ¤ê°€ ì˜¬ë¼ê°„ ê²½ìš°
         if (hitCard != null && hitCard != _currentlyHoveredCard)
         {
-            ClearHover(); // ÀÌÀü Ä«µå ¿ø»óº¹±¸
-            AnimateCardHoverEnter(hitCard); // »õ Ä«µå À§·Î ¿Ã¸®±â(È®´ë)
+            ClearHover(); // ì´ì „ ì¹´ë“œ ì›ìƒë³µêµ¬
+            AnimateCardHoverEnter(hitCard); // ìƒˆ ì¹´ë“œ ìœ„ë¡œ ì˜¬ë¦¬ê¸°(í™•ëŒ€)
             _currentlyHoveredCard = hitCard;
         }
-        // Çã°øÀ¸·Î ¸¶¿ì½º°¡ ºüÁ®³ª°£ °æ¿ì
+        // í—ˆê³µìœ¼ë¡œ ë§ˆìš°ìŠ¤ê°€ ë¹ ì ¸ë‚˜ê°„ ê²½ìš°
         else if (hitCard == null && _currentlyHoveredCard != null)
         {
             ClearHover();
         }
     }
 
-    // ¶°¿À¸¥ Ä«µå¸¦ ¿ø·¡ ÀÚ¸®·Î º¹±¸ÇÏ´Â ÇÔ¼ö
+    // ë– ì˜¤ë¥¸ ì¹´ë“œë¥¼ ì›ë˜ ìë¦¬ë¡œ ë³µêµ¬í•˜ëŠ” í•¨ìˆ˜
     public void ClearHover()
     {
         if (_currentlyHoveredCard != null)
@@ -248,7 +248,7 @@ public class HandCardControllManager : MonoBehaviour
     }
 
     // ==========================================================
-    // Ä«µå Ãß°¡ / »èÁ¦ °ü¸®
+    // ì¹´ë“œ ì¶”ê°€ / ì‚­ì œ ê´€ë¦¬
     // ==========================================================
     public void AddCardToHand(GameObject newCardObject)
     {
@@ -270,15 +270,15 @@ public class HandCardControllManager : MonoBehaviour
             _isCardScaleSet = true;
         }
 
-        // Ä«µå¸¦ handAnchorÀÇ ÀÚ½ÄÀ¸·Î µî·Ï (UI ·¹ÀÌ¾Æ¿ôÀÇ ÀÏºÎ·Î ¸¸µé±â)
+        // ì¹´ë“œë¥¼ handAnchorì˜ ìì‹ìœ¼ë¡œ ë“±ë¡ (UI ë ˆì´ì•„ì›ƒì˜ ì¼ë¶€ë¡œ ë§Œë“¤ê¸°)
         newCardObject.transform.SetParent(handAnchor, true);
         handCards.Add(newCardObject);
 
-        // Ä«µå Ãß°¡ ÈÄ µÕ±Ù ºÎÃ¤²Ã ¸ğ¾çÀ¸·Î ÀüÃ¼ ÀçÁ¤·Ä
+        // ì¹´ë“œ ì¶”ê°€ í›„ ë‘¥ê·¼ ë¶€ì±„ê¼´ ëª¨ì–‘ìœ¼ë¡œ ì „ì²´ ì¬ì •ë ¬
         UpdateHandLayout(newCardObject, newCardTravelDuration);
     }
 
-    // Æ¯Á¤ À§Ä¡¿¡ Ä«µå Ãß°¡
+    // íŠ¹ì • ìœ„ì¹˜ì— ì¹´ë“œ ì¶”ê°€
     public void InsertCardToHand(GameObject cardObject, int index)
     {
         if (!_isCardScaleSet)
@@ -287,7 +287,7 @@ public class HandCardControllManager : MonoBehaviour
             _isCardScaleSet = true;
         }
 
-        // [¼öÁ¤µÊ] false -> true ·Î º¯°æ
+        // [ìˆ˜ì •ë¨] false -> true ë¡œ ë³€ê²½
         cardObject.transform.SetParent(handAnchor, true);
 
         int targetIndex = Mathf.Clamp(index, 0, handCards.Count);
@@ -296,7 +296,7 @@ public class HandCardControllManager : MonoBehaviour
     }
 
 
-    // ¸®½ºÆ®¿¡¼­¸¸ »èÁ¦
+    // ë¦¬ìŠ¤íŠ¸ì—ì„œë§Œ ì‚­ì œ
     public void RemoveCardFromHandListOnly(GameObject card)
     {
         if (!handCards.Contains(card)) return;
@@ -307,7 +307,7 @@ public class HandCardControllManager : MonoBehaviour
     public void AlignHand() => UpdateHandLayout(null, shuffleDuration);
 
 
-    // ¸¶Áö¸· Ä«µå Á¦°Å
+    // ë§ˆì§€ë§‰ ì¹´ë“œ ì œê±°
     private void RemoveLastCardFromHand()
     {
         if (handCards.Count == 0) return;
@@ -315,7 +315,7 @@ public class HandCardControllManager : MonoBehaviour
     }
 
 
-    // Æ¯Á¤ Ä«µå Á¦°Å
+    // íŠ¹ì • ì¹´ë“œ ì œê±°
     public void RemoveCardFromHand(GameObject cardToRemove)
     {
         handArcRadius -= radius;
@@ -325,30 +325,103 @@ public class HandCardControllManager : MonoBehaviour
         handCards.Remove(cardToRemove);
         if (cardToRemove == _currentlyHoveredCard) _currentlyHoveredCard = null;
 
-        Destroy(cardToRemove); // ½ÇÁ¦ °ÔÀÓ¿ÀºêÁ§Æ® ÆÄ±«
+        Destroy(cardToRemove); // ì‹¤ì œ ê²Œì„ì˜¤ë¸Œì íŠ¸ íŒŒê´´
         UpdateHandLayout();
     }
 
+    // HandCardControllManager.cs ë‚´ë¶€ ì¶”ê°€
+    /// <summary>
+    /// ì„œë²„ë¡œë¶€í„° ì†íŒ¨ ì¹´ë“œ ìƒíƒœ ë³€ê²½ íŒ¨í‚·ì„ ë°›ì•˜ì„ ë•Œ,
+    /// ì¼ì¹˜í•˜ëŠ” ì¹´ë“œì˜ ìŠ¤íƒ¯(ë¹„ìš©, ê³µê²©ë ¥, ì²´ë ¥ ë“±)ì„ ì‹¤ì‹œê°„ìœ¼ë¡œ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// </summary>
+    public void UpdateHandCards(List<CardInfo> updatedCards)
+    {
+        if (updatedCards == null || updatedCards.Count == 0) return;
+
+        // ì—¬ëŸ¬ ì¹´ë“œê°€ ë™ì‹œì— ê°±ì‹ ë  ë•Œë¥¼ ìœ„í•´ ë²„í”„ ì—°ì¶œì„ ì¬ìƒí•  ì¹´ë“œë“¤ì„ ëª¨ì•„ë‘¡ë‹ˆë‹¤.
+        List<GameObject> cardsToAnimate = new List<GameObject>();
+
+        foreach (var updatedCardInfo in updatedCards)
+        {
+            // 1. í˜„ì¬ ì†íŒ¨ ë¦¬ìŠ¤íŠ¸(handCards)ì—ì„œ instanceIdê°€ ì¼ì¹˜í•˜ëŠ” ì¹´ë“œë¥¼ ì°¾ìŠµë‹ˆë‹¤.
+            GameObject targetCardObj = handCards.Find(card =>
+            {
+                var display = card.GetComponent<GameCardDisplay>();
+                return display != null && display.InstanceId == updatedCardInfo.instanceId;
+            });
+
+            if (targetCardObj != null)
+            {
+                var display = targetCardObj.GetComponent<GameCardDisplay>();
+                if (display != null)
+                {
+                    // ì´ì „ ë¹„ìš©ì´ë‚˜ ìŠ¤íƒ¯ì„ ë°±ì—…í•˜ì—¬ "ì‹¤ì œ ë²„í”„"ë‚˜ ë³€í™”ê°€ ì¼ì–´ë‚¬ëŠ”ì§€ ê°ì§€í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+                    int prevCost = display._cardInfo != null ? display._cardInfo.currentCost : display._cardData.manaCost;
+                    int prevAtk = display._cardInfo != null ? display._cardInfo.currentAttack : display._cardData.attack;
+                    int prevHp = display._cardInfo != null ? display._cardInfo.currentHealth : display._cardData.health;
+
+                    // 2. ìµœì‹  ìŠ¤í™ ë°ì´í„°ë¡œ UIë¥¼ ë³€ê²½í•©ë‹ˆë‹¤ (ìŠ¤íƒ¯ ìƒ‰ìƒ ë³€ê²½ í¬í•¨).
+                    display.Setup(display._cardData, updatedCardInfo);
+
+                    // 3. ìŠ¤íƒ¯ì— ë¬´ì–¸ê°€ ì´ë¡œìš´ ë³€í™”(ë¹„ìš© ê°ì†Œ, ê³µê²©ë ¥ ì¦ê°€, ì²´ë ¥ ì¦ê°€)ê°€ ìƒê²¼ì„ ë•Œë§Œ ì—°ì¶œ ë¦¬ìŠ¤íŠ¸ì— ë‹´ìŠµë‹ˆë‹¤.
+                    // (ë§Œì•½ ë””ë²„í”„ë‚˜ ëª¨ë“  ë³€í™”ì— íŠ€ê²Œ í•˜ê³  ì‹¶ë‹¤ë©´ ì´ ì¡°ê±´ë¬¸ì„ ì—†ì• ê³  ë°”ë¡œ Add í•˜ì…”ë„ ë©ë‹ˆë‹¤)
+                    bool isBuffed = (updatedCardInfo.currentCost < prevCost) ||
+                                   (updatedCardInfo.currentAttack > prevAtk) ||
+                                   (updatedCardInfo.currentHealth > prevHp);
+
+                    if (isBuffed)
+                    {
+                        cardsToAnimate.Add(targetCardObj);
+                    }
+                }
+            }
+        }
+
+        // 4. ìŠ¤íƒ¯ ë³€ê²½ ì‚¬í•­ì´ ë°˜ì˜ë˜ì—ˆìœ¼ë¯€ë¡œ ë¨¼ì € ì¹´ë“œë¥¼ ì›ë˜ ìë¦¬ì— ë§ê²Œ ì¬ì •ë ¬í•©ë‹ˆë‹¤.
+        AlignHand();
+
+        // 5. ì •ë ¬ ì• ë‹ˆë©”ì´ì…˜ì´ ì‹¤í–‰ë˜ëŠ” ë™ì‹œì—, ë²„í”„ ëŒ€ìƒ ì¹´ë“œë“¤ì—ê²Œ íŠ•ê¹€ íš¨ê³¼ë¥¼ ì ìš©í•©ë‹ˆë‹¤!
+        foreach (var cardObj in cardsToAnimate)
+        {
+            // ì •ë ¬ìš© DOScaleì´ í€ì¹˜ íš¨ê³¼ë¥¼ ì‚¼ì¼œë²„ë¦¬ì§€ ì•Šë„ë¡ 0.05ì´ˆì˜ ë¯¸ì„¸í•œ ì‹œê°„ì°¨ë¥¼ ë‘ê³  ì¾… ì–¹ì–´ì¤ë‹ˆë‹¤.
+            DOVirtual.DelayedCall(0.05f, () =>
+            {
+                if (cardObj != null)
+                {
+                    // DOTween ì• ë‹ˆë©”ì´ì…˜ ê¼¬ì„ ë°©ì§€
+                    cardObj.transform.DOKill(true); // true ì˜µì…˜ìœ¼ë¡œ ê¸°ì¡´ ìŠ¤ì¼€ì¼ ë„ë‹¬ì„ ëë§ˆì¹˜ê³  ì‹œì‘í•©ë‹ˆë‹¤.
+
+                    // í€ì¹˜ ì• ë‹ˆë©”ì´ì…˜ ê°€ë™!
+                    // í€ì¹˜ë ¥: (X: 1.2ë°° í™•ëŒ€, Y: 1.2ë°° í™•ëŒ€), ì‹œê°„: 0.5ì´ˆ, ì§„ë™ìˆ˜: 1íšŒ (í•œ ë²ˆ íŠ•ê¹€), íƒ„ì„±: 0.5
+                    cardObj.transform.DOPunchScale(new Vector3(0.2f, 0.2f, 0), 0.5f, 1, 0.5f)
+                        .SetEase(Ease.OutQuad);
+
+                    Debug.Log($"[UpdateHandCards] {cardObj.name} ì¹´ë“œê°€ ë²„í”„ë¥¼ ë°›ì•„ ì‚´ì§ í†µ~ íŠ€ì—ˆìŠµë‹ˆë‹¤!");
+                }
+            });
+        }
+    }
+
     // ==========================================================
-    // È£¹ö ¾Ö´Ï¸ŞÀÌ¼Ç ¿¬Ãâ (2D Äµ¹ö½º ¸ÂÃãÇü)
+    // í˜¸ë²„ ì• ë‹ˆë©”ì´ì…˜ ì—°ì¶œ (2D ìº”ë²„ìŠ¤ ë§ì¶¤í˜•)
     // ==========================================================
     public void AnimateCardHoverEnter(GameObject card)
     {
-        card.transform.DOKill(); // ÁøÇà ÁßÀÎ ¾Ö´Ï¸ŞÀÌ¼Ç Áï½Ã Á¤Áö
+        card.transform.DOKill(); // ì§„í–‰ ì¤‘ì¸ ì• ë‹ˆë©”ì´ì…˜ ì¦‰ì‹œ ì •ì§€
         RectTransform cardRect = card.GetComponent<RectTransform>();
 
-        // ¹Ì¸® °è»êµÈ ¿ø·¡ ºÎÃ¤²Ã ÁÂÇ¥(position)¿¡ ¸¶¿ì½º ¿À¹ö ÇÈ¼¿°ª(hoverOffset)À» ´õÇØ À§·Î ¶ç¿ó´Ï´Ù.
+        // ë¯¸ë¦¬ ê³„ì‚°ëœ ì›ë˜ ë¶€ì±„ê¼´ ì¢Œí‘œ(position)ì— ë§ˆìš°ìŠ¤ ì˜¤ë²„ í”½ì…€ê°’(hoverOffset)ì„ ë”í•´ ìœ„ë¡œ ë„ì›ë‹ˆë‹¤.
         if (_cardLayoutTargets.TryGetValue(card, out var layoutTarget))
         {
             Vector2 targetHoverPosition = layoutTarget.position + hoverOffset;
             cardRect.DOAnchorPos(targetHoverPosition, hoverAnimDuration).SetEase(Ease.OutQuad);
         }
 
-        // È¸Àü°ª 0À¸·Î ¸¸µé±â (±â¿ï¾îÁø Ä«µå°¡ ¶È¹Ù·Î ¼·´Ï´Ù)
+        // íšŒì „ê°’ 0ìœ¼ë¡œ ë§Œë“¤ê¸° (ê¸°ìš¸ì–´ì§„ ì¹´ë“œê°€ ë˜‘ë°”ë¡œ ì„­ë‹ˆë‹¤)
         cardRect.DOLocalRotateQuaternion(Quaternion.identity, hoverAnimDuration).SetEase(Ease.OutQuad);
         cardRect.DOScale(_originalCardScale * hoverScaleMultiplier, hoverAnimDuration).SetEase(Ease.OutQuad);
 
-        // [ÇÙ½É] ZÃà(±íÀÌ) ´ë½Å, UI °èÃş ±¸Á¶¿¡¼­ ¼ø¼­¸¦ ¸Ç ³¡À¸·Î º¸³» È­¸é °¡Àå ¾Õ¿¡ º¸ÀÌ°Ô ÇÕ´Ï´Ù.
+        // [í•µì‹¬] Zì¶•(ê¹Šì´) ëŒ€ì‹ , UI ê³„ì¸µ êµ¬ì¡°ì—ì„œ ìˆœì„œë¥¼ ë§¨ ëìœ¼ë¡œ ë³´ë‚´ í™”ë©´ ê°€ì¥ ì•ì— ë³´ì´ê²Œ í•©ë‹ˆë‹¤.
         cardRect.SetAsLastSibling();
     }
 
@@ -363,18 +436,18 @@ public class HandCardControllManager : MonoBehaviour
         card.transform.DOKill();
         RectTransform cardRect = card.GetComponent<RectTransform>();
 
-        // ÀúÀåÇØµĞ ºÎÃ¤²Ã À§Ä¡¿Í È¸Àü°ªÀ¸·Î º¹±Í
+        // ì €ì¥í•´ë‘” ë¶€ì±„ê¼´ ìœ„ì¹˜ì™€ íšŒì „ê°’ìœ¼ë¡œ ë³µê·€
         cardRect.DOAnchorPos(layoutTarget.position, hoverAnimDuration).SetEase(Ease.OutQuad);
         cardRect.DOLocalRotateQuaternion(layoutTarget.rotation, hoverAnimDuration).SetEase(Ease.OutQuad);
         cardRect.DOScale(_originalCardScale, hoverAnimDuration).SetEase(Ease.OutQuad);
 
-        // ¼ÕÆĞ ³» ¿ø·¡ ÀÎµ¦½º¸¦ Ã£¾Æ °ãÄ§ ¼ø¼­(Z-order ¿ªÇÒ)¸¦ ¿ø»ó º¹±¸
+        // ì†íŒ¨ ë‚´ ì›ë˜ ì¸ë±ìŠ¤ë¥¼ ì°¾ì•„ ê²¹ì¹¨ ìˆœì„œ(Z-order ì—­í• )ë¥¼ ì›ìƒ ë³µêµ¬
         int index = handCards.IndexOf(card);
         if (index != -1) cardRect.SetSiblingIndex(index);
     }
 
     // ==========================================================
-    // [Áß¿ä] ¼ÕÆĞ 2D ºÎÃ¤²Ã Á¤·Ä ¼öÇĞ ·ÎÁ÷
+    // [ì¤‘ìš”] ì†íŒ¨ 2D ë¶€ì±„ê¼´ ì •ë ¬ ìˆ˜í•™ ë¡œì§
     // ==========================================================
     private void UpdateHandLayout(GameObject newCard = null, float newCardDuration = 0.3f)
     {
@@ -389,9 +462,9 @@ public class HandCardControllManager : MonoBehaviour
         {
             GameObject card = handCards[i];
 
-            // µå·¡±× ÁßÀÎ Ä«µå´Â ºÎÃ¤²Ã °ø½Ä¿¡¼­ Á¦¿Ü (¸¶¿ì½º¸¦ µû¶ó´Ù³à¾ß ÇÏ¹Ç·Î)
+            // ë“œë˜ê·¸ ì¤‘ì¸ ì¹´ë“œëŠ” ë¶€ì±„ê¼´ ê³µì‹ì—ì„œ ì œì™¸ (ë§ˆìš°ìŠ¤ë¥¼ ë”°ë¼ë‹¤ë…€ì•¼ í•˜ë¯€ë¡œ)
             if (card == _currentlyDraggedCard) continue;
-            // ¸Ö¸®°ÇÀ¸·Î ¼±ÅÃµÈ Ä«µå¶ó¸é ¼ÕÆĞ Á¤·Ä(ºÎÃ¤²Ã) ¿¬»ê¿¡¼­ Á¦¿Ü!
+            // ë©€ë¦¬ê±´ìœ¼ë¡œ ì„ íƒëœ ì¹´ë“œë¼ë©´ ì†íŒ¨ ì •ë ¬(ë¶€ì±„ê¼´) ì—°ì‚°ì—ì„œ ì œì™¸!
             if (mulliganManager != null && mulliganManager._selectedCards.Contains(card))
                 continue;
 
@@ -400,33 +473,33 @@ public class HandCardControllManager : MonoBehaviour
 
             RectTransform cardRect = card.GetComponent<RectTransform>();
 
-            // 1. ZÃà 2D È¸Àü °¢µµ °è»ê
-            // Ä«µå °³¼ö¿¡ µû¶ó ÀüÃ¼ ºÎÃ¤²ÃÀÌ ¸î µµ³ª ¹ú¾îÁúÁö ±¸ÇÏ°í, ¿ŞÂÊ Ä«µåºÎÅÍ Â÷·Ê´ë·Î °¢µµ¸¦ ¹èÁ¤ÇÕ´Ï´Ù.
+            // 1. Zì¶• 2D íšŒì „ ê°ë„ ê³„ì‚°
+            // ì¹´ë“œ ê°œìˆ˜ì— ë”°ë¼ ì „ì²´ ë¶€ì±„ê¼´ì´ ëª‡ ë„ë‚˜ ë²Œì–´ì§ˆì§€ êµ¬í•˜ê³ , ì™¼ìª½ ì¹´ë“œë¶€í„° ì°¨ë¡€ëŒ€ë¡œ ê°ë„ë¥¼ ë°°ì •í•©ë‹ˆë‹¤.
             float totalAngle = (cardCount - 1) * baseCardSpacingAngle * handSpreadMultiplier;
             float startAngle = totalAngle / 2.0f;
             float angle = startAngle - (i * baseCardSpacingAngle * handSpreadMultiplier);
 
-            Quaternion targetRotation = Quaternion.Euler(0, 0, angle); // 2D UI È¸ÀüÀº ZÃà¸¸ »ç¿ë
+            Quaternion targetRotation = Quaternion.Euler(0, 0, angle); // 2D UI íšŒì „ì€ Zì¶•ë§Œ ì‚¬ìš©
 
-            // 2. »ï°¢ÇÔ¼ö(Sin, Cos)¸¦ ÀÌ¿ëÇÑ 2D °î¼± ÁÂÇ¥ °è»ê
-            // ¿¹Àü 3D¿¡¼­´Â Quaternion * Vector3.forward ¸¦ ½èÁö¸¸, UI Äµ¹ö½º¿¡¼­´Â ¼öÇĞ ÁÂÇ¥°¡ ÇÊ¿äÇÕ´Ï´Ù.
-            // X°ª: °¢µµ¿¡ µû¸¥ ÁÂ¿ì ÇÈ¼¿ ÀÌµ¿ (Sin »ç¿ë)
+            // 2. ì‚¼ê°í•¨ìˆ˜(Sin, Cos)ë¥¼ ì´ìš©í•œ 2D ê³¡ì„  ì¢Œí‘œ ê³„ì‚°
+            // ì˜ˆì „ 3Dì—ì„œëŠ” Quaternion * Vector3.forward ë¥¼ ì¼ì§€ë§Œ, UI ìº”ë²„ìŠ¤ì—ì„œëŠ” ìˆ˜í•™ ì¢Œí‘œê°€ í•„ìš”í•©ë‹ˆë‹¤.
+            // Xê°’: ê°ë„ì— ë”°ë¥¸ ì¢Œìš° í”½ì…€ ì´ë™ (Sin ì‚¬ìš©)
             float xPos = Mathf.Sin(-angle * Mathf.Deg2Rad) * handArcRadius;
-            // Y°ª: ¿øÇü °î¼±ÀÇ ³ôÀÌÂ÷ (Cos »ç¿ë, 1À» »©¼­ Áß½ÉÃàÀÌ ¸Ç ¾Æ·¡¿¡ ÀÖµµ·Ï Á¶Àı)
+            // Yê°’: ì›í˜• ê³¡ì„ ì˜ ë†’ì´ì°¨ (Cos ì‚¬ìš©, 1ì„ ë¹¼ì„œ ì¤‘ì‹¬ì¶•ì´ ë§¨ ì•„ë˜ì— ìˆë„ë¡ ì¡°ì ˆ)
             float yPos = (Mathf.Cos(angle * Mathf.Deg2Rad) - 1f) * handArcRadius;
 
-            Vector2 targetPos = new Vector2(xPos, yPos); // ÃÖÁ¾ °è»êµÈ UIÀÇ ¾ŞÄ¿(X, Y) ÇÈ¼¿ ÁÂÇ¥
+            Vector2 targetPos = new Vector2(xPos, yPos); // ìµœì¢… ê³„ì‚°ëœ UIì˜ ì•µì»¤(X, Y) í”½ì…€ ì¢Œí‘œ
 
-            // ³ªÁß¿¡ È£¹ö°¡ ³¡³µÀ» ¶§ µ¹¾Æ°¥ ¼ö ÀÖµµ·Ï °ª ±â·Ï
+            // ë‚˜ì¤‘ì— í˜¸ë²„ê°€ ëë‚¬ì„ ë•Œ ëŒì•„ê°ˆ ìˆ˜ ìˆë„ë¡ ê°’ ê¸°ë¡
             _cardLayoutTargets[card] = (targetPos, targetRotation);
 
-            // ¿ŞÂÊ Ä«µå°¡ °¡Àå ¹Ø¿¡, ¿À¸¥ÂÊ Ä«µå°¡ °¡Àå À§¿¡ ½×ÀÌ°Ô Á¤·Ä
+            // ì™¼ìª½ ì¹´ë“œê°€ ê°€ì¥ ë°‘ì—, ì˜¤ë¥¸ìª½ ì¹´ë“œê°€ ê°€ì¥ ìœ„ì— ìŒ“ì´ê²Œ ì •ë ¬
             cardRect.SetSiblingIndex(i);
 
             float duration = (card == newCard) ? newCardDuration : shuffleDuration;
             Ease easeType = (card == newCard) ? Ease.InOutSine : Ease.OutQuad;
 
-            // Áö±İ È£¹ö ÁßÀÎ Ä«µå¶ó¸é ¿ø·¡ ÀÚ¸®·Î °¡Áö ¾Ê°í, È£¹öµÈ À§Ä¡(À§·Î Æ¢¾î³ª¿Â »óÅÂ)¸¦ °»½Å
+            // ì§€ê¸ˆ í˜¸ë²„ ì¤‘ì¸ ì¹´ë“œë¼ë©´ ì›ë˜ ìë¦¬ë¡œ ê°€ì§€ ì•Šê³ , í˜¸ë²„ëœ ìœ„ì¹˜(ìœ„ë¡œ íŠ€ì–´ë‚˜ì˜¨ ìƒíƒœ)ë¥¼ ê°±ì‹ 
             if (card == _currentlyHoveredCard)
             {
                 cardRect.DOAnchorPos(targetPos + hoverOffset, duration).SetEase(easeType);
@@ -436,7 +509,7 @@ public class HandCardControllManager : MonoBehaviour
                 continue;
             }
 
-            // ÀÏ¹İ Ä«µåµéÀº °è»êµÈ ºÎÃ¤²Ã °î¼± ÁÂÇ¥·Î ºÎµå·´°Ô ÀÌµ¿ (DOMove ´ë½Å 2D Àü¿ëÀÎ DOAnchorPos »ç¿ë)
+            // ì¼ë°˜ ì¹´ë“œë“¤ì€ ê³„ì‚°ëœ ë¶€ì±„ê¼´ ê³¡ì„  ì¢Œí‘œë¡œ ë¶€ë“œëŸ½ê²Œ ì´ë™ (DOMove ëŒ€ì‹  2D ì „ìš©ì¸ DOAnchorPos ì‚¬ìš©)
             cardRect.DOAnchorPos(targetPos, duration).SetEase(easeType);
             cardRect.DOLocalRotateQuaternion(targetRotation, duration).SetEase(easeType);
             cardRect.DOScale(targetScale, duration).SetEase(easeType);
@@ -444,16 +517,16 @@ public class HandCardControllManager : MonoBehaviour
     }
 
     /// <summary>
-    /// µå·¡±× ÁßÀÎ Ä«µå¸¦ ¼³Á¤ÇÕ´Ï´Ù. µå·¡±× ÁßÀÎ Ä«µå´Â ¼ÕÆĞ Á¤·Ä¿¡¼­ ºüÁı´Ï´Ù.
+    /// ë“œë˜ê·¸ ì¤‘ì¸ ì¹´ë“œë¥¼ ì„¤ì •í•©ë‹ˆë‹¤. ë“œë˜ê·¸ ì¤‘ì¸ ì¹´ë“œëŠ” ì†íŒ¨ ì •ë ¬ì—ì„œ ë¹ ì§‘ë‹ˆë‹¤.
     /// </summary>
     public void SetDraggedCard(GameObject card)
     {
         _currentlyDraggedCard = card;
-        if (card != null) _currentlyHoveredCard = null; // µå·¡±× ½ÃÀÛÇÏ¸é È£¹ö ÇØÁ¦
+        if (card != null) _currentlyHoveredCard = null; // ë“œë˜ê·¸ ì‹œì‘í•˜ë©´ í˜¸ë²„ í•´ì œ
     }
 
     // ==========================================================
-    // ÀÜ»ó Ä«µå °ü¸® (µå·¡±× ÇÒ ¶§ ¿ø·¡ À§Ä¡ Ç¥½Ã)
+    // ì”ìƒ ì¹´ë“œ ê´€ë¦¬ (ë“œë˜ê·¸ í•  ë•Œ ì›ë˜ ìœ„ì¹˜ í‘œì‹œ)
     // ==========================================================
     public void CreatePhantomCard(GameObject originalCard)
     {
@@ -461,24 +534,26 @@ public class HandCardControllManager : MonoBehaviour
         int index = handCards.IndexOf(originalCard);
         if (index == -1) return;
 
-        // UI Äµ¹ö½º ±â¹İÀ¸·Î Instantiate
+        // UI ìº”ë²„ìŠ¤ ê¸°ë°˜ìœ¼ë¡œ Instantiate
         _activePhantomCard = Instantiate(phantomCardPrefab, handAnchor);
         RectTransform originalRect = originalCard.GetComponent<RectTransform>();
         RectTransform phantomRect = _activePhantomCard.GetComponent<RectTransform>();
 
-        // ¿ø·¡ Ä«µåÀÇ UI ¾ŞÄ¿ ÁÂÇ¥¿Í È¸ÀüÀ» ±×´ë·Î º¹»ç
+        // ì›ë˜ ì¹´ë“œì˜ UI ì•µì»¤ ì¢Œí‘œì™€ íšŒì „ì„ ê·¸ëŒ€ë¡œ ë³µì‚¬
         phantomRect.anchoredPosition = originalRect.anchoredPosition;
         phantomRect.localRotation = originalRect.localRotation;
 
-        phantomRect.SetSiblingIndex(index); // ¿ø·¡ Ä«µå°¡ ÀÖ´ø µª½º(¼ø¼­) À§Ä¡·Î »ğÀÔ
+        phantomRect.SetSiblingIndex(index); // ì›ë˜ ì¹´ë“œê°€ ìˆë˜ ëìŠ¤(ìˆœì„œ) ìœ„ì¹˜ë¡œ ì‚½ì…
     }
 
     public void RemovePhantomCard(GameObject originalCard)
     {
         if (_activePhantomCard == null) return;
-        Destroy(_activePhantomCard);
-        Destroy(originalCard);
+        Destroy(_activePhantomCard); // ì”ìƒ(Phantom)ë§Œ ì§€ìš°ê³  ì‹¤ì œ ì¹´ë“œëŠ” íŒŒê´´í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤!
         _activePhantomCard = null;
+
+        // ì¹´ë“œë¥¼ íŒŒê´´í•˜ëŠ” ëŒ€ì‹  íˆ¬ëª…í•˜ê²Œ ë§Œë“¤ê±°ë‚˜, ë“œë˜ê·¸ ìƒíƒœê°€ ëë‚¬ìœ¼ë¯€ë¡œ 
+        // ì„œë²„ ì‘ë‹µ ëŒ€ê¸° ìƒíƒœ(Waiting)ë¥¼ ì‹œê°ì ìœ¼ë¡œ ì²˜ë¦¬í•  ìˆ˜ ìˆë„ë¡ ë‘¡ë‹ˆë‹¤.
         AlignHand();
     }
 }

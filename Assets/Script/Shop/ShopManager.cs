@@ -1,192 +1,545 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Firebase.Auth;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
+/// <summary>
+/// ìƒì  ì¹´í…Œê³ ë¦¬ / UI íƒ­ ëŒ€ë¶„ë¥˜
+/// </summary>
+public enum ShopCategory
+{
+    LeaderSkin = 0, // ë¦¬ë” ìŠ¤í‚¨
+    Emote = 1,      // ì´ëª¨í‹°ì½˜
+    CardBack = 2,   // ì¹´ë“œ ë’·ë©´
+    MapDecor = 3,   // ë§µ ê¾¸ë¯¸ê¸°
+    PrismCard = 4,  // í”„ë¦¬ì¦˜ ì¹´ë“œ
+    Profile = 5,    // í”„ë¡œí•„
+    SeasonPass = 6, // ì‹œì¦Œ íŒ¨ìŠ¤
+    Package = 7,    // íŒ¨í‚¤ì§€
+    CardPack = 8,   // ì¹´ë“œ íŒ©
+    Cards = 9,      // ì¹´ë“œ ë‚±ì¥
+}
 
-// JSON ÀÀ´äÀ» ¿ªÁ÷·ÄÈ­ÇÒ ¶§ »ç¿ëÇÒ Å¬·¡½ºµé
-// ÀÌ Å¬·¡½ºµéÀÇ ±¸Á¶´Â Flask ¼­¹ö¿¡¼­ ¹İÈ¯ÇÏ´Â JSON ÀÀ´ä ±¸Á¶¿Í Á¤È®È÷ ÀÏÄ¡ÇØ¾ß ÇÕ´Ï´Ù.
+/// <summary>
+/// ê²°ì œ ì¬í™” ì¢…ë¥˜ Enum
+/// </summary>
+public enum PriceCurrency
+{
+    Gold = 0,        // ê³¨ë“œ (ì¼ë°˜ ì¸ê²Œì„ ì¬í™”)
+    Stellastone = 1, // ì„±ì„ (ìœ ë£Œ ê²°ì œ ì¬í™”)
+    Stardust = 2     // ë³„ê°€ë£¨ (ì¹´ë“œ ì œì‘/ë¶„í•´ ì¬í™”)
+}
+
+/// <summary>
+/// ê°œë³„ ìƒí’ˆ ë°ì´í„° ëª¨ë¸
+/// </summary>
 [System.Serializable]
 public class ProductData
 {
-    public int id;
-    public string name;
-    public string description;
-    public string image_url;
-    public int price;
-    public int currency_id;
-    public int category_id;
-    public bool is_active;
-    public string sale_start_date; // ³¯Â¥´Â ¹®ÀÚ¿­·Î ¹Ş¾Æ¼­ ÆÄ½Ì
-    public string sale_end_date;   // ³¯Â¥´Â ¹®ÀÚ¿­·Î ¹Ş¾Æ¼­ ÆÄ½Ì
-    public ProductCurrencyData Currencies;
-}
-// ProductData Å¬·¡½º ³»ºÎ¿¡ Currencies Á¤º¸¸¦ ´ãÀ» Å¬·¡½º Á¤ÀÇ
-[System.Serializable]
-public class ProductCurrencyData
-{
-    public string currency_name;
-    public string icon_url;
+    public ShopCategory category_Id;                      // ì¹´í…Œê³ ë¦¬ ì•„ì´ë”” (Enum)
+    public string productId;                               // ì•„ì´í…œ ê³ ìœ  ì•„ì´ë”” (ë¬¸ìì—´)
+    public string productName;                             // ì•„ì´í…œ ì´ë¦„
+    public string description;                             // ì•„ì´í…œ ì„¤ëª…
+    public string image_url;                               // ì•„ì´í…œ ì´ë¯¸ì§€ ìœ„ì¹˜
+    public int price;                                      // ì•„ì´í…œ ê°€ê²©
+    public PriceCurrency currency;                         // ê²°ì œ ì¬í™” ì¢…ë¥˜
+    public bool isActive;                                  // íŒë§¤ í™œì„±í™” ì—¬ë¶€
+    public string sale_Start_Date;                         // í• ì¸ ì‹œì‘ì¼
+    public string sale_End_Date;                           // í• ì¸ ì¢…ë£Œê¸°ê°„
 }
 
+/// <summary>
+/// ìƒì  ìƒí’ˆ ëª©ë¡ ì¡°íšŒ ì‘ë‹µ ë˜í¼
+/// </summary>
 [System.Serializable]
 public class ProductsApiResponse
 {
     public string status;
     public string message;
-    public List<ProductData> data; // ¿©·¯ °³ÀÇ ProductData °´Ã¼°¡ ´ã±æ ¸®½ºÆ®
+    public List<ProductData> data; // ì‹¤ì œ ë°˜í™˜ëœ ProductData ëª©ë¡
 }
+
+/// <summary>
+/// ìƒì  ìƒí’ˆ êµ¬ë§¤ ìš”ì²­ íŒ¨í‚· (í´ë¼ì´ì–¸íŠ¸ -> ì„œë²„)
+/// </summary>
+[System.Serializable]
+public class PurchaseRequest
+{
+    public string productId; // êµ¬ë§¤í•  ìƒí’ˆ ê³ ìœ  ID (ë¬¸ìì—´)
+    public int quantity;     // êµ¬ë§¤ ìˆ˜ëŸ‰
+}
+
+/// <summary>
+/// ìƒì  ìƒí’ˆ êµ¬ë§¤ ì‘ë‹µ íŒ¨í‚· (ì„œë²„ -> í´ë¼ì´ì–¸íŠ¸)
+/// </summary>
+[System.Serializable]
+public class PurchaseResponse
+{
+    public string status;                  // "success" ë˜ëŠ” "error"
+    public string message;                 // ê²°ê³¼ ì•ˆë‚´ ë©”ì‹œì§€
+    public string productId;               // êµ¬ë§¤í•œ ìƒí’ˆ ID (ë¬¸ìì—´)
+    public int quantity;                   // êµ¬ë§¤í•œ ìˆ˜ëŸ‰
+    public int remainingGold;              // êµ¬ë§¤ í›„ ë‚¨ì€ ê³¨ë“œ
+    public int remainingStellastone;       // êµ¬ë§¤ í›„ ë‚¨ì€ ì„±ì„
+    public int remainingStardust;          // êµ¬ë§¤ í›„ ë‚¨ì€ ë³„ê°€ë£¨
+    public List<string> obtainedCardIds;   // (ì¹´ë“œíŒ© êµ¬ë§¤ ì‹œ) ë½‘íŒ ì¹´ë“œ ID ëª©ë¡
+    public string obtainedItemId;          // (ìŠ¤í‚¨/ì´ëª¨í‹°ì½˜ êµ¬ë§¤ ì‹œ) íšë“í•œ ì•„ì´í…œ ID
+}
+
+/// <summary>
+/// ìƒì  ì „ì²´ë¥¼ ì´ê´„í•˜ëŠ” ë©”ì¸ ì‹±ê¸€í†¤ ë§¤ë‹ˆì €
+/// (ìƒí’ˆ ëª©ë¡ ë¡œë“œ, ìŠ¬ë¡¯ ìƒì„±, ìƒì„¸ íŒì—… ë°”ì¸ë”©, ì„œë²„ êµ¬ë§¤ ì²˜ë¦¬)
+/// </summary>
 public class ShopManager : MonoBehaviour
 {
-    // Flask ¼­¹öÀÇ »óÇ° Á¶È¸ API URL (±âº» °æ·Î)
-    public string productsApiBaseUrl = "http://localhost:5000/api/products";
-    // ÀÎ½ºÆåÅÍ¿¡¼­ ¼³Á¤ÇÒ Ä«Å×°í¸® ID
-    public int targetCategoryId = 5;
+    public static ShopManager Instance { get; private set; }
 
-    // »óÁ¡ ½½·ÔµéÀÌ ¹èÄ¡µÉ UI ºÎ¸ğ ¿ÀºêÁ§Æ® (Scroll ViewÀÇ Content µî)
-    public Transform shopContentParent;
-    // °¢ »óÇ° Á¤º¸¸¦ Ç¥½ÃÇÒ »óÁ¡ ½½·Ô UI ÇÁ¸®ÆÕ
-    public GameObject shopSlotPrefab;
-    // ÇöÀç È°¼ºÈ­µÇ¾î Ç¥½Ã ÁßÀÎ Ä«Å×°í¸® ID (Áßº¹ ·Îµù ¹æÁö¿ë)
-    private int currentActiveCategoryId = -1; // ÃÊ±â°ªÀº À¯È¿ÇÏÁö ¾ÊÀº ID·Î ¼³Á¤
+    // API URL (GameClient.Instanceê°€ nullì¼ ê²½ìš° ê¸°ë³¸ ì„œë²„ ì£¼ì†Œë¡œ fallback)
+    public string productsApiBaseUrl => (GameClient.Instance != null)
+        ? $"{GameClient.Instance.BaseApiUrl}/shop/products"
+        : "http://175.125.250.226:5123/api/shop/products";
 
-    // --- Ä«Å×°í¸® ¹öÆ° Å¬¸¯ ½Ã È£ÃâµÉ ÇÔ¼ö ---
-    // °¢ Ä«Å×°í¸® ¹öÆ°(¿¹: Ä«µåÆÑ, ¸®´õ½ºÅ², ¾Æ¹ÙÅ¸)ÀÇ OnClick() ÀÌº¥Æ®¿¡ ¿¬°áÇÕ´Ï´Ù.
-    // ÀÎ½ºÆåÅÍ¿¡¼­ ÀÌ ÇÔ¼ö¸¦ ¿¬°áÇÒ ¶§, °¢ Ä«Å×°í¸®¿¡ ÇØ´çÇÏ´Â int °ªÀ» ÀÎÀÚ·Î ³Ö¾îÁÖ¼¼¿ä.
-    // ¿¹: Ä«µåÆÑ ¹öÆ° -> OnCategoryButtonClicked(1)
-    //     ¸®´õ½ºÅ² ¹öÆ° -> OnCategoryButtonClicked(2)
-    public void OnCategoryButtonClicked(int categoryId)
+    public string purchaseApiUrl => (GameClient.Instance != null)
+        ? $"{GameClient.Instance.BaseApiUrl}/shop/purchase"
+        : "http://175.125.250.226:5123/api/shop/purchase";
+
+    [Header("1. ê¸°ë³¸ ì¹´í…Œê³ ë¦¬ ì„¤ì •")]
+    public ShopCategory defaultCategory = ShopCategory.CardPack;
+
+    [Header("2. ìƒì  ìŠ¬ë¡¯ ìƒì„± ìœ„ì¹˜ ë° í”„ë¦¬íŒ¹")]
+    public Transform shopContentParent; // Scroll Viewì˜ Content Transform
+    public GameObject shopSlotPrefab;   // ìƒí’ˆ ìŠ¬ë¡¯ í”„ë¦¬íŒ¹ (ShopSlotUI ë¶€ì°©)
+
+    [Header("3. ìƒí’ˆ ìƒì„¸ íŒì—… UI ì—°ê²°")]
+    public UIPanelToggler uIPanelToggler;           // íŒì—… ì—´ê¸°/ë‹«ê¸° í† ê¸€ëŸ¬
+    public QuantitySelector quantitySelector;       // êµ¬ë§¤ ìˆ˜ëŸ‰ ì¡°ì ˆê¸°
+    public GameObject popupPanel;                   // íŒì—… íŒ¨ë„ GameObject
+    public TextMeshProUGUI productNameText;         // íŒì—… ë‚´ ìƒí’ˆëª… í…ìŠ¤íŠ¸
+    public TextMeshProUGUI productDescriptionText;   // íŒì—… ë‚´ ìƒí’ˆ ì„¤ëª… í…ìŠ¤íŠ¸
+    public Image popupProductImage;                 // íŒì—… ë‚´ ìƒí’ˆ ì´ë¯¸ì§€ Image
+    public Image currencyIconImage;                 // íŒì—… ë‚´ ê²°ì œ ì¬í™” ì•„ì´ì½˜ Image
+
+    [Header("4. ì¬í™” ìŠ¤í”„ë¼ì´íŠ¸ (ë¡œì»¬ ë“±ë¡)")]
+    public Sprite goldIconSprite;        // ê³¨ë“œ ì•„ì´ì½˜ ìŠ¤í”„ë¼ì´íŠ¸
+    public Sprite stellastoneIconSprite; // ì„±ì„ ì•„ì´ì½˜ ìŠ¤í”„ë¼ì´íŠ¸
+    public Sprite stardustIconSprite;    // ë³„ê°€ë£¨ ì•„ì´ì½˜ ìŠ¤í”„ë¼ì´íŠ¸
+
+    [Header("5. íŒì—… ë²„íŠ¼")]
+    public Button closeButton;    // íŒì—… ë‹«ê¸° ë²„íŠ¼
+    public Button purchaseButton; // êµ¬ë§¤í•˜ê¸° ë²„íŠ¼
+
+    // êµ¬ë§¤ ì™„ë£Œ ì‹œ ì•Œë¦¼ ì´ë²¤íŠ¸ (UI ì¬í™” ê°±ì‹  ë° íŒ© ê°œë´‰ ì—°ì¶œìš©)
+    public event Action<PurchaseResponse> OnPurchaseCompleted;
+
+    // í˜„ì¬ í™œì„±í™”ë˜ì–´ í‘œì‹œ ì¤‘ì¸ ì¹´í…Œê³ ë¦¬ (ì¤‘ë³µ ë¡œë“œ ë°©ì§€ìš©)
+    private ShopCategory currentActiveCategory = (ShopCategory)(-1);
+    // í˜„ì¬ íŒì—…ì— ì„ íƒëœ ìƒí’ˆ ë°ì´í„°
+    private ProductData currentSelectedProduct;
+
+    private void Awake()
     {
-        Debug.Log($"Ä«Å×°í¸® ¹öÆ° Å¬¸¯µÊ: {categoryId}");
-
-        // ÀÌ¹Ì ÇØ´ç Ä«Å×°í¸®°¡ Ç¥½Ã ÁßÀÌ¶ó¸é ºÒÇÊ¿äÇÑ ÀÛ¾÷ ¹æÁö
-        if (currentActiveCategoryId == categoryId)
+        // ì‹±ê¸€í†¤ ì´ˆê¸°í™”
+        if (Instance != null && Instance != this)
         {
-            Debug.Log($"Ä«Å×°í¸® {categoryId}´Â ÀÌ¹Ì Ç¥½Ã ÁßÀÔ´Ï´Ù. Àç·ÎµùÇÏÁö ¾Ê½À´Ï´Ù.");
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
+        // íŒì—…ì°½ ì´ˆê¸° ë¹„í™œì„±í™”
+        if (popupPanel != null)
+        {
+            popupPanel.SetActive(false);
+        }
+
+        // íŒì—… ë²„íŠ¼ ì´ë²¤íŠ¸ ë¦¬ìŠ¤ë„ˆ ì—°ê²°
+        if (closeButton != null)
+        {
+            closeButton.onClick.AddListener(CloseProductPopup);
+        }
+
+        if (purchaseButton != null)
+        {
+            purchaseButton.onClick.AddListener(OnPurchaseButtonClicked);
+        }
+    }
+
+    private void Start()
+    {
+        // ìƒì  ì§„ì… ì‹œ ê¸°ë³¸ ì¹´í…Œê³ ë¦¬ ìƒí’ˆ ìë™ ë¡œë“œ
+        LoadCategory(defaultCategory);
+    }
+
+    // ==================================================================
+    // 1. ì¹´í…Œê³ ë¦¬ ë¡œë“œ ë° ìŠ¬ë¡¯ ìƒì„±
+    // ==================================================================
+
+    /// <summary>
+    /// ì¹´í…Œê³ ë¦¬ë¥¼ ë³€ê²½í•˜ê³  í•´ë‹¹ ìƒí’ˆ ëª©ë¡ì„ ì„œë²„ì—ì„œ ë¶ˆëŸ¬ì˜¤ëŠ” í•µì‹¬ í•¨ìˆ˜
+    /// </summary>
+    public void LoadCategory(ShopCategory category)
+    {
+        Debug.Log($"[Shop] ì¹´í…Œê³ ë¦¬ ë¡œë“œ ìš”ì²­: {category} ({(int)category})");
+
+        if (currentActiveCategory == category)
+        {
+            Debug.Log($"[Shop] ì¹´í…Œê³ ë¦¬ {category}ëŠ” ì´ë¯¸ í‘œì‹œ ì¤‘ì…ë‹ˆë‹¤.");
             return;
         }
 
-        // ±âÁ¸ »óÁ¡ ½½·Ô ¸ğµÎ »èÁ¦
         ClearShopSlots();
-
-        // ÇöÀç È°¼ºÈ­µÈ Ä«Å×°í¸® ID ¾÷µ¥ÀÌÆ®
-        currentActiveCategoryId = categoryId;
-
-        // ¼­¹ö¿¡¼­ ÇÊÅÍ¸µµÈ »óÇ° µ¥ÀÌÅÍ °¡Á®¿À±â ½ÃÀÛ
-        StartCoroutine(GetFilteredProductsFromServer(categoryId));
+        currentActiveCategory = category;
+        StartCoroutine(GetFilteredProductsFromServer(category));
     }
 
-    // ±âÁ¸¿¡ »ı¼ºµÈ ¸ğµç »óÁ¡ ½½·ÔÀ» »èÁ¦ÇÏ´Â ÇÔ¼ö
+    /// <summary>
+    /// C# ì½”ë“œì—ì„œ ShopCategory Enumìœ¼ë¡œ ì¹´í…Œê³ ë¦¬ ë²„íŠ¼ í´ë¦­ ì‹œ í˜¸ì¶œ
+    /// </summary>
+    public void OnCategoryButtonClicked(ShopCategory category)
+    {
+        LoadCategory(category);
+    }
+
+    /// <summary>
+    /// ìœ ë‹ˆí‹° ì¸ìŠ¤í™í„° ë²„íŠ¼ OnClick(int) ì´ë²¤íŠ¸ì—ì„œ í˜¸ì¶œí•  ìˆ˜ ìˆëŠ” ì˜¤ë²„ë¡œë“œ í•¨ìˆ˜
+    /// </summary>
+    public void OnCategoryButtonClicked(int categoryId)
+    {
+        LoadCategory((ShopCategory)categoryId);
+    }
+
+    /// <summary>
+    /// (ì´ì „ í˜¸í™˜ìš©) ìƒì  ë²„íŠ¼ í´ë¦­ ì‹œ í˜¸ì¶œ
+    /// </summary>
+    public void OnShopButtonClicked(int categoryId)
+    {
+        LoadCategory((ShopCategory)categoryId);
+    }
+
+    /// <summary>
+    /// í™”ë©´ì— í‘œì‹œëœ ëª¨ë“  ìƒí’ˆ ìŠ¬ë¡¯ ì œê±°
+    /// </summary>
     private void ClearShopSlots()
     {
         if (shopContentParent == null)
         {
-            Debug.LogError("Shop Content Parent°¡ ¼³Á¤µÇÁö ¾Ê¾Ò½À´Ï´Ù. ½½·ÔÀ» »èÁ¦ÇÒ ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogError("[Shop] Shop Content Parentê°€ ì„¤ì •ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
             return;
         }
 
-        // shopContentParentÀÇ ¸ğµç ÀÚ½Ä ¿ÀºêÁ§Æ®¸¦ ¼øÈ¸ÇÏ¸ç »èÁ¦
         foreach (Transform child in shopContentParent)
         {
             Destroy(child.gameObject);
         }
-        Debug.Log("±âÁ¸ »óÁ¡ ½½·ÔÀÌ ¸ğµÎ »èÁ¦µÇ¾ú½À´Ï´Ù.");
+        Debug.Log("[Shop] ì´ì „ ìƒì  ìŠ¬ë¡¯ì´ ëª¨ë‘ ì œê±°ë˜ì—ˆìŠµë‹ˆë‹¤.");
     }
 
-    // »óÁ¡ ¹öÆ° Å¬¸¯ ½Ã È£ÃâµÉ ÇÔ¼ö
-    public void OnShopButtonClicked(int categori_id)
+    /// <summary>
+    /// ì„œë²„ë¡œë¶€í„° íŠ¹ì • ì¹´í…Œê³ ë¦¬ì˜ ìƒí’ˆ ë°ì´í„°ë¥¼ ê°€ì ¸ì˜¤ëŠ” ì½”ë£¨í‹´
+    /// </summary>
+    private IEnumerator GetFilteredProductsFromServer(ShopCategory category)
     {
-        Debug.Log($"»óÁ¡ ¹öÆ° Å¬¸¯µÊ! Ä«Å×°í¸® {targetCategoryId}ÀÇ »óÇ°À» ¼­¹ö¿¡¼­ ÇÊÅÍ¸µÇÏ¿© °¡Á®¿É´Ï´Ù.");
-        StartCoroutine(GetFilteredProductsFromServer(categori_id));
-    }
-
-    // ¼­¹ö¿¡¼­ ÇÊÅÍ¸µµÈ »óÇ° µ¥ÀÌÅÍ¸¦ °¡Á®¿À´Â ÄÚ·çÆ¾
-    private IEnumerator GetFilteredProductsFromServer(int categoryId)
-    {
-        // Äõ¸® ÆÄ¶ó¹ÌÅÍ¸¦ Æ÷ÇÔÇÑ URL »ı¼º
-        // ¿¹: http://localhost:5000/api/products?category_id=5
-        string requestUrl = $"{productsApiBaseUrl}?category_id={categoryId}";
-        Debug.Log($"¼­¹ö ¿äÃ» URL: {requestUrl}");
+        string requestUrl = $"{productsApiBaseUrl}?category_id={(int)category}";
+        Debug.Log($"[Shop] ìƒí’ˆ ìš”ì²­ URL: {requestUrl}");
 
         using (UnityWebRequest webRequest = UnityWebRequest.Get(requestUrl))
         {
             yield return webRequest.SendWebRequest();
 
-            // UnityWebRequest.Result ¿­°ÅÇüÀ» Á÷Á¢ »ç¿ëÇÏ¿© ¿À·ù Ã³¸®
             switch (webRequest.result)
             {
-                case UnityWebRequest.Result.ConnectionError: // ³×Æ®¿öÅ© ¿¬°á ¹®Á¦ (¿¹: ÀÎÅÍ³İ ²÷±è, DNS ¿À·ù µî)
-                    Debug.LogError($"³×Æ®¿öÅ© ¿¬°á ¿À·ù: {webRequest.error}");
+                case UnityWebRequest.Result.ConnectionError:
+                    Debug.LogError($"[Shop] ë„¤íŠ¸ì›Œí¬ ì—°ê²° ì˜¤ë¥˜: {webRequest.error}");
                     break;
-                case UnityWebRequest.Result.ProtocolError: // HTTP ÇÁ·ÎÅäÄİ ¿À·ù (¿¹: 404 Not Found, 500 Internal Server Error µî)
-                    Debug.LogError($"HTTP ÇÁ·ÎÅäÄİ ¿À·ù: {webRequest.responseCode} - {webRequest.error}");
-                    Debug.LogError($"¼­¹ö ÀÀ´ä: {webRequest.downloadHandler.text}");
+                case UnityWebRequest.Result.ProtocolError:
+                    Debug.LogError($"[Shop] HTTP í”„ë¡œí† ì½œ ì˜¤ë¥˜: {webRequest.responseCode} - {webRequest.error}");
+                    Debug.LogError($"[Shop] ì‘ë‹µ ë³¸ë¬¸: {webRequest.downloadHandler.text}");
                     break;
-                case UnityWebRequest.Result.Success: // ¿äÃ» ¼º°ø
+                case UnityWebRequest.Result.Success:
                     string jsonResponse = webRequest.downloadHandler.text;
-                    Debug.Log($"¼­¹ö¿¡¼­ ¹ŞÀº ÇÊÅÍ¸µµÈ »óÇ° µ¥ÀÌÅÍ: {jsonResponse}");
+                    Debug.Log($"[Shop] ì„œë²„ ìƒí’ˆ ë°ì´í„° ìˆ˜ì‹ : {jsonResponse}");
 
                     try
                     {
                         ProductsApiResponse apiResponse = JsonUtility.FromJson<ProductsApiResponse>(jsonResponse);
 
-                        if (apiResponse.status == "success" && apiResponse.data != null)
+                        if (apiResponse != null && apiResponse.status == "success" && apiResponse.data != null)
                         {
-                            // ¼­¹ö¿¡¼­ ÀÌ¹Ì ÇÊÅÍ¸µµÈ µ¥ÀÌÅÍÀÌ¹Ç·Î, ¹Ù·Î »ç¿ëÇÕ´Ï´Ù.
                             List<ProductData> filteredProducts = apiResponse.data;
-
-                            Debug.Log($"¼­¹ö¿¡¼­ °¡Á®¿Â Ä«Å×°í¸® ID {categoryId}¿¡ ÇØ´çÇÏ´Â »óÇ° °³¼ö: {filteredProducts.Count}°³");
-
-                            // ÀÌÁ¦ filteredProducts ¸®½ºÆ®¿¡ Æ¯Á¤ Ä«Å×°í¸® »óÇ° µ¥ÀÌÅÍ°¡ ´ã°ÜÀÖ¾î¿ä.
-                            // ÀÌ µ¥ÀÌÅÍ¸¦ °¡Áö°í »óÁ¡ ½½·ÔÀ» »ı¼ºÇÏ´Â ·ÎÁ÷À» ¿©±â¿¡ Ãß°¡ÇÏ¸é µË´Ï´Ù.
-                            // ¿¹: CreateShopSlots(filteredProducts);
-
-                            // °¡Á®¿Â µ¥ÀÌÅÍ¸¦ ¹ÙÅÁÀ¸·Î »óÁ¡ ½½·Ô »ı¼º
+                            Debug.Log($"[Shop] ì¹´í…Œê³ ë¦¬ [{category}] ìƒí’ˆ ê°œìˆ˜: {filteredProducts.Count}ê°œ");
                             CreateShopSlots(filteredProducts);
                         }
                         else
                         {
-                            Debug.LogError($"»óÇ° µ¥ÀÌÅÍ¸¦ °¡Á®¿À´Â µ¥ ½ÇÆĞÇß½À´Ï´Ù: {apiResponse.message}");
+                            Debug.LogError($"[Shop] ìƒí’ˆ ë°ì´í„°ë¥¼ ê°€ì ¸ì˜¤ì§€ ëª»í–ˆìŠµë‹ˆë‹¤: {apiResponse?.message}");
                         }
                     }
-                    catch (System.Exception e)
+                    catch (Exception e)
                     {
-                        Debug.LogError($"JSON ÆÄ½Ì ¿À·ù: {e.Message}");
-                        Debug.LogError($"¿À·ù ¹ß»ı JSON: {jsonResponse}");
+                        Debug.LogError($"[Shop] JSON íŒŒì‹± ì˜¤ë¥˜: {e.Message} (ì‘ë‹µ: {jsonResponse})");
                     }
                     break;
-                default: // ±âÅ¸ ¿¹»óÄ¡ ¸øÇÑ ¿À·ù (¿¹: DataProcessingError µî)
-                    Debug.LogError($"¾Ë ¼ö ¾ø´Â UnityWebRequest ¿À·ù: {webRequest.result} - {webRequest.error}");
+                default:
+                    Debug.LogError($"[Shop] ì•Œ ìˆ˜ ì—†ëŠ” ì˜¤ë¥˜: {webRequest.result} - {webRequest.error}");
                     break;
             }
         }
     }
 
-    // »óÁ¡ ½½·ÔÀ» »ı¼ºÇÏ°í µ¥ÀÌÅÍ¸¦ Ã¤¿ö ³Ö´Â ÇÔ¼ö
+    /// <summary>
+    /// ìƒí’ˆ ìŠ¬ë¡¯ UI í”„ë¦¬íŒ¹ì„ ì¸ìŠ¤í„´ìŠ¤í™”í•˜ê³  ë°ì´í„°ë¥¼ ì±„ìš°ëŠ” í•¨ìˆ˜
+    /// </summary>
     private void CreateShopSlots(List<ProductData> products)
     {
         if (shopContentParent == null || shopSlotPrefab == null)
         {
-            Debug.LogError("Shop Content Parent ¶Ç´Â Shop Slot PrefabÀÌ ¼³Á¤µÇÁö ¾Ê¾Ò½À´Ï´Ù. »óÁ¡ ½½·ÔÀ» »ı¼ºÇÒ ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogError("[Shop] Shop Content Parent ë˜ëŠ” Shop Slot Prefabì´ ì„¤ì •ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
             return;
         }
 
-        Debug.Log($"ÃÑ {products.Count}°³ÀÇ »óÁ¡ ½½·ÔÀ» »ı¼ºÇÕ´Ï´Ù.");
+        Debug.Log($"[Shop] ì´ {products.Count}ê°œì˜ ìƒì  ìŠ¬ë¡¯ì„ ìƒì„±í•©ë‹ˆë‹¤.");
         foreach (ProductData product in products)
         {
-            // ÇÁ¸®ÆÕ ÀÎ½ºÅÏ½ºÈ­
             GameObject newSlot = Instantiate(shopSlotPrefab, shopContentParent);
-            newSlot.name = $"ShopSlot_{product.id}"; // ¿ÀºêÁ§Æ® ÀÌ¸§ ¼³Á¤ (µğ¹ö±ë ¿ëÀÌ)
+            newSlot.name = $"ShopSlot_{product.productId}";
 
             ShopSlotUI slotUI = newSlot.GetComponent<ShopSlotUI>();
             if (slotUI != null)
             {
-                slotUI.SetProductData(product); // ShopSlotUI ½ºÅ©¸³Æ®¿¡ SetProductData ÇÔ¼ö°¡ ÀÖ´Ù°í °¡Á¤
-                Debug.Log($"½½·Ô »ı¼º ¿Ï·á: {product.name} (ID: {product.id}, °¡°İ: {product.price})");
+                slotUI.SetProductData(product);
+                Debug.Log($"[Shop] ìŠ¬ë¡¯ ìƒì„± ì™„ë£Œ: {product.productName} (ID: {product.productId}, ê°€ê²©: {product.price})");
             }
             else
             {
-                Debug.LogWarning($"ShopSlotPrefab¿¡ ShopSlotUI ÄÄÆ÷³ÍÆ®°¡ ¾ø½À´Ï´Ù: {newSlot.name}");
+                Debug.LogWarning($"[Shop] ShopSlotPrefabì— ShopSlotUI ì»´í¬ë„ŒíŠ¸ê°€ ì—†ìŠµë‹ˆë‹¤: {newSlot.name}");
+            }
+        }
+    }
+
+    // ==================================================================
+    // 2. ìƒí’ˆ ìƒì„¸ ë° êµ¬ë§¤ íŒì—… UI ì œì–´
+    // ==================================================================
+
+    /// <summary>
+    /// ìƒí’ˆ ìŠ¬ë¡¯ í´ë¦­ ì‹œ íŒì—…ì„ ì—´ê³  ìƒì„¸ ë°ì´í„°ë¥¼ í‘œì‹œí•˜ëŠ” í•¨ìˆ˜
+    /// </summary>
+    public void OpenProductPopup(ProductData product)
+    {
+        currentSelectedProduct = product;
+
+        PopulatePopupUI(product);
+
+        if (quantitySelector != null)
+        {
+            quantitySelector.itemPrice = product.price;
+            quantitySelector.UpdateQuantity(1);
+        }
+
+        if (uIPanelToggler != null)
+        {
+            uIPanelToggler.ShowPanel();
+        }
+        else if (popupPanel != null)
+        {
+            popupPanel.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// íŒì—… ë‹«ê¸° í•¨ìˆ˜
+    /// </summary>
+    public void CloseProductPopup()
+    {
+        if (uIPanelToggler != null)
+        {
+            uIPanelToggler.HidePanel();
+        }
+        else if (popupPanel != null)
+        {
+            popupPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// ì¬í™” ì¢…ë¥˜ì— ë”°ë¼ ë¡œì»¬ ìŠ¤í”„ë¼ì´íŠ¸ë¥¼ ì•„ì´ì½˜ Imageì— ì„¤ì •
+    /// </summary>
+    private void SetCurrencyIcon(PriceCurrency currencyType)
+    {
+        if (currencyIconImage == null) return;
+
+        switch (currencyType)
+        {
+            case PriceCurrency.Gold:
+                currencyIconImage.sprite = goldIconSprite;
+                break;
+            case PriceCurrency.Stellastone:
+                currencyIconImage.sprite = stellastoneIconSprite;
+                break;
+            case PriceCurrency.Stardust:
+                currencyIconImage.sprite = stardustIconSprite;
+                break;
+            default:
+                currencyIconImage.sprite = null;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// íŒì—… UI ìš”ì†Œì— ìƒí’ˆ ë°ì´í„° ì±„ìš°ê¸°
+    /// </summary>
+    private void PopulatePopupUI(ProductData product)
+    {
+        SetCurrencyIcon(product.currency);
+
+        if (productNameText != null) productNameText.text = product.productName;
+        if (productDescriptionText != null) productDescriptionText.text = product.description;
+
+        if (popupProductImage != null && !string.IsNullOrEmpty(product.image_url))
+        {
+            LoadProductImage(product.image_url, popupProductImage);
+        }
+    }
+
+    /// <summary>
+    /// ë¡œì»¬ ì—ì…‹ ê²½ë¡œ(Assets/Sprite/Shop/...)ì—ì„œ ì´ë¯¸ì§€ë¥¼ ë¡œë“œí•˜ì—¬ Imageì— í‘œì‹œ
+    /// </summary>
+    public static void LoadProductImage(string imagePath, Image targetImage)
+    {
+        if (targetImage == null || string.IsNullOrWhiteSpace(imagePath)) return;
+
+        string cleanPath = imagePath.TrimStart('/', '\\');
+        string fullPath = System.IO.Path.Combine(Application.dataPath, "Sprite", "Shop", cleanPath);
+
+        if (!System.IO.File.Exists(fullPath))
+        {
+            fullPath = System.IO.Path.Combine(Application.dataPath, "Sprite", "Shop", "Items", cleanPath);
+        }
+
+        if (System.IO.File.Exists(fullPath))
+        {
+            try
+            {
+                byte[] fileData = System.IO.File.ReadAllBytes(fullPath);
+                Texture2D texture = new Texture2D(2, 2);
+                if (texture.LoadImage(fileData))
+                {
+                    Rect rect = new Rect(0, 0, texture.width, texture.height);
+                    Vector2 pivot = new Vector2(0.5f, 0.5f);
+                    targetImage.sprite = Sprite.Create(texture, rect, pivot);
+                    targetImage.preserveAspect = true;
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Shop] ë¡œì»¬ ì´ë¯¸ì§€ ë¡œë“œ ì¤‘ ì˜¤ë¥˜ ({fullPath}): {ex.Message}");
+            }
+        }
+
+        // Resources í´ë” ë¡œë“œ ì‹œë„
+        string resPath = cleanPath;
+        int dotIndex = resPath.LastIndexOf('.');
+        if (dotIndex > 0) resPath = resPath.Substring(0, dotIndex);
+
+        Sprite resSprite = Resources.Load<Sprite>(resPath);
+        if (resSprite != null)
+        {
+            targetImage.sprite = resSprite;
+            targetImage.preserveAspect = true;
+        }
+    }
+
+    // ==================================================================
+    // 3. ì„œë²„ ìƒí’ˆ êµ¬ë§¤ í†µì‹  ë¡œì§
+    // ==================================================================
+
+    /// <summary>
+    /// íŒì—… ë‚´ êµ¬ë§¤ ë²„íŠ¼ í´ë¦­ ì‹œ í˜¸ì¶œ
+    /// </summary>
+    private void OnPurchaseButtonClicked()
+    {
+        if (currentSelectedProduct == null)
+        {
+            Debug.LogWarning("[Shop] ì„ íƒëœ ìƒí’ˆì´ ì—†ìŠµë‹ˆë‹¤.");
+            return;
+        }
+
+        Debug.Log("êµ¬ë§¤ í´ë¦­");
+
+        int quantity = (quantitySelector != null) ? quantitySelector.CurrentQuantity : 1;
+        StartCoroutine(SendPurchaseRequest(currentSelectedProduct.productId, quantity));
+    }
+
+    /// <summary>
+    /// ì„œë²„ì— êµ¬ë§¤ ìš”ì²­ íŒ¨í‚·ì„ ì „ì†¡í•˜ëŠ” ì½”ë£¨í‹´
+    /// </summary>
+    private IEnumerator SendPurchaseRequest(string productId, int quantity)
+    {
+        FirebaseUser currentUser = FirebaseAuth.DefaultInstance.CurrentUser;
+        if (currentUser == null)
+        {
+            Debug.LogError("[Shop] ë¡œê·¸ì¸ëœ ì‚¬ìš©ìê°€ ì—†ìŠµë‹ˆë‹¤. êµ¬ë§¤ë¥¼ ì§„í–‰í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
+            yield break;
+        }
+
+        var tokenTask = currentUser.TokenAsync(false);
+        yield return new WaitUntil(() => tokenTask.IsCompleted);
+
+        if (tokenTask.IsFaulted || tokenTask.IsCanceled)
+        {
+            Debug.LogError("[Shop] Firebase ì¸ì¦ í† í°ì„ ê°€ì ¸ì˜¤ì§€ ëª»í–ˆìŠµë‹ˆë‹¤.");
+            yield break;
+        }
+
+        string idToken = tokenTask.Result;
+
+        // 1. PurchaseRequest íŒ¨í‚· ìƒì„± ë° ì§ë ¬í™”
+        PurchaseRequest requestPacket = new PurchaseRequest
+        {
+            productId = productId,
+            quantity = quantity
+        };
+
+        string jsonRequestBody = JsonUtility.ToJson(requestPacket);
+        Debug.Log($"[Shop] êµ¬ë§¤ ìš”ì²­ ì „ì†¡: {purchaseApiUrl} | ìƒí’ˆID: {productId}, ìˆ˜ëŸ‰: {quantity}");
+
+        // 2. ì„œë²„ POST ì „ì†¡
+        using (UnityWebRequest webRequest = new UnityWebRequest(purchaseApiUrl, "POST"))
+        {
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonRequestBody);
+            webRequest.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            webRequest.downloadHandler = new DownloadHandlerBuffer();
+            webRequest.SetRequestHeader("Content-Type", "application/json");
+            webRequest.SetRequestHeader("Authorization", "Bearer " + idToken);
+
+            yield return webRequest.SendWebRequest();
+
+            if (webRequest.result == UnityWebRequest.Result.Success)
+            {
+                string jsonResponse = webRequest.downloadHandler.text;
+                Debug.Log($"[Shop] êµ¬ë§¤ ì‘ë‹µ ìˆ˜ì‹ : {jsonResponse}");
+
+                PurchaseResponse response = JsonUtility.FromJson<PurchaseResponse>(jsonResponse);
+                if (response != null && response.status == "success")
+                {
+                    Debug.Log($"[Shop] êµ¬ë§¤ ì„±ê³µ! {response.message} (ë‚¨ì€ ê³¨ë“œ: {response.remainingGold}, ë‚¨ì€ ì„±ì„: {response.remainingStellastone})");
+                    OnPurchaseCompleted?.Invoke(response);
+
+                    // íŒì—… ë‹«ê¸°
+                    CloseProductPopup();
+                }
+                else
+                {
+                    Debug.LogWarning($"[Shop] êµ¬ë§¤ ì‹¤íŒ¨: {response?.message}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[Shop] êµ¬ë§¤ ìš”ì²­ ë„¤íŠ¸ì›Œí¬ ì˜¤ë¥˜: {webRequest.responseCode} - {webRequest.error} | {webRequest.downloadHandler.text}");
             }
         }
     }

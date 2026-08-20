@@ -1,54 +1,57 @@
 using UnityEngine;
-using UnityEngine.EventSystems; // UI ÀÌº¥Æ® ½Ã½ºÅÛ Ã³¸®¸¦ À§ÇØ ÇÊ¼ö
+using UnityEngine.EventSystems; // UI ì´ë²¤íŠ¸ ì‹œìŠ¤í…œ ì²˜ë¦¬ë¥¼ ìœ„í•´ í•„ìˆ˜
 using System.Collections.Generic;
 /// <summary>
-/// °ÔÀÓ ³»ÀÇ ¸ğµç ¸¶¿ì½º ÀÔ·Â(Hover, Click, Drag)À» Áß¾Ó¿¡¼­ °ü¸®ÇÏ´Â ½ºÅ©¸³Æ®ÀÔ´Ï´Ù.
+/// ê²Œì„ ë‚´ì˜ ëª¨ë“  ë§ˆìš°ìŠ¤ ì…ë ¥(Hover, Click, Drag)ì„ ì¤‘ì•™ì—ì„œ ê´€ë¦¬í•˜ëŠ” ìŠ¤í¬ë¦½íŠ¸ì…ë‹ˆë‹¤.
 /// 
-/// [¿¬µ¿ ¿Ï·á]
-/// - HandInteractionManagerÀÇ È£¹ö¸µ ±â´É (ProcessHover)
-/// - HandInteractionManagerÀÇ ¸Ö¸®°Ç Å¬¸¯ ±â´É (OnMulliganCardClicked)
+/// [ì—°ë™ ì™„ë£Œ]
+/// - HandInteractionManagerì˜ í˜¸ë²„ë§ ê¸°ëŠ¥ (ProcessHover)
+/// - HandInteractionManagerì˜ ë©€ë¦¬ê±´ í´ë¦­ ê¸°ëŠ¥ (OnMulliganCardClicked)
 /// </summary>
 public class GameInputManager : MonoBehaviour
 {
     public static GameInputManager Instance;
 
-    [Header("·¹ÀÌ¾î ¼³Á¤ (¿ì¼±¼øÀ§)")]
-    [Tooltip("¼ÕÆĞ Ä«µå ·¹ÀÌ¾î (°¡Àå ¸ÕÀú Å¬¸¯ ÆÇÁ¤)")]
+    [Header("ë ˆì´ì–´ ì„¤ì • (ìš°ì„ ìˆœìœ„)")]
+    [Tooltip("ì†íŒ¨ ì¹´ë“œ ë ˆì´ì–´ (ê°€ì¥ ë¨¼ì € í´ë¦­ íŒì •)")]
     public LayerMask handCardLayer;
-    [Tooltip("ÇÊµå ÇÏ¼öÀÎ/¿µ¿õ ·¹ÀÌ¾î (¼ÕÆĞ ´ÙÀ½À¸·Î Å¬¸¯ ÆÇÁ¤)")]
+    [Tooltip("í•„ë“œ í•˜ìˆ˜ì¸/ì˜ì›… ë ˆì´ì–´ (ì†íŒ¨ ë‹¤ìŒìœ¼ë¡œ í´ë¦­ íŒì •)")]
     public LayerMask minionEntityLayer;
-    [Tooltip("ÇÊµå ·¹ÀÌ¾î (ÇÏ¼öÀÎ ´ÙÀ½À¸·Î Å¬¸¯ ÆÇÁ¤)")]
+    [Tooltip("í•„ë“œ ë ˆì´ì–´ (í•˜ìˆ˜ì¸ ë‹¤ìŒìœ¼ë¡œ í´ë¦­ íŒì •)")]
     public LayerMask fieldEntityLayer;
-    [Tooltip("½½·Ô ·¹ÀÌ¾î")]
+    [Tooltip("ìŠ¬ë¡¯ ë ˆì´ì–´")]
     public LayerMask fieldSlotLayer;
 
-    [Header("µå·¡±× ¼³Á¤")]
-    public float dragThreshold = 10f; // ÀÌ¸¸Å­ ¿òÁ÷¿©¾ß µå·¡±×·Î ÀÎÁ¤
+    [Header("ë“œë˜ê·¸ ì„¤ì •")]
+    public float dragThreshold = 10f; // ì´ë§Œí¼ ì›€ì§ì—¬ì•¼ ë“œë˜ê·¸ë¡œ ì¸ì •
 
-    // --- »óÅÂ °ü¸®¸¦ À§ÇÑ ¿­°ÅÇü(Enum) ---
+    // ì „íˆ¬ì˜ í•¨ì„± ì¡°ì¤€ ìƒíƒœë¥¼ ì—…ë°ì´íŠ¸í•˜ê¸° ìœ„í•´ ì„œë²„ íŒ¨í‚· ë°ì´í„°ë¥¼ ì„ì‹œ ë³´ê´€í•  ë³€ìˆ˜
+    private S_RequestTargetForPlay _pendingTargetPacket;
+
+    // --- ìƒíƒœ ê´€ë¦¬ë¥¼ ìœ„í•œ ì—´ê±°í˜•(Enum) ---
     public enum InputState
     {
-        Idle,           // ¾Æ¹«°Íµµ ¾È ÇÔ (È£¹ö¸µ Áß)
-        ReadyToDrag,    // ¸¶¿ì½º¸¦ ²Ú ´­·¶À¸³ª ¾ÆÁ÷ ¾È ¿òÁ÷ÀÓ
-        DraggingHand,   // ¼ÕÆĞ Ä«µå¸¦ µå·¡±× Áß
-        DraggingField,   // ÇÊµå ÇÏ¼öÀÎÀ» µå·¡±× Áß (°ø°İ Á¶ÁØ)
-        WaitingForChoice, // ¼­¹ö·ÎºÎÅÍ ¼±ÅÃÀ» ±â´Ù¸®´Â »óÅÂ
+        Idle,           // ì•„ë¬´ê²ƒë„ ì•ˆ í•¨ (í˜¸ë²„ë§ ì¤‘)
+        ReadyToDrag,    // ë§ˆìš°ìŠ¤ë¥¼ ê¾¹ ëˆŒë €ìœ¼ë‚˜ ì•„ì§ ì•ˆ ì›€ì§ì„
+        DraggingHand,   // ì†íŒ¨ ì¹´ë“œë¥¼ ë“œë˜ê·¸ ì¤‘
+        DraggingField,   // í•„ë“œ í•˜ìˆ˜ì¸ì„ ë“œë˜ê·¸ ì¤‘ (ê³µê²© ì¡°ì¤€)
+        WaitingForChoice, // ì„œë²„ë¡œë¶€í„° ì„ íƒì„ ê¸°ë‹¤ë¦¬ëŠ” ìƒíƒœ
     }
 
-    [Header("ÇöÀç »óÅÂ (µğ¹ö±×¿ë)")]
+    [Header("í˜„ì¬ ìƒíƒœ (ë””ë²„ê·¸ìš©)")]
     public InputState currentState = InputState.Idle;
 
-    // --- ³»ºÎ º¯¼ö ---
+    // --- ë‚´ë¶€ ë³€ìˆ˜ ---
     private Camera _mainCamera;
     private Vector2 _mouseDownPos;
 
-    // ÇöÀç ¼±ÅÃµÈ ´ë»óµé
+    // í˜„ì¬ ì„ íƒëœ ëŒ€ìƒë“¤
     [SerializeField]
-    private GameCardDisplay _selectedHandCard; // µå·¡±×ÇÏ·Á°í ÀâÀº ¼ÕÆĞ Ä«µå
+    private GameCardDisplay _selectedHandCard; // ë“œë˜ê·¸í•˜ë ¤ê³  ì¡ì€ ì†íŒ¨ ì¹´ë“œ
     [SerializeField]
-    private GameCardDisplay _selectedFieldEntity; // °ø°İÇÏ·Á°í ÀâÀº ÇÊµå ÇÏ¼öÀÎ
+    private GameCardDisplay _selectedFieldEntity; // ê³µê²©í•˜ë ¤ê³  ì¡ì€ í•„ë“œ í•˜ìˆ˜ì¸
 
-    // ¼±ÅÃ ¸ğµå °ü·Ã ³»ºÎ º¯¼ö ---
+    // ì„ íƒ ëª¨ë“œ ê´€ë ¨ ë‚´ë¶€ ë³€ìˆ˜ ---
     private string _currentChoiceType = "";
     private int _choiceSourceEntityId = -1;
 
@@ -62,31 +65,31 @@ public class GameInputManager : MonoBehaviour
 
     void Update()
     {
-        // 1. ÇöÀç ³» ÅÏÀÎÁö È®ÀÎÇÕ´Ï´Ù.
+        // 1. í˜„ì¬ ë‚´ í„´ì¸ì§€ í™•ì¸í•©ë‹ˆë‹¤.
         bool isMyTurn = GameStateManager.Instance == null || GameStateManager.Instance.IsMyTurn;
         bool isFold = HandCardControllManager.instance.isFolded;
 
-        // »ó´ë ÅÏÀÎµ¥ ¸¶¿ì½º¸¦ Áã°í ÀÖ°Å³ª µå·¡±× »óÅÂ¶ó¸é °­Á¦·Î Ãë¼Ò½ÃÅµ´Ï´Ù (Idle »óÅÂ·Î º¹±Í).
+        // ìƒëŒ€ í„´ì¸ë° ë§ˆìš°ìŠ¤ë¥¼ ì¥ê³  ìˆê±°ë‚˜ ë“œë˜ê·¸ ìƒíƒœë¼ë©´ ê°•ì œë¡œ ì·¨ì†Œì‹œí‚µë‹ˆë‹¤ (Idle ìƒíƒœë¡œ ë³µê·€).
         if (!isMyTurn && currentState != InputState.Idle && currentState != InputState.WaitingForChoice)
         {
             ResetInput();
         }
 
-        // 2. »óÅÂ¿¡ µû¸¥ ¸¶¿ì½º ÀÔ·Â Ã³¸®
+        // 2. ìƒíƒœì— ë”°ë¥¸ ë§ˆìš°ìŠ¤ ì…ë ¥ ì²˜ë¦¬
         switch (currentState)
         {
             case InputState.Idle:
-                // Idle »óÅÂ¿¡¼­´Â È£¹ö¸µÀ» ÇØ¾ß ÇÏ¹Ç·Î ³» ÅÏ ¿©ºÎ¸¦ Àü´ŞÇÕ´Ï´Ù. (»ó´ë ÅÏ¿¡µµ ÀÛµ¿)
+                // Idle ìƒíƒœì—ì„œëŠ” í˜¸ë²„ë§ì„ í•´ì•¼ í•˜ë¯€ë¡œ ë‚´ í„´ ì—¬ë¶€ë¥¼ ì „ë‹¬í•©ë‹ˆë‹¤. (ìƒëŒ€ í„´ì—ë„ ì‘ë™)
                 HandleIdleAndHover(isMyTurn, isFold);
                 break;
             case InputState.ReadyToDrag:
-                if (isMyTurn) HandleReadyToDrag(); // µå·¡±× ÁØºñ´Â ³» ÅÏ¿¡¸¸
+                if (isMyTurn) HandleReadyToDrag(); // ë“œë˜ê·¸ ì¤€ë¹„ëŠ” ë‚´ í„´ì—ë§Œ
                 break;
             case InputState.DraggingHand:
-                if (isMyTurn) HandleDraggingHand(); // ¼ÕÆĞ µå·¡±×µµ ³» ÅÏ¿¡¸¸
+                if (isMyTurn) HandleDraggingHand(); // ì†íŒ¨ ë“œë˜ê·¸ë„ ë‚´ í„´ì—ë§Œ
                 break;
             case InputState.DraggingField:
-                if (isMyTurn) HandleDraggingField(); // °ø°İ Á¶ÁØµµ ³» ÅÏ¿¡¸¸
+                if (isMyTurn) HandleDraggingField(); // ê³µê²© ì¡°ì¤€ë„ ë‚´ í„´ì—ë§Œ
                 break;
             case InputState.WaitingForChoice:
                 HandleWaitingForChoice();
@@ -96,9 +99,9 @@ public class GameInputManager : MonoBehaviour
 
 
     // =========================================================
-    // 1. Æò»ó½Ã (Idle) : È£¹ö¸µ(Hover) °¨Áö ¹× Å¬¸¯(Down) ´ë±â
+    // 1. í‰ìƒì‹œ (Idle) : í˜¸ë²„ë§(Hover) ê°ì§€ ë° í´ë¦­(Down) ëŒ€ê¸°
     // =========================================================
-    // UI ¿ä¼Ò °¨Áö¿ë ÇÔ¼ö
+    // UI ìš”ì†Œ ê°ì§€ìš© í•¨ìˆ˜
     private List<RaycastResult> GetUIElementsUnderPointer()
     {
         PointerEventData pointerData = new PointerEventData(EventSystem.current)
@@ -117,7 +120,7 @@ public class GameInputManager : MonoBehaviour
             _mouseDownPos = Input.mousePosition;
 
             // =======================================================
-            // 1´Ü°è: UI (2D Äµ¹ö½º - ¼ÕÆĞ Ä«µå) ¿ì¼± ÆÇÁ¤
+            // 1ë‹¨ê³„: UI (2D ìº”ë²„ìŠ¤ - ì†íŒ¨ ì¹´ë“œ) ìš°ì„  íŒì •
             // =======================================================
             List<RaycastResult> uiHits = GetUIElementsUnderPointer();
             bool isUIClicked = false;
@@ -150,13 +153,13 @@ public class GameInputManager : MonoBehaviour
             }
 
             // =======================================================
-            // 2´Ü°è: UI¸¦ Å¬¸¯ÇÏÁö ¾Ê¾Ò´Ù¸é 3D ¹°¸®(Physics) ±â¹İ ÆÇÁ¤
+            // 2ë‹¨ê³„: UIë¥¼ í´ë¦­í•˜ì§€ ì•Šì•˜ë‹¤ë©´ 3D ë¬¼ë¦¬(Physics) ê¸°ë°˜ íŒì •
             // =======================================================
             if (!isUIClicked)
             {
                 Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
 
-                // ÇÊµå ÇÏ¼öÀÎ Å¬¸¯ ÆÇÁ¤ [2]
+                // í•„ë“œ í•˜ìˆ˜ì¸ í´ë¦­ íŒì • [2]
                 if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
                 {
                     if (EntityDetailViewer.Instance != null) EntityDetailViewer.Instance.HideDetail();
@@ -178,7 +181,7 @@ public class GameInputManager : MonoBehaviour
                     }
                     return;
                 }
-                // ÇÊµå ¹è°æ Å¬¸¯ ÆÇÁ¤ [3]
+                // í•„ë“œ ë°°ê²½ í´ë¦­ íŒì • [3]
                 else if (Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer) && !HandCardControllManager.instance.isMulliganPhase)
                 {
                     if (EntityDetailViewer.Instance != null) EntityDetailViewer.Instance.HideDetail();
@@ -193,7 +196,7 @@ public class GameInputManager : MonoBehaviour
                 }
             }
         }
-        else // È£¹ö¸µ °¨Áö
+        else // í˜¸ë²„ë§ ê°ì§€
         {
             if (HandCardControllManager.instance != null && !isFold)
             {
@@ -201,9 +204,11 @@ public class GameInputManager : MonoBehaviour
             }
         }
 
-        // ¿ìÅ¬¸¯ »ó¼¼Á¤º¸ Ã¢ ¶ç¿ì±â (3D ±â¹İ À¯Áö)
+        // ìš°í´ë¦­ ìƒì„¸ì •ë³´ ì°½ ë„ìš°ê¸° (3D ê¸°ë°˜ ìœ ì§€)
         if (Input.GetMouseButtonDown(1))
         {
+            Debug.Log("ìš°í´ë¦­");
+
             Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
             {
@@ -211,33 +216,33 @@ public class GameInputManager : MonoBehaviour
                 if (targetCard != null && EntityDetailViewer.Instance != null)
                 {
                     EntityDetailViewer.Instance.ShowDetail(targetCard);
-                    Debug.Log("»ó¼¼ Á¤º¸");
+                    Debug.Log("ìƒì„¸ ì •ë³´");
                 }
             }
         }
     }
 
     // =========================================================
-    // 2. ´©¸¥ »óÅÂ (ReadyToDrag) : ÁøÂ¥·Î µå·¡±×ÇÏ´ÂÁö È®ÀÎ
+    // 2. ëˆ„ë¥¸ ìƒíƒœ (ReadyToDrag) : ì§„ì§œë¡œ ë“œë˜ê·¸í•˜ëŠ”ì§€ í™•ì¸
     // =========================================================
     private void HandleReadyToDrag()
     {
-        // ¸¶¿ì½º¸¦ ¶¼¹ö¸®¸é Ãë¼Ò (Å¬¸¯¸¸ ÇÑ °æ¿ì)
+        // ë§ˆìš°ìŠ¤ë¥¼ ë–¼ë²„ë¦¬ë©´ ì·¨ì†Œ (í´ë¦­ë§Œ í•œ ê²½ìš°)
         if (Input.GetMouseButtonUp(0))
         {
             ResetInput();
             return;
         }
 
-        // µå·¡±× °Å¸® È®ÀÎ
+        // ë“œë˜ê·¸ ê±°ë¦¬ í™•ì¸
         if (Vector2.Distance(_mouseDownPos, Input.mousePosition) > dragThreshold)
         {
-            // Àâ°í ÀÖ´Â ´ë»ó¿¡ µû¶ó »óÅÂ ºĞ¸®
+            // ì¡ê³  ìˆëŠ” ëŒ€ìƒì— ë”°ë¼ ìƒíƒœ ë¶„ë¦¬
             if (_selectedHandCard != null)
             {
                 currentState = InputState.DraggingHand;
 
-                // [¿¬µ¿ ¿Ï·á] CardDragManager¿¡°Ô µå·¡±× ½ÃÀÛ ¸í·É
+                // [ì—°ë™ ì™„ë£Œ] CardDragManagerì—ê²Œ ë“œë˜ê·¸ ì‹œì‘ ëª…ë ¹
                 if (CardDragManager.instance != null)
                     CardDragManager.instance.StartDrag(_selectedHandCard.gameObject);
             }
@@ -245,7 +250,7 @@ public class GameInputManager : MonoBehaviour
             {
                 currentState = InputState.DraggingField;
 
-                // [¿¬µ¿ ¿Ï·á] EntityAttackManager¿¡°Ô °ø°İ Á¶ÁØ ½ÃÀÛ ¸í·É
+                // [ì—°ë™ ì™„ë£Œ] EntityAttackManagerì—ê²Œ ê³µê²© ì¡°ì¤€ ì‹œì‘ ëª…ë ¹
                 if (EntityAttackManager.Instance != null)
                 {
                     EntityAttackManager.Instance.StartAttackDrag(_selectedFieldEntity);
@@ -255,13 +260,13 @@ public class GameInputManager : MonoBehaviour
     }
 
     // =========================================================
-    // 3. ¼ÕÆĞ µå·¡±× Áß (DraggingHand)
+    // 3. ì†íŒ¨ ë“œë˜ê·¸ ì¤‘ (DraggingHand)
     // =========================================================
     private void HandleDraggingHand()
     {
         if (Input.GetMouseButtonUp(0))
         {
-            // [¿¬µ¿ ¿Ï·á] CardDragManager¿¡°Ô µå·¡±× Á¾·á ¸í·É
+            // [ì—°ë™ ì™„ë£Œ] CardDragManagerì—ê²Œ ë“œë˜ê·¸ ì¢…ë£Œ ëª…ë ¹
             if (CardDragManager.instance != null)
                 CardDragManager.instance.EndDrag();
 
@@ -270,17 +275,17 @@ public class GameInputManager : MonoBehaviour
     }
 
     // =========================================================
-    // 4. ÇÊµå °ø°İ Á¶ÁØ Áß (DraggingField)
+    // 4. í•„ë“œ ê³µê²© ì¡°ì¤€ ì¤‘ (DraggingField)
     // =========================================================
     private void HandleDraggingField()
     {
-        // [¿¬µ¿ ¿Ï·á] Á¶ÁØ¼± °»½Å ¹× Å¸°Ù ÇÏÀÌ¶óÀÌÆ® (¸Å ÇÁ·¹ÀÓ ½ÇÇà)
+        // [ì—°ë™ ì™„ë£Œ] ì¡°ì¤€ì„  ê°±ì‹  ë° íƒ€ê²Ÿ í•˜ì´ë¼ì´íŠ¸ (ë§¤ í”„ë ˆì„ ì‹¤í–‰)
         if (EntityAttackManager.Instance != null)
         {
             EntityAttackManager.Instance.UpdateTargetHighlight();
         }
 
-        // Å×½ºÆ®
+        // í…ŒìŠ¤íŠ¸
         if(GameEntityManager.Instance.test)
         {
 
@@ -288,7 +293,7 @@ public class GameInputManager : MonoBehaviour
 
         if (Input.GetMouseButtonUp(0))
         {
-            // [¿¬µ¿ ¿Ï·á] °ø°İ ½ÇÇà ¹× »óÅÂ ÃÊ±âÈ­ ¸í·É
+            // [ì—°ë™ ì™„ë£Œ] ê³µê²© ì‹¤í–‰ ë° ìƒíƒœ ì´ˆê¸°í™” ëª…ë ¹
             if (EntityAttackManager.Instance != null)
                 EntityAttackManager.Instance.TryCompleteAttack();
 
@@ -297,11 +302,11 @@ public class GameInputManager : MonoBehaviour
     }
 
     // =========================================================
-    // 5. ´ë»ó ¼±ÅÃ ´ë±â
+    // 5. ëŒ€ìƒ ì„ íƒ ëŒ€ê¸°
     // =========================================================
 
     /// <summary>
-    /// ¼­¹ö·ÎºÎÅÍ S_RequestChoice ÆĞÅ¶À» ¹Ş¾ÒÀ» ¶§ ¿ÜºÎ¿¡¼­ È£ÃâÇÕ´Ï´Ù.
+    /// ì„œë²„ë¡œë¶€í„° S_RequestChoice íŒ¨í‚·ì„ ë°›ì•˜ì„ ë•Œ ì™¸ë¶€ì—ì„œ í˜¸ì¶œí•©ë‹ˆë‹¤.
     /// </summary>
     public void StartChoiceMode(string choiceType, int sourceEntityId)
     {
@@ -309,30 +314,96 @@ public class GameInputManager : MonoBehaviour
         _currentChoiceType = choiceType;
         _choiceSourceEntityId = sourceEntityId;
 
-        Debug.Log($"[GameInputManager] ¼±ÅÃ ¸ğµå ÁøÀÔ: {_currentChoiceType} (¿ä±¸ ÁÖÃ¼: {_choiceSourceEntityId})");
+        // ì¡°ì¤€ì„ (í™”ì‚´í‘œ) í™œì„±í™”
+        if (TargetingReticle.Instance != null)
+        {
+            Transform startTransform = null;
+
+            // 1. ë°©ê¸ˆ í•˜ìˆ˜ì¸ì„ ë‚´ë ¤ë†“ì€ í•„ë“œ ìŠ¬ë¡¯ ìœ„ì¹˜ ìš°ì„  í™•ì¸ (í•˜ìˆ˜ì¸ì´ ì†Œí™˜ë  ìŠ¬ë¡¯ì—ì„œ í™”ì‚´í‘œ ì¶œë°œ)
+            if (CardDragManager.instance != null && CardDragManager.instance.LastPlayedSlotIndex >= 0)
+            {
+                int slotIdx = CardDragManager.instance.LastPlayedSlotIndex;
+                if (GameEntityManager.Instance != null && GameEntityManager.Instance.myFieldSlots != null && slotIdx < GameEntityManager.Instance.myFieldSlots.Length)
+                {
+                    startTransform = GameEntityManager.Instance.myFieldSlots[slotIdx].transform;
+                }
+            }
+
+            // 2. ì´ë¯¸ í•„ë“œì— ìƒì„±ëœ í•˜ìˆ˜ì¸ ì˜¤ë¸Œì íŠ¸ê°€ ìˆë‹¤ë©´ í•´ë‹¹ ìœ„ì¹˜ ì‚¬ìš©
+            if (startTransform == null && GameEntityManager.Instance != null && GameEntityManager.Instance._spawnedEntities.TryGetValue(sourceEntityId, out var sourceCard))
+            {
+                if (sourceCard != null) startTransform = sourceCard.transform;
+            }
+
+            // 3. ì—†ìœ¼ë©´ ë‚´ ë¦¬ë” ìœ„ì¹˜ ì‚¬ìš©
+            if (startTransform == null && GameEntityManager.Instance != null && GameEntityManager.Instance.myLeader != null)
+            {
+                startTransform = GameEntityManager.Instance.myLeader.transform;
+            }
+
+            if (startTransform != null)
+            {
+                TargetingReticle.Instance.StartTargeting(startTransform);
+            }
+        }
     }
 
     private void HandleWaitingForChoice()
     {
-        // ÁÂÅ¬¸¯ ½Ã ´ë»ó ¶Ç´Â À§Ä¡ ¼±ÅÃ È®Á¤
+        // ë§Œì•½ ì¼ë°˜ Choice ëª¨ë“œê°€ ì•„ë‹ˆë¼ ì „íˆ¬ì˜ í•¨ì„± íƒ€ê²Ÿ ëŒ€ê¸°ì¤‘ì¸ íŒ¨í‚·ì´ ìˆë‹¤ë©´ ì—¬ê¸°ì„œ ì²˜ë¦¬í•©ë‹ˆë‹¤.
+        if (_pendingTargetPacket != null)
+        {
+            // ì¢Œí´ë¦­: ëŒ€ìƒ í™•ì •
+            if (Input.GetMouseButtonDown(0))
+            {
+                Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
+                {
+                    GameCardDisplay targetCard = minionHit.collider.GetComponentInParent<GameCardDisplay>();
+                    if (targetCard != null)
+                    {
+                        // ì„œë²„ê°€ ë³´ë‚¸ ìœ íš¨ íƒ€ê²Ÿ ëª©ë¡ ê²€ì¦ í›„ ì „ì†¡
+                        if (_pendingTargetPacket.ValidTargetIds != null && _pendingTargetPacket.ValidTargetIds.Contains(targetCard.EntityId))
+                        {
+                            GameClient.Instance.SendTargetReauest(_pendingTargetPacket.CardEntityId, targetCard.EntityId);
+
+                            // íƒ€ê²ŸíŒ… ì™„ë£Œë˜ì—ˆìœ¼ë¯€ë¡œ ì •ë¦¬
+                            BattleManager.Instance.ResetHighlights();
+                            CleanUpTargetingMode();
+                        }
+                    }
+                }
+            }
+            // ìš°í´ë¦­: ì¡°ì¤€ ì·¨ì†Œ (ë˜ëŠ” ì†íŒ¨ ë³µêµ¬)
+            else if (Input.GetMouseButtonDown(1))
+            {
+                GameClient.Instance.SendTargetReauest(_pendingTargetPacket.CardEntityId, -1);
+                BattleManager.Instance.ResetHighlights();
+                CleanUpTargetingMode();
+            }
+            return; // ì¼ë°˜ Choice ëª¨ë“œ ì¡°ê±´ íƒ€ì§€ ì•Šê²Œ ì˜ˆë°©
+        }
+
+        // ì¢Œí´ë¦­ ì‹œ ëŒ€ìƒ ë˜ëŠ” ìœ„ì¹˜ ì„ íƒ í™•ì •
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
 
-            // 1. ÅäÅ« ¼ÒÈ¯ À§Ä¡ ¼±ÅÃÀÏ °æ¿ì (FieldSlot °¨Áö)
+            // 1. í† í° ì†Œí™˜ ìœ„ì¹˜ ì„ íƒì¼ ê²½ìš° (FieldSlot ê°ì§€)
             if (_currentChoiceType == "POSITION")
             {
                 if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
                 {
                     FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
-                    if (slot != null && !slot.IsOccupied) // ºó ÀÚ¸®ÀÏ ¶§¸¸ Çã¿ë
+                    if (slot != null && !slot.IsOccupied) // ë¹ˆ ìë¦¬ì¼ ë•Œë§Œ í—ˆìš©
                     {
                         GameClient.Instance.SendMakeChoiceRequest(slot.slotIndex, null, -1);
+                        CleanUpTargetingMode();
                         ResetInput();
                     }
                 }
             }
-            // 2. ÁÖ¹® µîÀÇ ´ÙÁß/´ÜÀÏ Å¸°Ù ¼±ÅÃÀÏ °æ¿ì (Entity °¨Áö)
+            // 2. ì£¼ë¬¸ ë“±ì˜ ë‹¤ì¤‘/ë‹¨ì¼ íƒ€ê²Ÿ ì„ íƒì¼ ê²½ìš° (Entity ê°ì§€)
             else if (_currentChoiceType == "TARGET")
             {
                 if (Physics.Raycast(ray, out RaycastHit hit, 100f, minionEntityLayer))
@@ -341,6 +412,7 @@ public class GameInputManager : MonoBehaviour
                     if (targetCard != null)
                     {
                         GameClient.Instance.SendMakeChoiceRequest(-1, null, targetCard.EntityId);
+                        CleanUpTargetingMode();
                         ResetInput();
                     }
                 }
@@ -348,9 +420,42 @@ public class GameInputManager : MonoBehaviour
         }
     }
 
+    public void HandleRequestTargetForPlay(S_RequestTargetForPlay packet)
+    {
+        // 1. íŒ¨í‚· ë°ì´í„°ë¥¼ ë©¤ë²„ ë³€ìˆ˜ì— ê³ ì´ ë³´ê´€í•©ë‹ˆë‹¤.
+        _pendingTargetPacket = packet;
+
+        // 2. ì¡°ì¤€ì„ ì´ ì‹œì‘ë  3D ìœ„ì¹˜ë¥¼ êµ¬í•©ë‹ˆë‹¤.
+        Transform spawnSlotTransform = GameEntityManager.Instance.myFieldSlots[packet.position].transform;
+
+        // 3. ì…ë ¥ ìƒíƒœë¥¼ ëŒ€ìƒ ì§€ì • ëŒ€ê¸° ìƒíƒœë¡œ ì „í™˜
+        currentState = InputState.WaitingForChoice;
+
+        // 4. ì¡°ì¤€ì„  ë° í•˜ì´ë¼ì´íŠ¸ ì¼œê¸°
+        if (TargetingReticle.Instance != null)
+        {
+            TargetingReticle.Instance.StartTargeting(spawnSlotTransform);
+        }
+
+        if (packet.ValidTargetIds != null)
+        {
+            BattleManager.Instance.OnReceiveValidTargetsRequestTargetForPlay(packet);
+        }
+    }
+
     // =========================================================
-    // °øÅë: ÀÔ·Â »óÅÂ ÃÊ±âÈ­
+    // ê³µí†µ: ì…ë ¥ ìƒíƒœ ì´ˆê¸°í™”
     // =========================================================
+
+    private void CleanUpTargetingMode()
+    {
+        if (TargetingReticle.Instance != null)
+            TargetingReticle.Instance.StopTargeting(); // ì¡°ì¤€ì„  ë„ê¸°
+
+        _pendingTargetPacket = null; // íŒ¨í‚· ë¹„ìš°ê¸°
+        ResetInput(); // currentStateë¥¼ Idle ìƒíƒœë¡œ ë³µêµ¬
+    }
+
     public void ResetInput()
     {
         currentState = InputState.Idle;

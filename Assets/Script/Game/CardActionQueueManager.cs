@@ -1,10 +1,10 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
 
 /// <summary>
-/// Ä«µå ¿¬ÃâÀÇ ÁøÇà »óÅÂ¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+/// ì¹´ë“œ ì—°ì¶œì˜ ì§„í–‰ ìƒíƒœë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
 /// </summary>
 public enum ActionState
 {
@@ -21,28 +21,27 @@ public class CardActionRequest
 }
 
 /// <summary>
-/// 2D UI ±â¹İ: Ä«µå »ç¿ë ¿¬Ãâ ¸Å´ÏÀú
-/// - ³» Ä«µå: Áß¾Ó ¿¬Ãâ »ı·«ÇÏ°í Áï½Ã ÇÊµå ½ºÆù
-/// - »ó´ë Ä«µå: ´ë±â¿­ ¾øÀÌ Áß¾Ó¿¡ ÇÏ³ª¾¿¸¸ º¸¿©ÁÜ (»õ Ä«µå »ç¿ë ½Ã ±âÁ¸ Ä«µå Áï½Ã µ¤¾î¾²±â)
+/// 2D UI ê¸°ë°˜: ì¹´ë“œ ì‚¬ìš© ì—°ì¶œ ë§¤ë‹ˆì €
+/// - ë‚´ ì¹´ë“œ: ì¤‘ì•™ ì—°ì¶œ ìƒëµí•˜ê³  ì¦‰ì‹œ í•„ë“œ ìŠ¤í°
+/// - ìƒëŒ€ ì¹´ë“œ: ëŒ€ê¸°ì—´ ì—†ì´ ì¤‘ì•™ì— í•˜ë‚˜ì”©ë§Œ ë³´ì—¬ì¤Œ (ìƒˆ ì¹´ë“œ ì‚¬ìš© ì‹œ ê¸°ì¡´ ì¹´ë“œ ì¦‰ì‹œ ë®ì–´ì“°ê¸°)
 /// </summary>
 public class CardActionQueueManager : MonoBehaviour
 {
     public static CardActionQueueManager Instance;
 
-    [Header("UI ¾À ¿¬°á")]
-    [Tooltip("»ó´ë¹æ Ä«µå°¡ °ø°³µÉ È­¸é Áß¾Ó À§Ä¡ (RectTransform)")]
+    [Header("UI ì”¬ ì—°ê²°")]
+    [Tooltip("ìƒëŒ€ë°© ì¹´ë“œê°€ ê³µê°œë  í™”ë©´ ì¤‘ì•™ ìœ„ì¹˜ (RectTransform)")]
     public RectTransform centerShowAnchor;
 
-    [Header("Å¸ÀÌ¹Ö ¼³Á¤")]
-    public float moveDuration = 0.4f; // Ä«µå°¡ Áß¾ÓÀ¸·Î ¿À´Â ½Ã°£
-    public float stayDuration = 1.0f; // Áß¾Ó¿¡¼­ ¸ØÃç¼­ º¸¿©ÁÖ´Â ½Ã°£
+    [Header("íƒ€ì´ë° ì„¤ì •")]
+    public float moveDuration = 0.4f; // ì¹´ë“œê°€ ì¤‘ì•™ìœ¼ë¡œ ì˜¤ëŠ” ì‹œê°„
+    public float stayDuration = 1.0f; // ì¤‘ì•™ì—ì„œ ë©ˆì¶°ì„œ ë³´ì—¬ì£¼ëŠ” ì‹œê°„
 
-    // ³×Æ®¿öÅ© µ¿±âÈ­¸¦ À§ÇÑ º¸ÀÌÁö ¾Ê´Â ³»ºÎ µ¥ÀÌÅÍ ¸®½ºÆ® (½Ã°¢Àû ´ë±â¿­ ¾Æ´Ô)
+    // ë„¤íŠ¸ì›Œí¬ ë™ê¸°í™”ë¥¼ ìœ„í•œ ë³´ì´ì§€ ì•ŠëŠ” ë‚´ë¶€ ë°ì´í„° ë¦¬ìŠ¤íŠ¸ (ì‹œê°ì  ëŒ€ê¸°ì—´ ì•„ë‹˜)
     private List<CardActionRequest> _internalList = new List<CardActionRequest>();
-    private Queue<EntityData> _orphanedDataBuffer = new Queue<EntityData>();
     private bool _isProcessing = false;
 
-    // ÇöÀç È­¸é Áß¾Ó¿¡¼­ º¸¿©ÁÖ°í ÀÖ´Â »ó´ë¹æ Ä«µå
+    // í˜„ì¬ í™”ë©´ ì¤‘ì•™ì—ì„œ ë³´ì—¬ì£¼ê³  ìˆëŠ” ìƒëŒ€ë°© ì¹´ë“œ
     private GameObject _currentShownCard = null;
     private Coroutine _hideCardCoroutine = null;
 
@@ -53,27 +52,18 @@ public class CardActionQueueManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ä«µå »ç¿ë ¿ÀºêÁ§Æ®°¡ »ı¼ºµÇ¾úÀ» ¶§ È£Ãâ (Å¬¶óÀÌ¾ğÆ® µå·¡±× ¶Ç´Â ¼­¹ö ¸Ş½ÃÁö)
-    /// CardDragManagerÀÇ OnServerSuccessResponse()ÇÔ¼ö¾Ö¼­ »ç¿ë
+    /// ì¹´ë“œ ì‚¬ìš© ì˜¤ë¸Œì íŠ¸ê°€ ìƒì„±ë˜ì—ˆì„ ë•Œ í˜¸ì¶œ (í´ë¼ì´ì–¸íŠ¸ ë“œë˜ê·¸ ë˜ëŠ” ì„œë²„ ë©”ì‹œì§€)
+    /// CardDragManagerì˜ OnServerSuccessResponse()í•¨ìˆ˜ì• ì„œ ì‚¬ìš©
     /// </summary>
     public void PreparePlay(GameObject cardObj, bool isOpponent)
     {
         CardActionRequest newRequest = new CardActionRequest
         {
             cardObject = cardObj,
-            isOpponent = isOpponent
+            isOpponent = isOpponent,
+            entityData = null, // ë²„í¼ ë¡œì§ ì‚­ì œë¡œ ë¬´ì¡°ê±´ null í• ë‹¹ í›„ ëŒ€ê¸°
+            state = ActionState.WaitingForData
         };
-
-        if (_orphanedDataBuffer.Count > 0)
-        {
-            newRequest.entityData = _orphanedDataBuffer.Dequeue();
-            newRequest.state = ActionState.Ready;
-        }
-        else
-        {
-            newRequest.entityData = null;
-            newRequest.state = ActionState.WaitingForData;
-        }
 
         _internalList.Add(newRequest);
 
@@ -81,9 +71,9 @@ public class CardActionQueueManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ¼­¹ö·ÎºÎÅÍ ½ÇÁ¦ Ä«µå ½ºÆå µ¥ÀÌÅÍ°¡ µµÂøÇßÀ» ¶§ È£Ãâ
+    /// ì„œë²„ë¡œë¶€í„° ì‹¤ì œ ì¹´ë“œ ìŠ¤í™ ë°ì´í„°ê°€ ë„ì°©í–ˆì„ ë•Œ í˜¸ì¶œ
     /// </summary>
-    public void ResolvePlay(EntityData data)
+    public bool ResolvePlay(EntityData data)
     {
         CardActionRequest pending = _internalList.Find(a => a.state == ActionState.WaitingForData);
 
@@ -91,11 +81,11 @@ public class CardActionQueueManager : MonoBehaviour
         {
             pending.entityData = data;
             pending.state = ActionState.Ready;
+            return true; // ëŒ€ê¸°ì—´ì—ì„œ ìƒëŒ€ë°© ì¹´ë“œë¥¼ ì°¾ì•„ ì •ìƒ ë§¤ì¹­í•¨
         }
-        else
-        {
-            _orphanedDataBuffer.Enqueue(data);
-        }
+
+        // íì— ëŒ€ê¸° ì¤‘ì¸ ì¹´ë“œê°€ ì—†ë‹¤ë©´ (ë‚´ ì¹´ë“œì´ê±°ë‚˜, íš¨ê³¼ë¡œ ì†Œí™˜ëœ í† í°)
+        return false;
     }
 
     private IEnumerator ProcessQueueRoutine()
@@ -106,7 +96,7 @@ public class CardActionQueueManager : MonoBehaviour
         {
             CardActionRequest current = _internalList[0];
 
-            // µ¥ÀÌÅÍ°¡ ¿Ã ¶§±îÁö ´ë±â
+            // ë°ì´í„°ê°€ ì˜¬ ë•Œê¹Œì§€ ëŒ€ê¸°
             if (current.state == ActionState.WaitingForData)
             {
                 yield return new WaitForSeconds(0.05f);
@@ -117,25 +107,25 @@ public class CardActionQueueManager : MonoBehaviour
             EntityData currentData = current.entityData;
 
             // ==========================================================
-            // 1. ³» Ä«µå Ã³¸® (¿¬Ãâ »ı·«, Áï½Ã ¼ÒÈ¯)
+            // 1. ë‚´ ì¹´ë“œ ì²˜ë¦¬ (ì—°ì¶œ ìƒëµ, ì¦‰ì‹œ ì†Œí™˜)
             // ==========================================================
             if (!current.isOpponent)
             {
-                // UI¿¡¼­ º¸¿©ÁÙ ÇÊ¿ä ¾øÀÌ ¹Ù·Î ÇÊµå ½ºÆù ½ÇÇà
+                // UIì—ì„œ ë³´ì—¬ì¤„ í•„ìš” ì—†ì´ ë°”ë¡œ í•„ë“œ ìŠ¤í° ì‹¤í–‰
                 if (GameEntityManager.Instance != null)
                 {
                     GameEntityManager.Instance.SpawnCard(currentData);
                 }
 
-                // ³» Ä«µå´Â µå·¡±×ÇÏ´ø ¼ÕÆĞ UI ¿ÀºêÁ§Æ®ÀÌ¹Ç·Î ¿ªÇÒÀÌ ³¡³µÀ¸´Ï ÆÄ±«
+                // ë‚´ ì¹´ë“œëŠ” ë“œë˜ê·¸í•˜ë˜ ì†íŒ¨ UI ì˜¤ë¸Œì íŠ¸ì´ë¯€ë¡œ ì—­í• ì´ ëë‚¬ìœ¼ë‹ˆ íŒŒê´´
                 if (currentCard != null) HandCardControllManager.instance.RemoveCardFromHand(currentCard);
             }
             // ==========================================================
-            // 2. »ó´ë¹æ Ä«µå Ã³¸® (Áß¾Ó ´ÜÀÏ ½½·Ô ¿¬Ãâ)
+            // 2. ìƒëŒ€ë°© ì¹´ë“œ ì²˜ë¦¬ (ì¤‘ì•™ ë‹¨ì¼ ìŠ¬ë¡¯ ì—°ì¶œ)
             // ==========================================================
             else
             {
-                // [ÇÙ½É] ±âÁ¸¿¡ È­¸é Áß¾Ó¿¡ º¸¿©ÁÖ°í ÀÖ´ø ´Ù¸¥ »ó´ë¹æ Ä«µå°¡ ÀÖ´Ù¸é Áï½Ã ÆÄ±«!
+                // [í•µì‹¬] ê¸°ì¡´ì— í™”ë©´ ì¤‘ì•™ì— ë³´ì—¬ì£¼ê³  ìˆë˜ ë‹¤ë¥¸ ìƒëŒ€ë°© ì¹´ë“œê°€ ìˆë‹¤ë©´ ì¦‰ì‹œ íŒŒê´´!
                 if (_currentShownCard != null)
                 {
                     Destroy(_currentShownCard);
@@ -145,35 +135,35 @@ public class CardActionQueueManager : MonoBehaviour
                 _currentShownCard = currentCard;
                 RectTransform cardRect = currentCard.GetComponent<RectTransform>();
 
-                // UI ºÎ¸ğ ¼³Á¤ ¹× ·»´õ¸µ ¼ø¼­ ¸Ç ¾ÕÀ¸·Î
-                cardRect.SetParent(centerShowAnchor, false); // Áß¾Ó ¾ŞÄ¿ ±âÁØ 0,0,0À¸·Î ½ÃÀÛ
+                // UI ë¶€ëª¨ ì„¤ì • ë° ë Œë”ë§ ìˆœì„œ ë§¨ ì•ìœ¼ë¡œ
+                cardRect.SetParent(centerShowAnchor, false); // ì¤‘ì•™ ì•µì»¤ ê¸°ì¤€ 0,0,0ìœ¼ë¡œ ì‹œì‘
                 cardRect.SetAsLastSibling();
 
-                // DOTween UI ¾Ö´Ï¸ŞÀÌ¼Ç (DOAnchorPos)
+                // DOTween UI ì• ë‹ˆë©”ì´ì…˜ (DOAnchorPos)
                 cardRect.DOKill();
                 cardRect.DOAnchorPos(Vector2.zero, moveDuration).SetEase(Ease.OutQuad);
                 cardRect.DOLocalRotateQuaternion(Quaternion.identity, moveDuration).SetEase(Ease.OutQuad);
 
-                // »ó´ë·ÎºÎÅÍ ³¯¾Æ¿Â ´À³¦À» ÁÖ±â À§ÇØ »ìÂ¦ Å­Á÷ÇÏ°Ô ¶ç¿ò
+                // ìƒëŒ€ë¡œë¶€í„° ë‚ ì•„ì˜¨ ëŠë‚Œì„ ì£¼ê¸° ìœ„í•´ ì‚´ì§ í¼ì§í•˜ê²Œ ë„ì›€
                 cardRect.DOScale(Vector3.one * 1.3f, moveDuration).SetEase(Ease.OutQuad);
 
-                // À¯Àú°¡ Ä«µå¸¦ È®ÀÎÇÒ ½Ã°£À» ÁÜ
-                yield return new WaitForSeconds(stayDuration);
+                // ìœ ì €ê°€ ì¹´ë“œë¥¼ í™•ì¸í•  ì‹œê°„ì„ ì¤Œ
+                // yield return new WaitForSeconds(stayDuration);
 
-                // ½ÇÁ¦ ÇÊµå¿¡ ÇÏ¼öÀÎ ½ºÆù
+                // ì‹¤ì œ í•„ë“œì— í•˜ìˆ˜ì¸ ìŠ¤í°
                 if (GameEntityManager.Instance != null)
                 {
                     GameEntityManager.Instance.SpawnCard(currentData);
                 }
 
-                // ÀÏÁ¤ ½Ã°£ÀÌ Áö³ª¸é º¸¿©Áá´ø Ä«µå¸¦ ÀÚ¿¬½º·´°Ô Ä¡¿ì±â (µµÁß¿¡ »õ Ä«µå°¡ ¿À¸é À§¿¡¼­ °­Á¦ ÆÄ±«µÊ)
+                // ì¼ì • ì‹œê°„ì´ ì§€ë‚˜ë©´ ë³´ì—¬ì¤¬ë˜ ì¹´ë“œë¥¼ ìì—°ìŠ¤ëŸ½ê²Œ ì¹˜ìš°ê¸° (ë„ì¤‘ì— ìƒˆ ì¹´ë“œê°€ ì˜¤ë©´ ìœ„ì—ì„œ ê°•ì œ íŒŒê´´ë¨)
                 _hideCardCoroutine = StartCoroutine(HideShownCardRoutine(_currentShownCard));
             }
 
-            // ¸®½ºÆ®¿¡¼­ Ã³¸® ¿Ï·áµÈ Ç×¸ñ Á¦°Å
+            // ë¦¬ìŠ¤íŠ¸ì—ì„œ ì²˜ë¦¬ ì™„ë£Œëœ í•­ëª© ì œê±°
             _internalList.RemoveAt(0);
 
-            // ´ë±â¿­ ¿¬ÃâÀÌ ¾øÀ¸¹Ç·Î »çÀÌ °£°İÀ» ¸Å¿ì Âª°Ô Áİ´Ï´Ù.
+            // ëŒ€ê¸°ì—´ ì—°ì¶œì´ ì—†ìœ¼ë¯€ë¡œ ì‚¬ì´ ê°„ê²©ì„ ë§¤ìš° ì§§ê²Œ ì¤ë‹ˆë‹¤.
             yield return new WaitForSeconds(0.1f);
         }
 
@@ -181,11 +171,11 @@ public class CardActionQueueManager : MonoBehaviour
     }
 
     /// <summary>
-    /// »ó´ë¹æ Ä«µå¸¦ º¸¿©ÁØ ÈÄ ÀÚ¿¬½º·´°Ô Ãà¼ÒÇÏ¸ç ÆÄ±«ÇÏ´Â ÄÚ·çÆ¾
+    /// ìƒëŒ€ë°© ì¹´ë“œë¥¼ ë³´ì—¬ì¤€ í›„ ìì—°ìŠ¤ëŸ½ê²Œ ì¶•ì†Œí•˜ë©° íŒŒê´´í•˜ëŠ” ì½”ë£¨í‹´
     /// </summary>
     private IEnumerator HideShownCardRoutine(GameObject targetCard)
     {
-        // ¼ÒÈ¯ ¿Ï·á ÈÄ 0.5ÃÊ Á¤µµ ´õ º¸¿©ÁÖ´Ù°¡ »ç¶óÁü
+        // ì†Œí™˜ ì™„ë£Œ í›„ 0.5ì´ˆ ì •ë„ ë” ë³´ì—¬ì£¼ë‹¤ê°€ ì‚¬ë¼ì§
         yield return new WaitForSeconds(1.0f);
 
         if (targetCard != null)

@@ -1074,7 +1074,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e5b281a16254e24dad473d9cdd7cd2c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  className: "\uC720\uB2C8"
+  className: Yuni
   deckBuilder: {fileID: 0}
 --- !u!1 &89114044
 GameObject:
@@ -4296,7 +4296,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e5b281a16254e24dad473d9cdd7cd2c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  className: "\uD6C4\uC57C"
+  className: Huya
   deckBuilder: {fileID: 0}
 --- !u!114 &433161351
 MonoBehaviour:

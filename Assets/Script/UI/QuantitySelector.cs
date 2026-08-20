@@ -6,67 +6,55 @@ using UnityEngine.UI;
 
 public class QuantitySelector : MonoBehaviour
 {
-    [Header("UI ¿¬°á")]
-    [Tooltip("¼ö·®À» ÁÙÀÌ´Â '-' ¹öÆ°ÀÔ´Ï´Ù.")]
+    [Header("UI ì—°ê²°")]
+    [Tooltip("ìˆ˜ëŸ‰ì„ ì¤„ì´ëŠ” '-' ë²„íŠ¼ì…ë‹ˆë‹¤.")]
     public Button decreaseButton;
-    [Tooltip("¼ö·®À» ´Ã¸®´Â '+' ¹öÆ°ÀÔ´Ï´Ù.")]
+    [Tooltip("ìˆ˜ëŸ‰ì„ ëŠ˜ë¦¬ëŠ” '+' ë²„íŠ¼ì…ë‹ˆë‹¤.")]
     public Button increaseButton;
-    [Tooltip("¼ö·®À» Á÷Á¢ ÀÔ·ÂÇÏ´Â InputFieldÀÔ´Ï´Ù.")]
+    [Tooltip("ìˆ˜ëŸ‰ì„ ì§ì ‘ ì…ë ¥í•˜ëŠ” InputFieldì…ë‹ˆë‹¤.")]
     public TMP_InputField quantityInput;
-    [Tooltip("ÃÑ °¡°İÀ» Ç¥½ÃÇÒ TextMeshPro UIÀÔ´Ï´Ù.")]
+    [Tooltip("ì´ ê°€ê²©ì„ í‘œì‹œí•  TextMeshPro UIì…ë‹ˆë‹¤.")]
     public TextMeshProUGUI totalPriceText;
-    [Tooltip("ÀçÈ­ ÀÌ¹ÌÁöÀÔ´Ï´Ù.")]
+    [Tooltip("ì¬í™” ì´ë¯¸ì§€ì…ë‹ˆë‹¤.")]
     public Image priceImage;
 
-
-    [Header("¾ÆÀÌÅÛ Á¤º¸")]
-    [Tooltip("¾ÆÀÌÅÛÀÇ °³´ç °¡°İÀÔ´Ï´Ù.")]
+    [Header("ë°ì´í„° ì„¤ì •")]
+    [Tooltip("ì•„ì´í…œì˜ ë‹¨ì¼ ê°€ê²©ì…ë‹ˆë‹¤.")]
     public int itemPrice = 100;
-    [Tooltip("ÃÖ´ë ±¸¸Å °¡´É ¼ö·®ÀÔ´Ï´Ù.")]
+    [Tooltip("ìµœëŒ€ êµ¬ë§¤ ê°€ëŠ¥ ìˆ˜ëŸ‰ì…ë‹ˆë‹¤.")]
     public int maxQuantity = 99;
-    [Tooltip("ÃÖ¼Ò ±¸¸Å °¡´É ¼ö·®ÀÔ´Ï´Ù.")]
+    [Tooltip("ìµœì†Œ êµ¬ë§¤ ê°€ëŠ¥ ìˆ˜ëŸ‰ì…ë‹ˆë‹¤.")]
     public int minQuantity = 1;
 
-    // ÇöÀç ¼±ÅÃµÈ ¼ö·®À» ÀúÀåÇÏ´Â º¯¼ö
+    // í˜„ì¬ ì„ íƒëœ ìˆ˜ëŸ‰ì„ ì €ì¥í•˜ëŠ” ë³€ìˆ˜
     private int currentQuantity = 1;
 
     /// <summary>
-    /// ½ºÅ©¸³Æ®°¡ Ã³À½ ½ÃÀÛµÉ ¶§ È£ÃâµË´Ï´Ù.
+    /// í˜„ì¬ ì„ íƒëœ ìˆ˜ëŸ‰ ë°˜í™˜ í”„ë¡œí¼í‹°
     /// </summary>
+    public int CurrentQuantity => currentQuantity;
+
     void Start()
     {
-        // °¢ UI ¿ä¼Ò¿¡ ÀÌº¥Æ® ¸®½º³Ê¸¦ µ¿ÀûÀ¸·Î Ãß°¡ÇÕ´Ï´Ù.
-        decreaseButton.onClick.AddListener(OnDecreaseClicked);
-        increaseButton.onClick.AddListener(OnIncreaseClicked);
-        // InputFieldÀÇ °ªÀÌ º¯°æµÉ ¶§¸¶´Ù ÇÔ¼ö¸¦ È£ÃâÇÏµµ·Ï ¿¬°áÇÕ´Ï´Ù.
-        quantityInput.onValueChanged.AddListener(OnInputFieldValueChanged);
+        if (decreaseButton != null) decreaseButton.onClick.AddListener(OnDecreaseClicked);
+        if (increaseButton != null) increaseButton.onClick.AddListener(OnIncreaseClicked);
+        if (quantityInput != null) quantityInput.onValueChanged.AddListener(OnInputFieldValueChanged);
 
-        // ½ÃÀÛ ½Ã ¼ö·®À» 1·Î ÃÊ±âÈ­ÇÏ°í UI¸¦ ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.
         UpdateQuantity(1);
     }
 
-    /// <summary>
-    /// '-' ¹öÆ°À» Å¬¸¯ÇßÀ» ¶§ È£ÃâµÉ ÇÔ¼öÀÔ´Ï´Ù.
-    /// </summary>
     private void OnDecreaseClicked()
     {
         UpdateQuantity(currentQuantity - 1);
     }
 
-    /// <summary>
-    /// '+' ¹öÆ°À» Å¬¸¯ÇßÀ» ¶§ È£ÃâµÉ ÇÔ¼öÀÔ´Ï´Ù.
-    /// </summary>
     private void OnIncreaseClicked()
     {
         UpdateQuantity(currentQuantity + 1);
     }
 
-    /// <summary>
-    /// InputField¿¡ Á÷Á¢ °ªÀ» ÀÔ·ÂÇÒ ¶§ È£ÃâµÉ ÇÔ¼öÀÔ´Ï´Ù.
-    /// </summary>
     private void OnInputFieldValueChanged(string newText)
     {
-        // ÀÔ·ÂµÈ ÅØ½ºÆ®¸¦ ¼ıÀÚ·Î º¯È¯ÇÏ¿© ¼ö·®À» ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.
         if (int.TryParse(newText, out int newQuantity))
         {
             UpdateQuantity(newQuantity);
@@ -74,22 +62,21 @@ public class QuantitySelector : MonoBehaviour
     }
 
     /// <summary>
-    /// ¼ö·®À» ¾÷µ¥ÀÌÆ®ÇÏ°í, À¯È¿¼ºÀ» °Ë»çÇÏ¸ç, UI¸¦ °»½ÅÇÏ´Â ÇÙ½É ÇÔ¼öÀÔ´Ï´Ù.
+    /// ìˆ˜ëŸ‰ì„ ì—…ë°ì´íŠ¸í•˜ê³  ìœ íš¨ì„±ì„ ê²€ì‚¬í•˜ë©° UIë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
     /// </summary>
     public void UpdateQuantity(int newQuantity)
     {
-        // ¼ö·®ÀÌ ÃÖ¼Ò/ÃÖ´ë ¹üÀ§¸¦ ¹ş¾î³ªÁö ¾Êµµ·Ï °ªÀ» Á¦ÇÑÇÕ´Ï´Ù.
         currentQuantity = Mathf.Clamp(newQuantity, minQuantity, maxQuantity);
 
-        // InputFieldÀÇ ÅØ½ºÆ®¸¦ ÇöÀç ¼ö·®À¸·Î ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.
-        // (¹«ÇÑ ·çÇÁ¸¦ ¹æÁöÇÏ±â À§ÇØ, ÇöÀç ÅØ½ºÆ®¿Í ´Ù¸¦ ¶§¸¸ ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.)
-        if (quantityInput.text != currentQuantity.ToString())
+        if (quantityInput != null && quantityInput.text != currentQuantity.ToString())
         {
             quantityInput.text = currentQuantity.ToString();
         }
 
-        // ÃÑ °¡°İÀ» °è»êÇÏ°í UI ÅØ½ºÆ®¸¦ ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.
-        int totalPrice = currentQuantity * itemPrice;
-        totalPriceText.text = totalPrice.ToString("N0"); // "N0"´Â 1,000 ´ÜÀ§ ÄŞ¸¶¸¦ Ãß°¡ÇØÁİ´Ï´Ù.
+        if (totalPriceText != null)
+        {
+            int totalPrice = currentQuantity * itemPrice;
+            totalPriceText.text = totalPrice.ToString("N0");
+        }
     }
 }

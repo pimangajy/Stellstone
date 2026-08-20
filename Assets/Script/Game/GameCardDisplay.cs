@@ -1,81 +1,84 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using TMPro;
 using DG.Tweening;
 using UnityEngine.UI;
 using System.Collections;
 using UnityEditor;
-using System.Collections.Generic; // ¾Ö´Ï¸ŞÀÌ¼Ç
+using System.Collections.Generic; // ì• ë‹ˆë©”ì´ì…˜
 
 /// <summary>
-/// ÀÎ°ÔÀÓ(ÇÊµå, ¼ÕÆĞ)¿¡¼­ Ä«µåÀÇ ¿ÜÇüÀ» Ç¥½ÃÇÕ´Ï´Ù.
-/// [¼öÁ¤µÊ]
-/// - °ø°İÀÚ/´ë»ó ¿¬Ãâ (Floating, Glow)
-/// - ½ºÅÈ º¯È­¿¡ µû¸¥ ÅØ½ºÆ® »ö»ó º¯°æ (¹öÇÁ: ÃÊ·Ï, ³ÊÇÁ: »¡°­)
+/// ì¸ê²Œì„(í•„ë“œ, ì†íŒ¨)ì—ì„œ ì¹´ë“œì˜ ì™¸í˜•ì„ í‘œì‹œí•©ë‹ˆë‹¤.
+/// [ìˆ˜ì •ë¨]
+/// - ê³µê²©ì/ëŒ€ìƒ ì—°ì¶œ (Floating, Glow)
+/// - ìŠ¤íƒ¯ ë³€í™”ì— ë”°ë¥¸ í…ìŠ¤íŠ¸ ìƒ‰ìƒ ë³€ê²½ (ë²„í”„: ì´ˆë¡, ë„ˆí”„: ë¹¨ê°•)
 /// </summary>
 public class GameCardDisplay : MonoBehaviour
 {
-    [Header("UI ¿¬°á")]
+    [Header("UI ì—°ê²°")]
     public SpriteGifPlayer cardArtAnimator;
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI descriptionText;
 
-    [Header("½ºÅÈ UI")]
+    [Header("ìŠ¤íƒ¯ UI")]
     public TextMeshProUGUI costText;
     public TextMeshProUGUI attackText;
     public TextMeshProUGUI healthText;
 
-    [Header("ÇÊµå ¿ë UI ¿¬°á")]
+    [Header("í•„ë“œ ìš© UI ì—°ê²°")]
     public TextMeshPro entityNameText;
     public TextMeshPro entityDescriptionText;
 
-    [Header("ÇÊµå ¿ë ½ºÅÈ UI")]
+    [Header("í•„ë“œ ìš© ìŠ¤íƒ¯ UI")]
     public TextMeshPro entityCostText;
     public TextMeshPro entityAttackText;
     public TextMeshPro entityHealthText;
 
-    [Header("¸®´õ¿ë UI")]
+    [Header("ë¦¬ë”ìš© UI")]
     public TextMeshPro HP;
     public MeshRenderer leaderMat;
     public List<Material> materials;
 
-    [Header("»ö»ó ¼³Á¤")]
+    [Header("ìƒ‰ìƒ ì„¤ì •")]
     public Color normalColor = Color.white;
-    public Color buffColor = Color.green;   // ½ºÅÈÀÌ ³ô¾ÆÁ³À» ¶§ (ÃÊ·Ï»ö)
-    public Color debuffColor = Color.red;   // ½ºÅÈÀÌ ³·¾ÆÁ³À» ¶§ (»¡°£»ö)
+    public Color buffColor = Color.green;   // ìŠ¤íƒ¯ì´ ë†’ì•„ì¡Œì„ ë•Œ (ì´ˆë¡ìƒ‰)
+    public Color debuffColor = Color.red;   // ìŠ¤íƒ¯ì´ ë‚®ì•„ì¡Œì„ ë•Œ (ë¹¨ê°„ìƒ‰)
 
-    [Header("µ¥ÀÌÅÍ")]
+    [Header("ë°ì´í„°")]
     public CardData _cardData;
     public CardInfo _cardInfo;
     public EntityData CurrentEntityData;
     public int EntityId { get; private set; }
     public string InstanceId => _cardInfo?.instanceId;
 
-    // --- [¿¬Ãâ ¼³Á¤] ---
-    [Header("¿¬Ãâ - °ø°İÀÚ (Floating)")]
-    [Tooltip("°ø°İ ½Ãµµ ½Ã ¶°¿À¸¦ ³ôÀÌ")]
+    // --- [ì—°ì¶œ ì„¤ì •] ---
+    [Header("ì—°ì¶œ - ê³µê²©ì (Floating)")]
+    [Tooltip("ê³µê²© ì‹œë„ ì‹œ ë– ì˜¤ë¥¼ ë†’ì´")]
     public float floatHeight = 0.5f;
     public float floatDuration = 0.2f;
 
-    [Header("¿¬Ãâ - ´ë»ó (Glow)")]
-    [Tooltip("Á¶ÁØ´çÇÒ ¶§ ÄÑÁú ÇÏÀÌ¶óÀÌÆ® ¿ÀºêÁ§Æ® (Å×µÎ¸® ÀÌ¹ÌÁö µî)")]
+    [Header("ì—°ì¶œ - ëŒ€ìƒ (Glow)")]
+    [Tooltip("ì¡°ì¤€ë‹¹í•  ë•Œ ì¼œì§ˆ í•˜ì´ë¼ì´íŠ¸ ì˜¤ë¸Œì íŠ¸ (í…Œë‘ë¦¬ ì´ë¯¸ì§€ ë“±)")]
     public GameObject glowEffectObject;
 
-    [Header("ÇÇ°İ ¸ğ¼Ç")]
+    [Header("í”¼ê²© ëª¨ì…˜")]
     public GameObject damageIMG;
 
-    private Vector3 _basePosition; // ¿ø·¡ À§Ä¡
-    private bool _isFloating = false; // ÇöÀç ¶°ÀÖ´Â »óÅÂÀÎ°¡?
+    [Header("ë²„í”„ íš¨ê³¼ìš© íŒŒí‹°í´ í”„ë¦¬íŒ¹")]
+    public GameObject buffVFXPrefab;
+
+    private Vector3 _basePosition; // ì›ë˜ ìœ„ì¹˜
+    private bool _isFloating = false; // í˜„ì¬ ë– ìˆëŠ” ìƒíƒœì¸ê°€?
 
     private void Awake()
     {
         _basePosition = transform.localPosition;
 
-        // ½ÃÀÛ ½Ã ¹ß±¤ È¿°ú´Â ²¨µÓ´Ï´Ù.
+        // ì‹œì‘ ì‹œ ë°œê´‘ íš¨ê³¼ëŠ” êº¼ë‘¡ë‹ˆë‹¤.
         if (glowEffectObject != null) glowEffectObject.SetActive(false);
     }
 
     /// <summary>
-    /// [¼ÕÆĞ¿ë] Ä«µå µ¥ÀÌÅÍ¸¦ ¹Ş¾Æ¼­ È­¸é¿¡ Ç¥½ÃÇÕ´Ï´Ù.
+    /// [ì†íŒ¨ìš©] ì¹´ë“œ ë°ì´í„°ë¥¼ ë°›ì•„ì„œ í™”ë©´ì— í‘œì‹œí•©ë‹ˆë‹¤.
     /// </summary>
     public void Setup(CardData data, CardInfo info)
     {
@@ -84,22 +87,22 @@ public class GameCardDisplay : MonoBehaviour
 
         if (_cardData == null) return;
 
-        // 1. ÀÌ¹ÌÁö ¹× ÅØ½ºÆ® ¼³Á¤
+        // 1. ì´ë¯¸ì§€ ë° í…ìŠ¤íŠ¸ ì„¤ì •
         if (cardArtAnimator != null && _cardData.animationFrames != null)
             cardArtAnimator.SetGif(_cardData.animationFrames);
 
         if (nameText != null) nameText.text = _cardData.cardName;
         if (descriptionText != null) descriptionText.text = _cardData.description;
 
-        // 2. ½ºÅÈ ¼³Á¤ (¼­¹ö Á¤º¸°¡ ÀÖÀ¸¸é ¹İ¿µ, ¾øÀ¸¸é ±âº»°ª)
+        // 2. ìŠ¤íƒ¯ ì„¤ì • (ì„œë²„ ì •ë³´ê°€ ìˆìœ¼ë©´ ë°˜ì˜, ì—†ìœ¼ë©´ ê¸°ë³¸ê°’)
         int cost = (info != null) ? info.currentCost : _cardData.manaCost;
         int atk = (info != null) ? info.currentAttack : _cardData.attack;
         int hp = (info != null) ? info.currentHealth : _cardData.health;
 
         if (costText != null) costText.text = cost.ToString();
 
-        // ÇÏ¼öÀÎ¸¸ °ø/Ã¼ Ç¥½Ã ¹× »ö»ó Àû¿ë
-        bool isMinion = _cardData.cardType == CardType.ÇÏ¼öÀÎ;
+        // í•˜ìˆ˜ì¸ë§Œ ê³µ/ì²´ í‘œì‹œ ë° ìƒ‰ìƒ ì ìš©
+        bool isMinion = _cardData.cardType == CardType.í•˜ìˆ˜ì¸;
 
         if (attackText != null)
         {
@@ -115,7 +118,7 @@ public class GameCardDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// [ÇÊµå¿ë] ¼ÒÈ¯µÈ °³Ã¼ÀÇ Á¤º¸¸¦ ¼³Á¤ÇÕ´Ï´Ù.
+    /// [í•„ë“œìš©] ì†Œí™˜ëœ ê°œì²´ì˜ ì •ë³´ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
     /// </summary>
     public void SetupEntity(EntityData entityData, CardData cardData)
     {
@@ -135,87 +138,79 @@ public class GameCardDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸®´õ UI¸¦ °»½ÅÇÕ´Ï´Ù.
+    /// ë¦¬ë” UI ë° ë°ì´í„°ë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
     /// </summary>
-    public void SetReader(S_GameReady info)
+    public void SetLeader(EntityData leaderData)
     {
-        if(info.myLeader.ownerUid == GameClient.Instance.UserUid)
+        if (leaderData == null) return;
+
+        // ë¦¬ë” ì´ë¯¸ì§€ ì ìš©
+        switch (leaderData.cardId)
         {
-            // ¾Æ±º ¸®´õÀÌ¹ÌÁö Àû¿ë
-            switch (info.myLeader.cardId)
-            {
-                case "LEADER_Gangzi":
+            case "LEADER_Gangzi":
+                if (materials != null && materials.Count > 0 && materials[0] != null && leaderMat != null)
                     leaderMat.sharedMaterial = materials[0];
-                    break;
-                case "LEADER_Yuni":
+                break;
+            case "LEADER_Yuni":
+                if (materials != null && materials.Count > 1 && materials[1] != null && leaderMat != null)
                     leaderMat.sharedMaterial = materials[1];
-                    break;
-                case "LEADER_Huya":
+                break;
+            case "LEADER_Huya":
+                if (materials != null && materials.Count > 2 && materials[2] != null && leaderMat != null)
                     leaderMat.sharedMaterial = materials[2];
-                    break;
-            }
-
-            // ¸®´õ ½ºÅÈ Àû¿ë
-            this.EntityId = info.myLeader.entityId;
-            this.CurrentEntityData = info.myLeader;
-            HP.text = info.myLeader.health.ToString();
-
+                break;
         }
-        else
-        {
-            // Àû ¸®´õ ÀÌ¹ÌÁö Àû¿ë
-            switch (info.enemyLeader.cardId)
-            {
-                case "LEADER_Gangzi":
-                    leaderMat.sharedMaterial = materials[0];
-                    break;
-                case "LEADER_Yuni":
-                    leaderMat.sharedMaterial = materials[1];
-                    break;
-                case "LEADER_Huya":
-                    leaderMat.sharedMaterial = materials[2];
-                    break;
-            }
 
-            // Àû ¸®´õ ½ºÅÈ Àû¿ë
-            this.EntityId = info.enemyLeader.entityId;
-            this.CurrentEntityData = info.enemyLeader;
-            HP.text = info.enemyLeader.health.ToString();
+        // ë¦¬ë” ìŠ¤íƒ¯ ì ìš©
+        this.EntityId = leaderData.entityId;
+        this.CurrentEntityData = leaderData;
+        if (HP != null)
+        {
+            HP.text = leaderData.health.ToString();
         }
     }
 
-    /// <summary>
-    /// ¼­¹ö¿¡¼­ ¿Â ÃÖ½Å »óÅÂ·Î ½ºÅÈ UI¸¦ °»½ÅÇÕ´Ï´Ù.
+    /// <summary>                                                                                                                                           
+    /// ì„œë²„ì—ì„œ ì˜¨ ìµœì‹  ìƒíƒœë¡œ ìŠ¤íƒ¯ UIë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
     /// </summary>
     public void UpdateEntityStats(EntityData entityData)
     {
         this.CurrentEntityData = entityData;
 
-        // ºñ¿ëÀº ÇÊµå¿¡¼­ º¸Åë Ç¥½Ã ¾È ÇÏÁö¸¸, ÇÊ¿äÇÏ´Ù¸é ¾÷µ¥ÀÌÆ®
-        // if (costText != null) costText.text = entityData.cost.ToString();
+        // =======================================================
+        // 1. ë¦¬ë”(ì˜ì›…)ì¸ ê²½ìš° : ë¦¬ë” ì „ìš© UI (HP) ê°±ì‹ 
+        // =======================================================
+        if (entityData.isLeader || HP != null)
+        {
+            if (HP != null)
+            {
+                HP.text = entityData.health.ToString();
 
-        // °ø°İ·Â°ú Ã¼·ÂÀ» °»½ÅÇÏ¸é¼­ »ö»óµµ °°ÀÌ °è»êÇÕ´Ï´Ù.
-        if (entityAttackText != null)
+                // ìµœëŒ€ ì²´ë ¥(ì˜ˆ: 30) ëŒ€ë¹„ ìƒ‰ìƒ í‘œì‹œ (í”¼ê²© ì‹œ ë¹¨ê°•, í’€í”¼ ì‹œ í°ìƒ‰)
+                int maxHp = entityData.maxHealth > 0 ? entityData.maxHealth : 30;
+                EntitySetStatText(HP, entityData.health, maxHp);
+            }
+            return; // ë¦¬ë”ëŠ” ì¼ë°˜ í•˜ìˆ˜ì¸ ìŠ¤íƒ¯ ê°±ì‹ ì„ ê±°ì¹˜ì§€ ì•Šê³  ì¢…ë£Œ
+        }
+
+        // =======================================================
+        // 2. ì¼ë°˜ í•˜ìˆ˜ì¸ / ë©¤ë²„ì¸ ê²½ìš°
+        // =======================================================
+        if (entityAttackText != null && _cardData != null)
         {
             entityAttackText.text = entityData.attack.ToString();
-
-            // ÇöÀç °ø°İ·Â vs ¿ø·¡ °ø°İ·Â ºñ±³
             EntitySetStatText(entityAttackText, entityData.attack, _cardData.attack);
         }
 
-        if (entityHealthText != null)
+        if (entityHealthText != null && _cardData != null)
         {
             entityHealthText.text = entityData.health.ToString();
-
-            // ÇöÀç Ã¼·Â vs ¿ø·¡ Ã¼·Â ºñ±³
-            // (ÁÖÀÇ: ÇÏ½º½ºÅæ ·ÎÁ÷»ó 'ÇÇÇØ¸¦ ÀÔÀº »óÅÂ'´Â »¡°­, 'ÃÖ´ë Ã¼·ÂÀÌ ´Ã¾î³­ »óÅÂ'´Â ÃÊ·ÏÀÔ´Ï´Ù.
-            // ¿©±â¼­´Â ¿äÃ»ÇÏ½Å ´ë·Î 'ÇöÀç °ª vs ¿øº» ÃÖ´ë°ª' ±âÁØÀ¸·Î ´Ü¼ø ºñ±³ÇÕ´Ï´Ù)
             EntitySetStatText(entityHealthText, entityData.health, _cardData.health);
         }
     }
 
     /// <summary>
-    /// [³»ºÎ ÇÔ¼ö] °ª¿¡ µû¶ó ÅØ½ºÆ® ³»¿ë°ú »ö»óÀ» º¯°æÇÕ´Ï´Ù.
+    /// [ë‚´ë¶€ í•¨ìˆ˜] ê°’ì— ë”°ë¼ í…ìŠ¤íŠ¸ ë‚´ìš©ê³¼ ìƒ‰ìƒì„ ë³€ê²½í•©ë‹ˆë‹¤.
     /// </summary>
     /// 
     private void SetStatText(TextMeshProUGUI textComp, int currentVal, int originalVal)
@@ -224,15 +219,15 @@ public class GameCardDisplay : MonoBehaviour
 
         if (currentVal > originalVal)
         {
-            textComp.color = buffColor; // ¹öÇÁ (ÃÊ·Ï)
+            textComp.color = buffColor; // ë²„í”„ (ì´ˆë¡)
         }
         else if (currentVal < originalVal)
         {
-            textComp.color = debuffColor; // ³ÊÇÁ/ÇÇÇØ (»¡°­)
+            textComp.color = debuffColor; // ë„ˆí”„/í”¼í•´ (ë¹¨ê°•)
         }
         else
         {
-            textComp.color = normalColor; // Á¤»ó (Èò»ö)
+            textComp.color = normalColor; // ì •ìƒ (í°ìƒ‰)
         }
     }
 
@@ -242,41 +237,41 @@ public class GameCardDisplay : MonoBehaviour
 
         if (currentVal > originalVal)
         {
-            textComp.color = buffColor; // ¹öÇÁ (ÃÊ·Ï)
+            textComp.color = buffColor; // ë²„í”„ (ì´ˆë¡)
         }
         else if (currentVal < originalVal)
         {
-            textComp.color = debuffColor; // ³ÊÇÁ/ÇÇÇØ (»¡°­)
+            textComp.color = debuffColor; // ë„ˆí”„/í”¼í•´ (ë¹¨ê°•)
         }
         else
         {
-            textComp.color = normalColor; // Á¤»ó (Èò»ö)
+            textComp.color = normalColor; // ì •ìƒ (í°ìƒ‰)
         }
     }
 
-    // --- [¿¬Ãâ ±â´É 1] °ø°İÀÚ¿ë: °øÁßºÎ¾ç (Floating) ---
+    // --- [ì—°ì¶œ ê¸°ëŠ¥ 1] ê³µê²©ììš©: ê³µì¤‘ë¶€ì–‘ (Floating) ---
     public void SetFloatingState(bool shouldFloat)
     {
         if (_isFloating == shouldFloat) return;
         _isFloating = shouldFloat;
 
-        transform.DOKill(); // ±âÁ¸ ¾Ö´Ï¸ŞÀÌ¼Ç Ãë¼Ò
+        transform.DOKill(); // ê¸°ì¡´ ì• ë‹ˆë©”ì´ì…˜ ì·¨ì†Œ
 
         if (shouldFloat)
         {
-            // À§·Î µÕ½Ç ¶°¿À¸§
+            // ìœ„ë¡œ ë‘¥ì‹¤ ë– ì˜¤ë¦„
             transform.DOLocalMoveY(_basePosition.y + floatHeight, floatDuration)
                 .SetEase(Ease.OutQuad);
         }
         else
         {
-            // ¿ø·¡ ÀÚ¸®·Î ÂøÁö
+            // ì›ë˜ ìë¦¬ë¡œ ì°©ì§€
             transform.DOLocalMoveY(_basePosition.y, floatDuration)
                 .SetEase(Ease.OutQuad);
         }
     }
 
-    // --- [¿¬Ãâ ±â´É 2] ´ë»ó¿ë: ¹ß±¤ (Glow) ---
+    // --- [ì—°ì¶œ ê¸°ëŠ¥ 2] ëŒ€ìƒìš©: ë°œê´‘ (Glow) ---
     public void SetGlowState(bool shouldGlow)
     {
         if (glowEffectObject != null)
@@ -285,7 +280,7 @@ public class GameCardDisplay : MonoBehaviour
         }
     }
 
-    // --- [¿¬Ãâ ±â´É 3] µ¥¹ÌÁö ---
+    // --- [ì—°ì¶œ ê¸°ëŠ¥ 3] ë°ë¯¸ì§€ ---
     public void DamageUI(int damage)
     {
         StartCoroutine(HitUI(damage));
@@ -302,29 +297,46 @@ public class GameCardDisplay : MonoBehaviour
 
     }
 
+    // ì¹´ë“œ ë²„í”„ì‹œ ì´íŒ©íŠ¸
+    public void PlayBuffVFX()
+    {
+        if (buffVFXPrefab != null)
+        {
+            // ì¹´ë“œ ì¤‘ì•™ ìœ„ì¹˜ì— ì´í™íŠ¸ë¥¼ ì†Œí™˜í•˜ê³  ì§§ì€ ì‹œê°„ í›„ íŒŒê´´í•©ë‹ˆë‹¤.
+            GameObject vfx = Instantiate(buffVFXPrefab, transform.position, Quaternion.identity, this.transform);
+            Destroy(vfx, 1.5f);
+        }
+    }
+
     public void PlayTriggerAnimation(EffectTriggerType triggerType)
     {
-        // Ä«µå°¡ °¡Áø VFX ¿¡¼Â ¸®½ºÆ® Áß¿¡¼­ ÇöÀç Æ®¸®°Å Å¸ÀÔ°ú ÀÏÄ¡ÇÏ´Â ¿¡¼ÂÀ» Ã£À½
+        // ì¹´ë“œê°€ ê°€ì§„ VFX ì—ì…‹ ë¦¬ìŠ¤íŠ¸ ì¤‘ì—ì„œ í˜„ì¬ íŠ¸ë¦¬ê±° íƒ€ì…ê³¼ ì¼ì¹˜í•˜ëŠ” ì—ì…‹ì„ ì°¾ìŒ
         CardVFXData vfxData = _cardData.triggerVFXList.Find(x => x.triggerType == triggerType);
 
         if (vfxData != null && vfxData.vfxPrefab != null)
         {
-            // ¿¡¼Â¿¡ µî·ÏµÈ ÀÌÆåÆ® »ı¼º
+            // ì—ì…‹ì— ë“±ë¡ëœ ì´í™íŠ¸ ìƒì„±
             Instantiate(vfxData.vfxPrefab, transform.position, Quaternion.identity);
 
-            // (¼±ÅÃ) »ç¿îµå Àç»ı ·ÎÁ÷
+            // (ì„ íƒ) ì‚¬ìš´ë“œ ì¬ìƒ ë¡œì§
             // if (vfxData.soundEffect != null) AudioManager.Play(vfxData.soundEffect);
         }
         else
         {
-            // °³º° ÀÌÆåÆ®°¡ ¾ø´Ù¸é ½Ã½ºÅÛ ±âº» ÀÌÆåÆ® Àç»ı (ÀÌÀü ¼³¸í°ú µ¿ÀÏ)
-            Debug.Log("±âº» ¹ü¿ë ¿¬Ãâ ½ÇÇà");
+            // ê°œë³„ ì´í™íŠ¸ê°€ ì—†ë‹¤ë©´ ì‹œìŠ¤í…œ ê¸°ë³¸ ì´í™íŠ¸ ì¬ìƒ (ì´ì „ ì„¤ëª…ê³¼ ë™ì¼)
+            Debug.Log("ê¸°ë³¸ ë²”ìš© ì—°ì¶œ ì‹¤í–‰");
         }
     }
 
-    // À§Ä¡ Àç¼³Á¤ (ÀÌµ¿ ÈÄ È£Ãâ)
+    // ìœ„ì¹˜ ì¬ì„¤ì • (ì´ë™ í›„ í˜¸ì¶œ)
     public void ResetBasePosition()
     {
         _basePosition = transform.localPosition;
+    }
+
+    void OnDestroy()
+    {
+        // ì´ ì˜¤ë¸Œì íŠ¸(transform)ì— ê±¸ë ¤ìˆëŠ” ëª¨ë“  DoTween ì• ë‹ˆë©”ì´ì…˜ì„ ì¦‰ì‹œ ì œê±°
+        transform.DOKill();
     }
 }

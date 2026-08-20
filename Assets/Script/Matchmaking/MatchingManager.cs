@@ -12,8 +12,8 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 
 /// <summary>
-/// ¸ŞÀÎ ·Îºñ/¸ÅÄ¡¸ŞÀÌÅ· ¾ÀÀÇ UI¿Í »óÅÂ¸¦ °ü¸®ÇÕ´Ï´Ù.
-/// DeckSelectPopup°ú Åë½ÅÇÏ¿© ¼±ÅÃµÈ µ¦À» È­¸é¿¡ Ç¥½ÃÇÕ´Ï´Ù.
+/// ë©”ì¸ ë¡œë¹„/ë§¤ì¹˜ë©”ì´í‚¹ ì”¬ì˜ UIì™€ ìƒíƒœë¥¼ ê´€ë¦¬í•©ë‹ˆë‹¤.
+/// DeckSelectPopupê³¼ í†µì‹ í•˜ì—¬ ì„ íƒëœ ë±ì„ í™”ë©´ì— í‘œì‹œí•©ë‹ˆë‹¤.
 /// </summary>
 public class MatchingManager : MonoBehaviour
 {
@@ -21,90 +21,93 @@ public class MatchingManager : MonoBehaviour
     private class SelectDeckResponse
     {
         public string status;
-        public DeckData deck; // DeckData ÀüÃ¼¸¦ ¹ŞÀ½
+        public DeckData deck; // DeckData ì „ì²´ë¥¼ ë°›ìŒ
     }
 
-    [Header("UI ¿¬°á (·Îºñ È­¸é)")]
-    [SerializeField] private Button openDeckSelectButton; // 'µ¦ ¼±ÅÃ' ÅØ½ºÆ®/¹öÆ°
-    [SerializeField] private TextMeshProUGUI selectedDeckNameText; // 'µ¦ ¼±ÅÃ' ¹öÆ° ¾ÈÀÇ ÅØ½ºÆ®
-    [SerializeField] private Image selectedLeaderImage; // '¸®´õ º¯°æ' ¹öÆ° ¾ÈÀÇ ÀÌ¹ÌÁö
+    [Header("UI ì—°ê²° (ë¡œë¹„ í™”ë©´)")]
+    [SerializeField] private Button openDeckSelectButton; // 'ë± ì„ íƒ' í…ìŠ¤íŠ¸/ë²„íŠ¼
+    [SerializeField] private TextMeshProUGUI selectedDeckNameText; // 'ë± ì„ íƒ' ë²„íŠ¼ ì•ˆì˜ í…ìŠ¤íŠ¸
+    [SerializeField] private Image selectedLeaderImage; // 'ë¦¬ë” ë³€ê²½' ë²„íŠ¼ ì•ˆì˜ ì´ë¯¸ì§€
 
-    [Header("ÆË¾÷ ÂüÁ¶")]
-    [SerializeField] private DeckSelectPopup deckSelectPopup; // ¾À¿¡ ÀÖ´Â DeckSelectPopup ½ºÅ©¸³Æ®
+    [Header("íŒì—… ì°¸ì¡°")]
+    [SerializeField] private DeckSelectPopup deckSelectPopup; // ì”¬ì— ìˆëŠ” DeckSelectPopup ìŠ¤í¬ë¦½íŠ¸
 
-    // (Ãß°¡) ·ÎºñÀÇ µ¦ Ä«µå ¸ñ·Ï UI
-    [Header("µ¦ Ä«µå ¸ñ·Ï UI (·Îºñ)")]
-    [Tooltip("¼±ÅÃµÈ ¸ŞÀÎ µ¦ÀÇ Ä«µå ¸ñ·ÏÀÌ Ç¥½ÃµÉ ½ºÅ©·Ñ ºäÀÇ Content")]
+    // (ì¶”ê°€) ë¡œë¹„ì˜ ë± ì¹´ë“œ ëª©ë¡ UI
+    [Header("ë± ì¹´ë“œ ëª©ë¡ UI (ë¡œë¹„)")]
+    [Tooltip("ì„ íƒëœ ë©”ì¸ ë±ì˜ ì¹´ë“œ ëª©ë¡ì´ í‘œì‹œë  ìŠ¤í¬ë¡¤ ë·°ì˜ Content")]
     [SerializeField] private Transform deckCardListParent;
-    [Tooltip("¼±ÅÃµÈ »çÀÌµå µ¦ÀÇ Ä«µå ¸ñ·ÏÀÌ Ç¥½ÃµÉ ½ºÅ©·Ñ ºäÀÇ Content")]
+    [Tooltip("ì„ íƒëœ ì‚¬ì´ë“œ ë±ì˜ ì¹´ë“œ ëª©ë¡ì´ í‘œì‹œë  ìŠ¤í¬ë¡¤ ë·°ì˜ Content")]
     [SerializeField] private Transform  sideDeckCardListParent;
-    [Tooltip("Ä«µå ¸ñ·Ï¿¡ »ç¿ëµÉ ÇÁ¸®ÆÕ (LobbyDeckCardDisplay.cs ½ºÅ©¸³Æ® Æ÷ÇÔ)")]
+    [Tooltip("ì¹´ë“œ ëª©ë¡ì— ì‚¬ìš©ë  í”„ë¦¬íŒ¹ (LobbyDeckCardDisplay.cs ìŠ¤í¬ë¦½íŠ¸ í¬í•¨)")]
     [SerializeField] private GameObject deckCardPrefab;
 
 
-    [Header("¸ÅÄ¡¸ŞÀÌÅ·")]
-    [Tooltip("¾À¿¡ ÀÖ´Â MatchmakingService ½ºÅ©¸³Æ®¸¦ ¿¬°á")]
+    [Header("ë§¤ì¹˜ë©”ì´í‚¹")]
+    [Tooltip("ì”¬ì— ìˆëŠ” MatchmakingService ìŠ¤í¬ë¦½íŠ¸ë¥¼ ì—°ê²°")]
     [SerializeField] private MatchmakingService matchmakingService;
-    [Tooltip("À¯Àú°¡ ´©¸¦ '´ëÀü Ã£±â' ¹öÆ°")]
+    [Tooltip("ìœ ì €ê°€ ëˆ„ë¥¼ 'ëŒ€ì „ ì°¾ê¸°' ë²„íŠ¼")]
     [SerializeField] private Button findMatchButton;
-    [Tooltip("À¯Àú°¡ ´©¸¦ 'Ã£±â Ãë¼Ò' ¹öÆ°")]
+    [Tooltip("ìœ ì €ê°€ ëˆ„ë¥¼ 'ì°¾ê¸° ì·¨ì†Œ' ë²„íŠ¼")]
     [SerializeField] private Button cancelMatchButton;
 
-    [Header("¸ÅÄ¡¸ŞÀÌÅ· UI")]
-    [Tooltip("'´ëÀü Ã£´Â Áß...' »óÅÂÀÏ ¶§ ÄÓ ÆĞ³Î")]
+    [Header("ë§¤ì¹˜ë©”ì´í‚¹ UI")]
+    [Tooltip("'ëŒ€ì „ ì°¾ëŠ” ì¤‘...' ìƒíƒœì¼ ë•Œ ì¼¤ íŒ¨ë„")]
     [SerializeField] private GameObject searchingPanel;
-    [Tooltip("±âº» ·Îºñ È­¸é (´ëÀü Ã£±â ¹öÆ°ÀÌ ÀÖ´Â)")]
+    [Tooltip("ëŒ€ì „ ì°¾ëŠ” ì‹œê°„")]
+    [SerializeField] private TextMeshProUGUI machingTime;
+    [Tooltip("ê¸°ë³¸ ë¡œë¹„ í™”ë©´ (ëŒ€ì „ ì°¾ê¸° ë²„íŠ¼ì´ ìˆëŠ”)")]
     [SerializeField] private GameObject lobbyPanel;
 
-    //  DeckSaveManager¿¡¼­ ¼­¹ö ÁÖ¼Ò º¹»ç
+    //  DeckSaveManagerì—ì„œ ì„œë²„ ì£¼ì†Œ ë³µì‚¬
 
     private string ApiBaseUrl = GameClient.Instance.BaseUrl;
     private string selectdeckRequestUrl => GameClient.Instance.GetApiUrl("user/select-deck");
 
-    //  ¼­¹ö·Î º¸³¾ DTO(µ¥ÀÌÅÍ Àü¼Û °´Ã¼)
+    //  ì„œë²„ë¡œ ë³´ë‚¼ DTO(ë°ì´í„° ì „ì†¡ ê°ì²´)
     [System.Serializable]
     private class SelectDeckRequest
     {
         public string deckId;
     }
 
-    // ³»ºÎ º¯¼ö
-    private DeckData currentSelectedDeck; // ÇöÀç À¯Àú°¡ ¼±ÅÃÇÑ µ¦
+    // ë‚´ë¶€ ë³€ìˆ˜
+    private DeckData currentSelectedDeck; // í˜„ì¬ ìœ ì €ê°€ ì„ íƒí•œ ë±
     private FirebaseFirestore db;
     private FirebaseAuth auth;
     private string currentUserId;
+    private Coroutine matchingTimerCoroutine;
 
     void Awake()
     {
-        // DeckSelectPopupÀÌ º¸³¾ 'µ¦ È®Á¤' ÀÌº¥Æ®¸¦ ±¸µ¶(Subscribe)ÇÕ´Ï´Ù.
+        // DeckSelectPopupì´ ë³´ë‚¼ 'ë± í™•ì •' ì´ë²¤íŠ¸ë¥¼ êµ¬ë…(Subscribe)í•©ë‹ˆë‹¤.
         DeckSelectPopup.OnDeckConfirmed += HandlePopupDeckConfirmed;
 
-        // ¹öÆ°¿¡ ÆË¾÷ ¿©´Â ±â´É ¿¬°á
+        // ë²„íŠ¼ì— íŒì—… ì—¬ëŠ” ê¸°ëŠ¥ ì—°ê²°
         if (openDeckSelectButton != null)
         {
             openDeckSelectButton.onClick.AddListener(OnOpenDeckPopup);
         }
 
-        // Firestore ¹× Auth ÃÊ±âÈ­
+        // Firestore ë° Auth ì´ˆê¸°í™”
         db = FirebaseFirestore.DefaultInstance;
         auth = FirebaseAuth.DefaultInstance;
 
-        // ÀÎÁõ »óÅÂ °¨Áö (DeckSaveManager¿Í µ¿ÀÏÇÑ ·ÎÁ÷)
+        // ì¸ì¦ ìƒíƒœ ê°ì§€ (DeckSaveManagerì™€ ë™ì¼í•œ ë¡œì§)
         auth.StateChanged += HandleAuthStateChanged;
 
-        // "´ëÀü Ã£±â" ¹öÆ°¿¡ ·¡ÆÛ(Wrapper) ÇÔ¼ö ¿¬°á
+        // "ëŒ€ì „ ì°¾ê¸°" ë²„íŠ¼ì— ë˜í¼(Wrapper) í•¨ìˆ˜ ì—°ê²°
         if (findMatchButton != null)
         {
             findMatchButton.onClick.AddListener(OnFindMatchClicked);
         }
 
-        // "Ã£±â Ãë¼Ò" ¹öÆ°¿¡ Ãë¼Ò ÇÔ¼ö ¿¬°á
+        // "ì°¾ê¸° ì·¨ì†Œ" ë²„íŠ¼ì— ì·¨ì†Œ í•¨ìˆ˜ ì—°ê²°
         if (cancelMatchButton != null)
         {
             cancelMatchButton.onClick.AddListener(OnCancelMatchClicked);
         }
 
-        // MatchmakingServiceÀÇ ÀÌº¥Æ®µéÀ» ±¸µ¶ÇØ¼­ UI¸¦ º¯°æÇÕ´Ï´Ù.
+        // MatchmakingServiceì˜ ì´ë²¤íŠ¸ë“¤ì„ êµ¬ë…í•´ì„œ UIë¥¼ ë³€ê²½í•©ë‹ˆë‹¤.
         if (matchmakingService != null)
         {
             matchmakingService.OnMatchmakingStarted += HandleMatchmakingStarted;
@@ -113,14 +116,16 @@ public class MatchingManager : MonoBehaviour
             matchmakingService.OnMatchFound += HandleMatchFound;
         }
 
-        // ½ÃÀÛ ½Ã UI »óÅÂ ÃÊ±âÈ­
+        // ì‹œì‘ ì‹œ UI ìƒíƒœ ì´ˆê¸°í™”
         searchingPanel.SetActive(false);
         // lobbyPanel.SetActive(true);
     }
 
     void OnDestroy()
     {
-        // ¾ÀÀÌ ÆÄ±«µÉ ¶§ ÀÌº¥Æ® ±¸µ¶À» ÇØÁöÇÕ´Ï´Ù. (¸Ş¸ğ¸® ´©¼ö ¹æÁö)
+        StopMatchingTimer();
+
+        // ì”¬ì´ íŒŒê´´ë  ë•Œ ì´ë²¤íŠ¸ êµ¬ë…ì„ í•´ì§€í•©ë‹ˆë‹¤. (ë©”ëª¨ë¦¬ ëˆ„ìˆ˜ ë°©ì§€)
         DeckSelectPopup.OnDeckConfirmed -= HandlePopupDeckConfirmed;
         auth.StateChanged -= HandleAuthStateChanged;
 
@@ -134,19 +139,19 @@ public class MatchingManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 'µ¦ ¼±ÅÃ' ¹öÆ°À» ´­·¯ ÆË¾÷À» ¿±´Ï´Ù.
+    /// 'ë± ì„ íƒ' ë²„íŠ¼ì„ ëˆŒëŸ¬ íŒì—…ì„ ì—½ë‹ˆë‹¤.
     /// </summary>
     private void OnOpenDeckPopup()
     {
         if (deckSelectPopup != null)
         {
-            // (¼öÁ¤) ÆË¾÷À» ¿­ ¶§ 'ÇöÀç ¼±ÅÃµÈ µ¦' Á¤º¸¸¦ Àü´ŞÇÕ´Ï´Ù.
+            // (ìˆ˜ì •) íŒì—…ì„ ì—´ ë•Œ 'í˜„ì¬ ì„ íƒëœ ë±' ì •ë³´ë¥¼ ì „ë‹¬í•©ë‹ˆë‹¤.
             deckSelectPopup.OpenPopup(currentSelectedDeck);
         }
     }
 
     /// <summary>
-    /// ·Î±×ÀÎ »óÅÂ°¡ º¯°æµÇ¸é È£ÃâµË´Ï´Ù.
+    /// ë¡œê·¸ì¸ ìƒíƒœê°€ ë³€ê²½ë˜ë©´ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private async void HandleAuthStateChanged(object sender, System.EventArgs e)
     {
@@ -158,14 +163,14 @@ public class MatchingManager : MonoBehaviour
         else
         {
             currentUserId = null;
-            selectedDeckNameText.text = "µ¦ ¼±ÅÃ";
+            selectedDeckNameText.text = "ë± ì„ íƒ";
             currentSelectedDeck = null;
-            UpdateDeckCardList(null); // ·Î±×¾Æ¿ô ½Ã ¸ñ·Ï ºñ¿ì±â
+            UpdateDeckCardList(null); // ë¡œê·¸ì•„ì›ƒ ì‹œ ëª©ë¡ ë¹„ìš°ê¸°
         }
     }
 
     /// <summary>
-    /// (¼öÁ¤) ¼­¹ö API¸¦ ÅëÇØ ¸¶Áö¸·À¸·Î ¼±ÅÃÇÑ µ¦ÀÇ 'ÀüÃ¼ µ¥ÀÌÅÍ'¸¦ ºÒ·¯¿Í UI¿¡ Àû¿ëÇÕ´Ï´Ù.
+    /// (ìˆ˜ì •) ì„œë²„ APIë¥¼ í†µí•´ ë§ˆì§€ë§‰ìœ¼ë¡œ ì„ íƒí•œ ë±ì˜ 'ì „ì²´ ë°ì´í„°'ë¥¼ ë¶ˆëŸ¬ì™€ UIì— ì ìš©í•©ë‹ˆë‹¤.
     /// </summary>
     private async Task LoadLastSelectedDeck(string userId)
     {
@@ -185,57 +190,57 @@ public class MatchingManager : MonoBehaviour
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     string jsonResponse = request.downloadHandler.text;
-                    // JSON ÆÄ½Ì
+                    // JSON íŒŒì‹±
                     SelectDeckResponse response = JsonUtility.FromJson<SelectDeckResponse>(jsonResponse);
 
                     if (response != null && response.deck != null && !string.IsNullOrEmpty(response.deck.deckId))
                     {
                         DeckData lastSelectedDeck = response.deck;
 
-                        Debug.Log($"¼­¹ö¿¡¼­ ºÒ·¯¿Â ¸¶Áö¸· µ¦: '{lastSelectedDeck.deckName}'");
+                        Debug.Log($"ì„œë²„ì—ì„œ ë¶ˆëŸ¬ì˜¨ ë§ˆì§€ë§‰ ë±: '{lastSelectedDeck.deckName}'");
 
-                        // (ÇÙ½É) ¹Ş¾Æ¿Â µ¦ µ¥ÀÌÅÍ¸¦ ¹Ù·Î UI¿¡ Àû¿ëÇÕ´Ï´Ù.
-                        // ¼­¹ö ÀúÀå(saveToServer)Àº false·Î ¼³Á¤ÇÕ´Ï´Ù (ÀÌ¹Ì ¼­¹ö¿¡¼­ °¡Á®¿Â °Å´Ï±î¿ä).
+                        // (í•µì‹¬) ë°›ì•„ì˜¨ ë± ë°ì´í„°ë¥¼ ë°”ë¡œ UIì— ì ìš©í•©ë‹ˆë‹¤.
+                        // ì„œë²„ ì €ì¥(saveToServer)ì€ falseë¡œ ì„¤ì •í•©ë‹ˆë‹¤ (ì´ë¯¸ ì„œë²„ì—ì„œ ê°€ì ¸ì˜¨ ê±°ë‹ˆê¹Œìš”).
                         HandleDeckConfirmed(lastSelectedDeck, false);
                     }
                     else
                     {
-                        Debug.Log("¼­¹ö¿¡ ÀúÀåµÈ ¼±ÅÃ µ¦ÀÌ ¾ø°Å³ª À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+                        Debug.Log("ì„œë²„ì— ì €ì¥ëœ ì„ íƒ ë±ì´ ì—†ê±°ë‚˜ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
                     }
                 }
                 else
                 {
-                    Debug.LogError($"¸¶Áö¸· µ¦ ºÒ·¯¿À±â ½ÇÆĞ: {request.error}");
+                    Debug.LogError($"ë§ˆì§€ë§‰ ë± ë¶ˆëŸ¬ì˜¤ê¸° ì‹¤íŒ¨: {request.error}");
                 }
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"¸¶Áö¸· ¼±ÅÃ µ¦ ·Îµå Áß ¿À·ù: {e.Message}");
+            Debug.LogError($"ë§ˆì§€ë§‰ ì„ íƒ ë± ë¡œë“œ ì¤‘ ì˜¤ë¥˜: {e.Message}");
         }
     }
 
 
     /// <summary>
-    ///  DeckSelectPopupÀÇ 'Action<DeckData>' ½Ã±×´ÏÃ³¿Í
-    /// HandleDeckConfirmed(DeckData, bool) ½Ã±×´ÏÃ³¸¦ ¿¬°áÇØÁÖ´Â '¾î´ğÅÍ' ÇÔ¼öÀÔ´Ï´Ù.
+    ///  DeckSelectPopupì˜ 'Action<DeckData>' ì‹œê·¸ë‹ˆì²˜ì™€
+    /// HandleDeckConfirmed(DeckData, bool) ì‹œê·¸ë‹ˆì²˜ë¥¼ ì—°ê²°í•´ì£¼ëŠ” 'ì–´ëŒ‘í„°' í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
     private void HandlePopupDeckConfirmed(DeckData selectedDeck)
     {
-        // ÆË¾÷¿¡¼­ µ¦ÀÌ È®Á¤µÇ¸é, Ç×»ó ¼­¹ö¿¡ ÀúÀåÇØ¾ß ÇÏ¹Ç·Î 'true'¸¦ ºÙ¿© È£ÃâÇÕ´Ï´Ù.
+        // íŒì—…ì—ì„œ ë±ì´ í™•ì •ë˜ë©´, í•­ìƒ ì„œë²„ì— ì €ì¥í•´ì•¼ í•˜ë¯€ë¡œ 'true'ë¥¼ ë¶™ì—¬ í˜¸ì¶œí•©ë‹ˆë‹¤.
         HandleDeckConfirmed(selectedDeck, true);
     }
 
     /// <summary>
-    /// µ¦ È®Á¤ ½ÃÀÇ '½ÇÁ¦' ·ÎÁ÷.
-    /// ¼­¹ö ÀúÀå ¿©ºÎ¸¦ °áÁ¤ÇÏ´Â ÆÄ¶ó¹ÌÅÍ Ãß°¡
+    /// ë± í™•ì • ì‹œì˜ 'ì‹¤ì œ' ë¡œì§.
+    /// ì„œë²„ ì €ì¥ ì—¬ë¶€ë¥¼ ê²°ì •í•˜ëŠ” íŒŒë¼ë¯¸í„° ì¶”ê°€
     /// </summary>
     private async void HandleDeckConfirmed(DeckData selectedDeck, bool saveToServer = true)
     {
         currentSelectedDeck = selectedDeck;
         selectedDeckNameText.text = selectedDeck.deckName;
 
-        // (¼öÁ¤) ÀÌÁ¦ ºñµ¿±â(Async)°¡ ¾Æ´Ï¾îµµ µÇÁö¸¸, ±¸Á¶ À¯Áö¸¦ À§ÇØ È£Ãâ¸¸ ±ò²ûÇÏ°Ô º¯°æ
+        // (ìˆ˜ì •) ì´ì œ ë¹„ë™ê¸°(Async)ê°€ ì•„ë‹ˆì–´ë„ ë˜ì§€ë§Œ, êµ¬ì¡° ìœ ì§€ë¥¼ ìœ„í•´ í˜¸ì¶œë§Œ ê¹”ë”í•˜ê²Œ ë³€ê²½
         UpdateDeckCardList(selectedDeck);
 
         if (saveToServer)
@@ -245,30 +250,30 @@ public class MatchingManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ·ÎºñÀÇ Ä«µå ¸ñ·Ï UI¸¦ ¼±ÅÃµÈ µ¦ÀÇ Ä«µå·Î Ã¤¿ó´Ï´Ù.
+    /// ë¡œë¹„ì˜ ì¹´ë“œ ëª©ë¡ UIë¥¼ ì„ íƒëœ ë±ì˜ ì¹´ë“œë¡œ ì±„ì›ë‹ˆë‹¤.
     /// </summary>
     private void UpdateDeckCardList(DeckData deck)
     {
-        // 1. ±âÁ¸ UI »èÁ¦
+        // 1. ê¸°ì¡´ UI ì‚­ì œ
         if (deckCardListParent == null || sideDeckCardListParent == null || deckCardPrefab == null) return;
         foreach (Transform child in deckCardListParent) Destroy(child.gameObject);
         foreach (Transform child in sideDeckCardListParent) Destroy(child.gameObject);
 
-        // 2. µ¦ °Ë»ç
+        // 2. ë± ê²€ì‚¬
         if (deck == null || deck.cardIds == null || deck.cardIds.Count == 0) return;
 
-        // [ÇÙ½É º¯°æ] ResourceManager »ç¿ë
+        // [í•µì‹¬ ë³€ê²½] ResourceManager ì‚¬ìš©
         if (ResourceManager.Instance == null)
         {
-            Debug.LogError("ResourceManager°¡ ¾ø½À´Ï´Ù! ·Îºñ ¾À¿¡ ResourceManager°¡ ÀÖ´ÂÁö È®ÀÎÇÏ¼¼¿ä.");
+            Debug.LogError("ResourceManagerê°€ ì—†ìŠµë‹ˆë‹¤! ë¡œë¹„ ì”¬ì— ResourceManagerê°€ ìˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.");
             return;
         }
 
-        // 3. µ¦ÀÇ Ä«µå IDµéÀ» ¼øÈ¸ÇÏ¸ç ½ÇÁ¦ CardData(ScriptableObject) Ã£±â
+        // 3. ë±ì˜ ì¹´ë“œ IDë“¤ì„ ìˆœíšŒí•˜ë©° ì‹¤ì œ CardData(ScriptableObject) ì°¾ê¸°
         List<CardData> cardsInDeck = new List<CardData>();
         foreach (string cardId in deck.cardIds)
         {
-            // ResourceManager¿¡¼­ ID·Î Ä«µå µ¥ÀÌÅÍ¸¦ 'Áï½Ã' °¡Á®¿É´Ï´Ù.
+            // ResourceManagerì—ì„œ IDë¡œ ì¹´ë“œ ë°ì´í„°ë¥¼ 'ì¦‰ì‹œ' ê°€ì ¸ì˜µë‹ˆë‹¤.
             CardData card = ResourceManager.Instance.GetCardData(cardId);
             if (card != null)
             {
@@ -276,15 +281,15 @@ public class MatchingManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"ResourceManager¿¡¼­ ID°¡ '{cardId}'ÀÎ Ä«µå¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+                Debug.LogWarning($"ResourceManagerì—ì„œ IDê°€ '{cardId}'ì¸ ì¹´ë“œë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             }
         }
 
-        // 4. µ¦ÀÇ Ä«µå IDµéÀ» ¼øÈ¸ÇÏ¸ç ½ÇÁ¦ CardData(ScriptableObject) Ã£±â »çÀÌµå µ¦ Àü¿ë
+        // 4. ë±ì˜ ì¹´ë“œ IDë“¤ì„ ìˆœíšŒí•˜ë©° ì‹¤ì œ CardData(ScriptableObject) ì°¾ê¸° ì‚¬ì´ë“œ ë± ì „ìš©
         List<CardData> sideCardsInDeck = new List<CardData>();
         foreach (string cardId in deck.sideDeckCardIds)
         {
-            // ResourceManager¿¡¼­ ID·Î Ä«µå µ¥ÀÌÅÍ¸¦ 'Áï½Ã' °¡Á®¿É´Ï´Ù.
+            // ResourceManagerì—ì„œ IDë¡œ ì¹´ë“œ ë°ì´í„°ë¥¼ 'ì¦‰ì‹œ' ê°€ì ¸ì˜µë‹ˆë‹¤.
             CardData card = ResourceManager.Instance.GetCardData(cardId);
             if (card != null)
             {
@@ -292,13 +297,13 @@ public class MatchingManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"ResourceManager¿¡¼­ ID°¡ '{cardId}'ÀÎ Ä«µå¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+                Debug.LogWarning($"ResourceManagerì—ì„œ IDê°€ '{cardId}'ì¸ ì¹´ë“œë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             }
         }
 
-        // 5. ¸ŞÀÎ µ¦ Á¤·Ä ¹× ±×·ìÈ­ (CardData ±âÁØ)
+        // 5. ë©”ì¸ ë± ì •ë ¬ ë° ê·¸ë£¹í™” (CardData ê¸°ì¤€)
         var groupedAndSortedDeck = cardsInDeck
-            .GroupBy(card => card.cardID) // ID ±âÁØ ±×·ìÈ­
+            .GroupBy(card => card.cardID) // ID ê¸°ì¤€ ê·¸ë£¹í™”
             .Select(group => new
             {
                 Card = group.First(),
@@ -307,12 +312,12 @@ public class MatchingManager : MonoBehaviour
             .OrderBy(item => item.Card.manaCost) // cost -> manaCost
             .ThenBy(item => item.Card.cardName); // name -> cardName
 
-        // 6. »çÀÌµå µ¦ Á¤·Ä ¹× ±×·ìÈ­ (CardData ±âÁØ)
+        // 6. ì‚¬ì´ë“œ ë± ì •ë ¬ ë° ê·¸ë£¹í™” (CardData ê¸°ì¤€)
         var sideGroupedAndSortedDeck = sideCardsInDeck
             .OrderBy(card => card.manaCost) // cost -> manaCost
             .ThenBy(card => card.cardName); // name -> cardName
 
-        // 7. ¸ŞÀÎ µ¦ ¸®½ºÆ® UI »ı¼º
+        // 7. ë©”ì¸ ë± ë¦¬ìŠ¤íŠ¸ UI ìƒì„±
         foreach (var item in groupedAndSortedDeck)
         {
             GameObject newDeckCardUI = Instantiate(deckCardPrefab, deckCardListParent);
@@ -320,12 +325,12 @@ public class MatchingManager : MonoBehaviour
 
             if (itemDisplay != null)
             {
-                // (¼öÁ¤) CardData °´Ã¼¸¦ ±×´ë·Î Àü´Ş
+                // (ìˆ˜ì •) CardData ê°ì²´ë¥¼ ê·¸ëŒ€ë¡œ ì „ë‹¬
                 itemDisplay.Setup(item.Card, 1);
             }
         }
 
-        // 8. »çÀÌµå µ¦ ¸®½ºÆ® UI »ı¼º
+        // 8. ì‚¬ì´ë“œ ë± ë¦¬ìŠ¤íŠ¸ UI ìƒì„±
         foreach (var item in sideGroupedAndSortedDeck)
         {
             GameObject newDeckCardUI = Instantiate(deckCardPrefab, sideDeckCardListParent);
@@ -333,161 +338,206 @@ public class MatchingManager : MonoBehaviour
 
             if (itemDisplay != null)
             {
-                // (¼öÁ¤) CardData °´Ã¼¸¦ ±×´ë·Î Àü´Ş
+                // (ìˆ˜ì •) CardData ê°ì²´ë¥¼ ê·¸ëŒ€ë¡œ ì „ë‹¬
                 itemDisplay.Setup(item, 1);
             }
         }
     }
 
     /// <summary>
-    /// À¯Àú°¡ ¼±ÅÃÇÑ µ¦ ID¸¦ '¼­¹ö'¿¡ ÀúÀåÇÕ´Ï´Ù.
+    /// ìœ ì €ê°€ ì„ íƒí•œ ë± IDë¥¼ 'ì„œë²„'ì— ì €ì¥í•©ë‹ˆë‹¤.
     /// </summary>
     private async Task SaveSelectedDeckToServer(string deckId)
     {
         if (string.IsNullOrEmpty(currentUserId) || auth.CurrentUser == null)
         {
-            Debug.LogError("·Î±×ÀÎÇÑ À¯Àú°¡ ¾ø¾î ¼±ÅÃÇÑ µ¦À» ÀúÀåÇÒ ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogError("ë¡œê·¸ì¸í•œ ìœ ì €ê°€ ì—†ì–´ ì„ íƒí•œ ë±ì„ ì €ì¥í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             return;
         }
 
         try
         {
-            // 1. Firebase ÀÎÁõ ÅäÅ« °¡Á®¿À±â
+            // 1. Firebase ì¸ì¦ í† í° ê°€ì ¸ì˜¤ê¸°
             string idToken = await auth.CurrentUser.TokenAsync(true);
 
-            // 3. ¼­¹ö·Î º¸³¾ JSON º»¹® »ı¼º
+            // 3. ì„œë²„ë¡œ ë³´ë‚¼ JSON ë³¸ë¬¸ ìƒì„±
             SelectDeckRequest requestBody = new SelectDeckRequest { deckId = deckId };
             string jsonBody = JsonUtility.ToJson(requestBody);
             byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
 
-            // 4. UnityWebRequest »ı¼º (PUT ¹æ½Ä)
+            // 4. UnityWebRequest ìƒì„± (PUT ë°©ì‹)
             using (UnityWebRequest request = new UnityWebRequest(selectdeckRequestUrl, "PUT"))
             {
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
 
-                // 5. Çì´õ ¼³Á¤ (ÀÎÁõ ÅäÅ« + Content-Type)
+                // 5. í—¤ë” ì„¤ì • (ì¸ì¦ í† í° + Content-Type)
                 request.SetRequestHeader("Content-Type", "application/json");
                 request.SetRequestHeader("Authorization", "Bearer " + idToken);
 
-                Debug.Log($"¼±ÅÃ µ¦ ÀúÀå API È£Ãâ: {selectdeckRequestUrl} (DeckID: {deckId})");
+                Debug.Log($"ì„ íƒ ë± ì €ì¥ API í˜¸ì¶œ: {selectdeckRequestUrl} (DeckID: {deckId})");
 
-                // 6. API ¿äÃ» Àü¼Û
+                // 6. API ìš”ì²­ ì „ì†¡
                 var operation = request.SendWebRequest();
                 while (!operation.isDone)
                 {
                     await Task.Yield();
                 }
 
-                // 7. °á°ú Ã³¸®
+                // 7. ê²°ê³¼ ì²˜ë¦¬
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    Debug.LogError($"¼±ÅÃ µ¦ ÀúÀå ½ÇÆĞ: {request.error} - {request.downloadHandler.text}");
+                    Debug.LogError($"ì„ íƒ ë± ì €ì¥ ì‹¤íŒ¨: {request.error} - {request.downloadHandler.text}");
                 }
                 else
                 {
-                    Debug.Log($"¼±ÅÃ µ¦ ÀúÀå ¼º°ø: {request.downloadHandler.text}");
-                    // (¼±ÅÃ) ¿©±â¼­ currentSelectedDeck = selectedDeck; ¸¦ È®Á¤ÇÏ°Å³ª
-                    // ·Îºñ UI¿¡ "ÀúÀå ¿Ï·á" °°Àº ÇÇµå¹éÀ» ÁÙ ¼ö ÀÖ½À´Ï´Ù.
+                    Debug.Log($"ì„ íƒ ë± ì €ì¥ ì„±ê³µ: {request.downloadHandler.text}");
+                    // (ì„ íƒ) ì—¬ê¸°ì„œ currentSelectedDeck = selectedDeck; ë¥¼ í™•ì •í•˜ê±°ë‚˜
+                    // ë¡œë¹„ UIì— "ì €ì¥ ì™„ë£Œ" ê°™ì€ í”¼ë“œë°±ì„ ì¤„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
                 }
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"¼±ÅÃ µ¦ ÀúÀå Áß ¿¹¿Ü ¹ß»ı: {e.Message}");
+            Debug.LogError($"ì„ íƒ ë± ì €ì¥ ì¤‘ ì˜ˆì™¸ ë°œìƒ: {e.Message}");
         }
     }
 
     /// <summary>
-    /// "´ëÀü Ã£±â" ¹öÆ° Å¬¸¯ ½Ã È£ÃâµÉ '·¡ÆÛ' ÇÔ¼öÀÔ´Ï´Ù.
+    /// "ëŒ€ì „ ì°¾ê¸°" ë²„íŠ¼ í´ë¦­ ì‹œ í˜¸ì¶œë  'ë˜í¼' í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
     private void OnFindMatchClicked()
     {
-        // 1. (Áß¿ä) µ¦À» ¼±ÅÃÇß´ÂÁö ¸ÕÀú °Ë»çÇÕ´Ï´Ù.
+        // 1. (ì¤‘ìš”) ë±ì„ ì„ íƒí–ˆëŠ”ì§€ ë¨¼ì € ê²€ì‚¬í•©ë‹ˆë‹¤.
         if (currentSelectedDeck == null)
         {
-            Debug.LogWarning("¸ÅÄªÀ» ½ÃÀÛÇÏ±â Àü¿¡ µ¦À» ¼±ÅÃÇØ¾ß ÇÕ´Ï´Ù.");
-            // TODO: À¯Àú¿¡°Ô "µ¦À» ¼±ÅÃÇÏ¼¼¿ä"¶ó´Â ¾Ë¸² UI¸¦ ¶ç¿öÁÖ¼¼¿ä.
+            Debug.LogWarning("ë§¤ì¹­ì„ ì‹œì‘í•˜ê¸° ì „ì— ë±ì„ ì„ íƒí•´ì•¼ í•©ë‹ˆë‹¤.");
+            // TODO: ìœ ì €ì—ê²Œ "ë±ì„ ì„ íƒí•˜ì„¸ìš”"ë¼ëŠ” ì•Œë¦¼ UIë¥¼ ë„ì›Œì£¼ì„¸ìš”.
             return;
         }
 
-        // 2. µ¦ÀÌ ¼±ÅÃµÇ¾ú´Ù¸é, ¼­ºñ½º¸¦ È£ÃâÇÕ´Ï´Ù.
-        // 'currentSelectedDeck' º¯¼ö (LoadLastSelectedDeck µî¿¡¼­ ÀÌ¹Ì ¼³Á¤µÊ)¸¦ ³Ñ°ÜÁİ´Ï´Ù.
+        // 2. ë±ì´ ì„ íƒë˜ì—ˆë‹¤ë©´, ì„œë¹„ìŠ¤ë¥¼ í˜¸ì¶œí•©ë‹ˆë‹¤.
+        // 'currentSelectedDeck' ë³€ìˆ˜ (LoadLastSelectedDeck ë“±ì—ì„œ ì´ë¯¸ ì„¤ì •ë¨)ë¥¼ ë„˜ê²¨ì¤ë‹ˆë‹¤.
         matchmakingService.StartMatchmaking(currentSelectedDeck);
     }
 
     /// <summary>
-    /// "Ã£±â Ãë¼Ò" ¹öÆ° Å¬¸¯ ½Ã È£ÃâµÉ ÇÔ¼öÀÔ´Ï´Ù.
+    /// "ì°¾ê¸° ì·¨ì†Œ" ë²„íŠ¼ í´ë¦­ ì‹œ í˜¸ì¶œë  í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
     private void OnCancelMatchClicked()
     {
         matchmakingService.CancelMatchmaking();
     }
 
-    // ----- MatchmakingService ÀÌº¥Æ® ÇÚµé·¯ -----
+    // ----- MatchmakingService ì´ë²¤íŠ¸ í•¸ë“¤ëŸ¬ -----
 
     /// <summary>
-    /// ¼­ºñ½º°¡ "´ëÀü Ã£±â ½ÃÀÛµÊ" ÀÌº¥Æ®¸¦ º¸³ÂÀ» ¶§ È£ÃâµË´Ï´Ù.
+    /// ì„œë¹„ìŠ¤ê°€ "ëŒ€ì „ ì°¾ê¸° ì‹œì‘ë¨" ì´ë²¤íŠ¸ë¥¼ ë³´ëƒˆì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void HandleMatchmakingStarted()
     {
-        Debug.Log("UI: ´ëÀü Ã£±â ½ÃÀÛ...");
+        Debug.Log("UI: ëŒ€ì „ ì°¾ê¸° ì‹œì‘...");
+        StartMatchingTimer();
+
         UIPanelToggler uIPanelToggler = searchingPanel.GetComponent<UIPanelToggler>();
         if (uIPanelToggler != null)
         {
             uIPanelToggler.ShowPanel();
         }
-        //searchingPanel.SetActive(true); // "Ã£´Â Áß" UI ÄÑ±â
-        // lobbyPanel.SetActive(false);    // "·Îºñ" UI ²ô±â
     }
 
     /// <summary>
-    /// ¼­ºñ½º°¡ "Ãë¼ÒµÊ" ÀÌº¥Æ®¸¦ º¸³ÂÀ» ¶§ È£ÃâµË´Ï´Ù.
+    /// ì„œë¹„ìŠ¤ê°€ "ì·¨ì†Œë¨" ì´ë²¤íŠ¸ë¥¼ ë³´ëƒˆì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void HandleMatchmakingCancelled()
     {
-        Debug.Log("UI: ´ëÀü Ã£±â Ãë¼ÒµÊ.");
+        Debug.Log("UI: ëŒ€ì „ ì°¾ê¸° ì·¨ì†Œë¨.");
+        StopMatchingTimer();
+
         UIPanelToggler uIPanelToggler = searchingPanel.GetComponent<UIPanelToggler>();
         if (uIPanelToggler != null)
         {
             uIPanelToggler.HidePanel();
         }
-        //searchingPanel.SetActive(false); // "Ã£´Â Áß" UI ²ô±â
-        // lobbyPanel.SetActive(true);     // "·Îºñ" UI ÄÑ±â
     }
 
     /// <summary>
-    /// ¼­ºñ½º°¡ "½ÇÆĞ" ÀÌº¥Æ®¸¦ º¸³ÂÀ» ¶§ È£ÃâµË´Ï´Ù.
+    /// ì„œë¹„ìŠ¤ê°€ "ì‹¤íŒ¨" ì´ë²¤íŠ¸ë¥¼ ë³´ëƒˆì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void HandleMatchmakingFailed(string errorMessage)
     {
-        Debug.LogError($"UI: ¸ÅÄ¡¸ŞÀÌÅ· ½ÇÆĞ: {errorMessage}");
+        Debug.LogError($"UI: ë§¤ì¹˜ë©”ì´í‚¹ ì‹¤íŒ¨: {errorMessage}");
+        StopMatchingTimer();
+
         UIPanelToggler uIPanelToggler = searchingPanel.GetComponent<UIPanelToggler>();
         if (uIPanelToggler != null)
         {
             uIPanelToggler.HidePanel();
         }
-        //searchingPanel.SetActive(false); // "Ã£´Â Áß" UI ²ô±â
-        //lobbyPanel.SetActive(true);     // "·Îºñ" UI ÄÑ±â
-        // TODO: À¯Àú¿¡°Ô ¿¡·¯ ¸Ş½ÃÁö ÆË¾÷À» ¶ç¿öÁÖ¼¼¿ä.
     }
 
     /// <summary>
-    /// ¼­ºñ½º°¡ "¸ÅÄª ¼º°ø!" ÀÌº¥Æ®¸¦ º¸³ÂÀ» ¶§ È£ÃâµË´Ï´Ù.
+    /// ì„œë¹„ìŠ¤ê°€ "ë§¤ì¹­ ì„±ê³µ!" ì´ë²¤íŠ¸ë¥¼ ë³´ëƒˆì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void HandleMatchFound(string gameId, string opponentUid)
     {
+        StopMatchingTimer();
+
         UIPanelToggler uIPanelToggler = searchingPanel.GetComponent<UIPanelToggler>();
         if (uIPanelToggler != null)
         {
             uIPanelToggler.HidePanel();
         }
+    }
 
-        // TODO:
-        // 1. °ÔÀÓ ID¿Í »ó´ë¹æ ID¸¦ 'DontDestroyOnLoad' °°Àº °÷¿¡ ÀúÀåÇÕ´Ï´Ù.
-        // (¿¹: GameManager.Instance.CurrentGameId = gameId;)
+    // ----- ë§¤ì¹­ íƒ€ì´ë¨¸ (00:00) ê¸°ëŠ¥ -----
 
-        // 2. ´ëÀü ¾À(BattleScene)À¸·Î ÀÌµ¿ÇÕ´Ï´Ù.
-        // UnityEngine.SceneManagement.SceneManager.LoadScene("BattleSceneName");
+    /// <summary>
+    /// ë§¤ì¹­ ì‹œì‘ ì‹œ íƒ€ì´ë¨¸ë¥¼ 0ì´ˆë¶€í„° ì‹œì‘
+    /// </summary>
+    private void StartMatchingTimer()
+    {
+        StopMatchingTimer();
+        matchingTimerCoroutine = StartCoroutine(MatchingTimerCoroutine());
+    }
+
+    /// <summary>
+    /// ë§¤ì¹­ ì·¨ì†Œ/ì™„ë£Œ ì‹œ íƒ€ì´ë¨¸ ì •ì§€
+    /// </summary>
+    private void StopMatchingTimer()
+    {
+        if (matchingTimerCoroutine != null)
+        {
+            StopCoroutine(matchingTimerCoroutine);
+            matchingTimerCoroutine = null;
+        }
+    }
+
+    /// <summary>
+    /// ë§¤ì´ˆ ê²½ê³¼ ì‹œê°„ì„ 00:00 í¬ë§·ìœ¼ë¡œ machingTime í…ìŠ¤íŠ¸ì— ê°±ì‹ 
+    /// </summary>
+    private System.Collections.IEnumerator MatchingTimerCoroutine()
+    {
+        int totalSeconds = 0;
+
+        // ì‹œì‘ ì¦‰ì‹œ 00:00 í‘œì‹œ
+        if (machingTime != null)
+        {
+            machingTime.text = "00:00";
+        }
+
+        while (true)
+        {
+            yield return new WaitForSeconds(1f);
+            totalSeconds++;
+
+            int minutes = totalSeconds / 60;
+            int seconds = totalSeconds % 60;
+
+            if (machingTime != null)
+            {
+                machingTime.text = string.Format("{0:D2}:{1:D2}", minutes, seconds);
+            }
+        }
     }
 }

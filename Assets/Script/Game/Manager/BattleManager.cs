@@ -1,56 +1,59 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// °ÔÀÓÀÇ ÀüÃ¼ ±ÔÄ¢, ¼­¹ö µ¿±âÈ­ µ¥ÀÌÅÍ, ±×¸®°í ÅÏ Á¾·á ¹× ¸¶³ª UI¸¦ ÅëÇÕÇÏ¿© °ü¸®ÇÏ´Â ½ºÅ©¸³Æ®ÀÔ´Ï´Ù.
+/// ê²Œì„ì˜ ì „ì²´ ê·œì¹™, ì„œë²„ ë™ê¸°í™” ë°ì´í„°, ê·¸ë¦¬ê³  í„´ ì¢…ë£Œ ë° ë§ˆë‚˜ UIë¥¼ í†µí•©í•˜ì—¬ ê´€ë¦¬í•˜ëŠ” ìŠ¤í¬ë¦½íŠ¸ì…ë‹ˆë‹¤.
 /// </summary>
 public class BattleManager : MonoBehaviour
 {
     public static BattleManager Instance;
 
-    [Header("Game State (°ÔÀÓ »óÅÂ)")]
-    public string myUid;               // ³» °èÁ¤ÀÇ °íÀ¯ ID
-    public bool isPlayerTurn = false;  // ÇöÀç ³» ÅÏ ¿©ºÎ
-    public GamePhase currentPhase;        // ÇöÀç ÆäÀÌÁî
-    public float remainingTime;        // ¼­¹ö µ¿±âÈ­ ±â¹İ ³²Àº ½Ã°£
-    private long _turnEndTimeTimestamp; // ¼­¹ö¿¡¼­ º¸³½ Á¾·á ½ÃÁ¡
+    [Header("Game State (ê²Œì„ ìƒíƒœ)")]
+    public string myUid;               // ë‚´ ê³„ì •ì˜ ê³ ìœ  ID
+    public bool isPlayerTurn = false;  // í˜„ì¬ ë‚´ í„´ ì—¬ë¶€
+    public GamePhase currentPhase;        // í˜„ì¬ í˜ì´ì¦ˆ
+    public float remainingTime;        // ì„œë²„ ë™ê¸°í™” ê¸°ë°˜ ë‚¨ì€ ì‹œê°„
+    private long _turnEndTimeTimestamp; // ì„œë²„ì—ì„œ ë³´ë‚¸ ì¢…ë£Œ ì‹œì 
+    // ì„œë²„ê°€ ë³´ë‚´ì¤€ ìœ íš¨í•œ íƒ€ê²Ÿ IDë“¤ì„ ì„ì‹œ ì €ì¥í•´ ë‘˜ ìºì‹œ ë¦¬ìŠ¤íŠ¸
+    private List<int> _serverValidTargetIds = new List<int>();
+    private List<GameCardDisplay> _highlightedTargets = new List<GameCardDisplay>();
 
-    [Header("Hand & Field Data (µ¥ÀÌÅÍ)")]
-    public List<CardInfo> playerHand = new List<CardInfo>();
-    public List<CardInfo> enemyHand = new List<CardInfo>();
-    public Dictionary<int, EntityData> entities = new Dictionary<int, EntityData>();
+    [Header("Hand & Field Data (ë°ì´í„°)")]
+    public List<CardInfo> playerHand = new List<CardInfo>();               // ìœ ì € ì†íŒ¨
+    public List<CardInfo> enemyHand = new List<CardInfo>();                // ì  ì†íŒ¨
+    public Dictionary<int, EntityData> entities = new Dictionary<int, EntityData>();   // í•„ë“œìœ„ ê°ì²´
 
-    [Header("Mana Data (¸¶³ª µ¥ÀÌÅÍ)")]
-    public int playerCurrentMana;      // ÇöÀç »ç¿ë °¡´ÉÇÑ ¸¶³ª
-    public int playerMaxMana;          // ÀÌ¹ø ÅÏÀÇ ÀüÃ¼ ¸¶³ª Åë
+    [Header("Mana Data (ë§ˆë‚˜ ë°ì´í„°)")]
+    public int playerCurrentMana;      // í˜„ì¬ ì‚¬ìš© ê°€ëŠ¥í•œ ë§ˆë‚˜
+    public int playerMaxMana;          // ì´ë²ˆ í„´ì˜ ì „ì²´ ë§ˆë‚˜ í†µ
     public int enemyCurrentMana;
     public int enemyMaxMana;
 
-    [Header("Mana UI Settings (¸¶³ª ½Ã°¢È­)")]
-    public TextMeshProUGUI manaText;      // "3 / 5" Ã³·³ ¼ıÀÚ·Î Ç¥½ÃÇÒ ÅØ½ºÆ®
-    public Image[] playerManaCrystals;    // 10°³ÀÇ ¸¶³ª ÀÌ¹ÌÁö ¹è¿­
-    public Sprite manaOnSprite;           // Ã¤¿öÁø ¸¶³ª ÀÌ¹ÌÁö (On)
-    public Sprite manaOffSprite;          // »ç¿ëÇÑ ¸¶³ª ÀÌ¹ÌÁö (Empty Slot)
-    public Sprite manaLockedSprite;       // ¾ÆÁ÷ Àá±ä ¸¶³ª ÀÌ¹ÌÁö (¼±ÅÃ »çÇ×, Åõ¸íÇÏ°Ô Ã³¸® °¡´É)
-    public Color manaHighlightColor = Color.yellow; // Ä«µå µå·¡±× ½Ã ¼Ò¸ğµÉ ¸¶³ª °­Á¶ »ö»ó
+    [Header("Mana UI Settings (ë§ˆë‚˜ ì‹œê°í™”)")]
+    public TextMeshProUGUI manaText;      // "3 / 5" ì²˜ëŸ¼ ìˆ«ìë¡œ í‘œì‹œí•  í…ìŠ¤íŠ¸
+    public Image[] playerManaCrystals;    // 10ê°œì˜ ë§ˆë‚˜ ì´ë¯¸ì§€ ë°°ì—´
+    public Sprite manaOnSprite;           // ì±„ì›Œì§„ ë§ˆë‚˜ ì´ë¯¸ì§€ (On)
+    public Sprite manaOffSprite;          // ì‚¬ìš©í•œ ë§ˆë‚˜ ì´ë¯¸ì§€ (Empty Slot)
+    public Sprite manaLockedSprite;       // ì•„ì§ ì ê¸´ ë§ˆë‚˜ ì´ë¯¸ì§€ (ì„ íƒ ì‚¬í•­, íˆ¬ëª…í•˜ê²Œ ì²˜ë¦¬ ê°€ëŠ¥)
+    public Color manaHighlightColor = Color.yellow; // ì¹´ë“œ ë“œë˜ê·¸ ì‹œ ì†Œëª¨ë  ë§ˆë‚˜ ê°•ì¡° ìƒ‰ìƒ
 
-    [Header("Turn End UI (ÅÏ Á¾·á UI)")]
-    public Button turnButton;          // ÅÏ Á¾·á ¹öÆ°
-    public TextMeshProUGUI statusText; // ¹öÆ° Áß¾Ó ÅØ½ºÆ® ("³ªÀÇ ÅÏ" µî)
-    public Slider timerSlider;         // ½Ã°£ °ÔÀÌÁö ½½¶óÀÌ´õ
-    public Image sliderFillImage;      // ½½¶óÀÌ´õ »ö»ó º¯°æÀ» À§ÇÑ ÀÌ¹ÌÁö
-    float prevRemainingTime;           // ÅÏÁ¾·á Å¸ÀÌ¹ÖÀ» À§ÇÑ º¯¼ö
+    [Header("Turn End UI (í„´ ì¢…ë£Œ UI)")]
+    public Button turnButton;          // í„´ ì¢…ë£Œ ë²„íŠ¼
+    public TextMeshProUGUI statusText; // ë²„íŠ¼ ì¤‘ì•™ í…ìŠ¤íŠ¸ ("ë‚˜ì˜ í„´" ë“±)
+    public Slider timerSlider;         // ì‹œê°„ ê²Œì´ì§€ ìŠ¬ë¼ì´ë”
+    public Image sliderFillImage;      // ìŠ¬ë¼ì´ë” ìƒ‰ìƒ ë³€ê²½ì„ ìœ„í•œ ì´ë¯¸ì§€
+    float prevRemainingTime;           // í„´ì¢…ë£Œ íƒ€ì´ë°ì„ ìœ„í•œ ë³€ìˆ˜
 
-    [Header("UI Settings (UI ¼³Á¤)")]
-    public float warningThreshold = 10f; // °æ°í »ö»ó ½ÃÀÛ ½Ã°£ (ÃÊ)
-    public Color myTurnColor = new Color(0.2f, 0.8f, 0.4f);   // ³» ÅÏ »ö»ó (ÃÊ·Ï)
-    public Color enemyTurnColor = new Color(0.9f, 0.3f, 0.2f); // »ó´ë ÅÏ »ö»ó (»¡°­)
-    public Color warningColor = new Color(1f, 0.6f, 0f);       // °æ°í »ö»ó (ÁÖÈ²)
+    [Header("UI Settings (UI ì„¤ì •)")]
+    public float warningThreshold = 10f; // ê²½ê³  ìƒ‰ìƒ ì‹œì‘ ì‹œê°„ (ì´ˆ)
+    public Color myTurnColor = new Color(0.2f, 0.8f, 0.4f);   // ë‚´ í„´ ìƒ‰ìƒ (ì´ˆë¡)
+    public Color enemyTurnColor = new Color(0.9f, 0.3f, 0.2f); // ìƒëŒ€ í„´ ìƒ‰ìƒ (ë¹¨ê°•)
+    public Color warningColor = new Color(1f, 0.6f, 0f);       // ê²½ê³  ìƒ‰ìƒ (ì£¼í™©)
 
-    // --- ½Ã½ºÅÛ ÀÌº¥Æ® ---
+    // --- ì‹œìŠ¤í…œ ì´ë²¤íŠ¸ ---
     public event Action OnStateChanged;
     public event Action OnHandUpdated;
     public event Action<List<EntityData>> OnEntitiesUpdated;
@@ -63,24 +66,29 @@ public class BattleManager : MonoBehaviour
 
     void Start()
     {
-        // ¼­¹ö Åë½Å ÀÌº¥Æ® ±¸µ¶
+        // ì„œë²„ í†µì‹  ì´ë²¤íŠ¸ êµ¬ë…
         if (GameClient.Instance != null)
         {
-            GameClient.Instance.ConnectToServerAsync();
+            GameClient gameClient = GameClient.Instance;
+
+            gameClient.ConnectToServerAsync();
 
             myUid = GameClient.Instance.UserUid;
-            GameClient.Instance.OnPhaseStartEvent += HandlePhaseStart;
-            GameClient.Instance.OnUpdateManaEvent += HandleUpdateMana;
-            GameClient.Instance.OnGameReadyEvent += HandleGameReady;
+            gameClient.OnPhaseStartEvent += HandlePhaseStart;
+            gameClient.OnUpdateManaEvent += HandleUpdateMana;
+            gameClient.OnGameReadyEvent += HandleGameReady;
+            gameClient.validTargetResponse += OnReceiveValidTargets;
+            gameClient.validAttackTargetsResponse += OnReceiveValidAttackTargets;
+            gameClient.OnUpdateHandCardsEvent += HandleUpdateHandCards;
         }
 
         OnStateChanged += UpdateManaUI;
 
-        // ¹öÆ° Å¬¸¯ ÀÌº¥Æ® ¿¬°á
+        // ë²„íŠ¼ í´ë¦­ ì´ë²¤íŠ¸ ì—°ê²°
         if (turnButton != null)
             turnButton.onClick.AddListener(RequestEndTurn);
 
-        // ½½¶óÀÌ´õ ÃÊ±â ¼³Á¤
+        // ìŠ¬ë¼ì´ë” ì´ˆê¸° ì„¤ì •
         if (timerSlider != null)
         {
             timerSlider.minValue = 0;
@@ -90,30 +98,35 @@ public class BattleManager : MonoBehaviour
 
     private void OnDisable()
     {
-        // ¸Ş¸ğ¸® ´©¼ö ¹æÁö¸¦ À§ÇÑ ÀÌº¥Æ® ±¸µ¶ ÇØÁ¦
+        // ë©”ëª¨ë¦¬ ëˆ„ìˆ˜ ë°©ì§€ë¥¼ ìœ„í•œ ì´ë²¤íŠ¸ êµ¬ë… í•´ì œ
         if (GameClient.Instance != null)
         {
-            GameClient.Instance.OnPhaseStartEvent -= HandlePhaseStart;
-            GameClient.Instance.OnUpdateManaEvent -= HandleUpdateMana;
-            GameClient.Instance.OnGameReadyEvent -= HandleGameReady;
+            GameClient gameClient = GameClient.Instance;
+
+            gameClient.OnPhaseStartEvent -= HandlePhaseStart;
+            gameClient.OnUpdateManaEvent -= HandleUpdateMana;
+            gameClient.OnGameReadyEvent -= HandleGameReady;
+            gameClient.validTargetResponse -= OnReceiveValidTargets;
+            gameClient.validAttackTargetsResponse -= OnReceiveValidAttackTargets;
+            gameClient.OnUpdateHandCardsEvent -= HandleUpdateHandCards;
         }
     }
 
     void Update()
     {
-        // 1. ¼­¹ö µ¿±âÈ­ ±â¹İ ½Ã°£ °è»ê
+        // 1. ì„œë²„ ë™ê¸°í™” ê¸°ë°˜ ì‹œê°„ ê³„ì‚°
         if (_turnEndTimeTimestamp > 0)
         {
             UpdateRemainingTime();
         }
 
-        // 2. UI ½½¶óÀÌ´õ ¾÷µ¥ÀÌÆ®
+        // 2. UI ìŠ¬ë¼ì´ë” ì—…ë°ì´íŠ¸
         UpdateTimerUI();
     }
 
-    // --- ¼­¹ö ÆĞÅ¶ Ã³¸® ÇÚµé·¯ ---
+    // --- ì„œë²„ íŒ¨í‚· ì²˜ë¦¬ í•¸ë“¤ëŸ¬ ---
 
-    // °ÔÀÓ ½ÃÀÛ½Ã ½ÃÀÛ ÇÃ·¹ÀÌ¾î°¡ ´©±¸ÀÎÁö ³» ¼ÕÆĞ¿Í »ó´ëÆùÆĞ°¡ ¹«¾ùÀÎÁö ¼³Á¤
+    // ê²Œì„ ì‹œì‘ì‹œ ì‹œì‘ í”Œë ˆì´ì–´ê°€ ëˆ„êµ¬ì¸ì§€ ë‚´ ì†íŒ¨ì™€ ìƒëŒ€í°íŒ¨ê°€ ë¬´ì—‡ì¸ì§€ ì„¤ì •
     private void HandleGameReady(S_GameReady info)
     {
         isPlayerTurn = (info.firstPlayerUid == myUid);
@@ -124,11 +137,11 @@ public class BattleManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
-    // ÆäÀÌÁî ½ÃÀÛ¸¶´Ù ½ÇÇà
+    // í˜ì´ì¦ˆ ì‹œì‘ë§ˆë‹¤ ì‹¤í–‰
     private void HandlePhaseStart(S_PhaseStart info)
     {
         currentPhase = info.phase;
-        // Standby -> Draw -> Main 3°³ÀÇ ÆäÀÌÁî Á¤º¸¸¦ º¸³»ÁÖÁö¸¸ info.newTurnPlayerUidÀÇ °ªÀº Standby,Draw ¿¡¼­¸¸ º¸³¿
+        // Standby -> Draw -> Main 3ê°œì˜ í˜ì´ì¦ˆ ì •ë³´ë¥¼ ë³´ë‚´ì£¼ì§€ë§Œ info.newTurnPlayerUidì˜ ê°’ì€ Standby,Draw ì—ì„œë§Œ ë³´ëƒ„
         if (info.TurnPlayerUid == myUid)
         {
             switch (info.phase)
@@ -165,14 +178,34 @@ public class BattleManager : MonoBehaviour
         RefreshTurnUI();
     }
 
-    // ¸¶³ª ¾÷µ¥ÀÌÆ®¸¶´Ù ½ÇÇà
+    // ì†íŒ¨ ì—…ë°ì´íŠ¸ë§ˆë‹¤ ì‹¤í–‰
+    private void HandleUpdateHandCards(S_UpdateHandCards info)
+    {
+        if (info.updatedCards == null) return;
+
+        foreach (var updatedCard in info.updatedCards)
+        {
+            // ë‚´ ì†íŒ¨ ëª©ë¡(playerHand)ì—ì„œ ì¼ì¹˜í•˜ëŠ” ì¸ë±ìŠ¤ë¥¼ ì°¾ì•„ ìµœì‹  ìƒíƒœë¡œ ì¹˜í™˜í•©ë‹ˆë‹¤.
+            int idx = playerHand.FindIndex(c => c.instanceId == updatedCard.instanceId);
+            if (idx != -1)
+            {
+                playerHand[idx] = updatedCard;
+            }
+        }
+
+        // ë°ì´í„° ë³€ê²½ ì‚¬í•­ ë¸Œë¡œë“œìºìŠ¤íŒ…
+        OnHandUpdated?.Invoke();
+        OnStateChanged?.Invoke();
+    }
+
+    // ë§ˆë‚˜ ì—…ë°ì´íŠ¸ë§ˆë‹¤ ì‹¤í–‰
     private void HandleUpdateMana(S_UpdateMana info)
     {
         if (info.ownerUid == myUid)
         {
             playerCurrentMana = info.currentMana;
             playerMaxMana = info.maxMana;
-            UpdateManaUI(); // ³» ¸¶³ª°¡ ¹Ù²î¾úÀ» ¶§¸¸ ÀÌ¹ÌÁö °»½Å
+            UpdateManaUI(); // ë‚´ ë§ˆë‚˜ê°€ ë°”ë€Œì—ˆì„ ë•Œë§Œ ì´ë¯¸ì§€ ê°±ì‹ 
         }
         else
         {
@@ -183,44 +216,44 @@ public class BattleManager : MonoBehaviour
     }
 
 
-    // --- ³»ºÎ ÇïÆÛ ¹× UI ·ÎÁ÷ ---
+    // --- ë‚´ë¶€ í—¬í¼ ë° UI ë¡œì§ ---
 
     /// <summary>
-    /// 10°³ÀÇ ¸¶³ª ¼öÁ¤À» ÇöÀç ¸¶³ª¿Í ÃÖ´ë ¸¶³ª¿¡ ¸ÂÃç ½Ã°¢È­ÇÕ´Ï´Ù.
+    /// 10ê°œì˜ ë§ˆë‚˜ ìˆ˜ì •ì„ í˜„ì¬ ë§ˆë‚˜ì™€ ìµœëŒ€ ë§ˆë‚˜ì— ë§ì¶° ì‹œê°í™”í•©ë‹ˆë‹¤.
     /// </summary>
     private void UpdateManaUI()
     {
-        // 1. ÅØ½ºÆ® ¾÷µ¥ÀÌÆ® (¿¹: 3 / 5)
+        // 1. í…ìŠ¤íŠ¸ ì—…ë°ì´íŠ¸ (ì˜ˆ: 3 / 5)
         if (manaText != null)
         {
             manaText.text = $"{playerCurrentMana} / {playerMaxMana}";
         }
 
-        // 2. ÀÌ¹ÌÁö ¹è¿­ ¾÷µ¥ÀÌÆ® (ÃÖ´ë 10°³ °¡Á¤)
+        // 2. ì´ë¯¸ì§€ ë°°ì—´ ì—…ë°ì´íŠ¸ (ìµœëŒ€ 10ê°œ ê°€ì •)
         if (playerManaCrystals == null || playerManaCrystals.Length == 0) return;
 
         for (int i = 0; i < playerManaCrystals.Length; i++)
         {
-            // ÀÎµ¦½º´Â 0ºÎÅÍ ½ÃÀÛÇÏ¹Ç·Î i+1°ú ¸¶³ª °ªÀ» ºñ±³ÇÕ´Ï´Ù.
+            // ì¸ë±ìŠ¤ëŠ” 0ë¶€í„° ì‹œì‘í•˜ë¯€ë¡œ i+1ê³¼ ë§ˆë‚˜ ê°’ì„ ë¹„êµí•©ë‹ˆë‹¤.
             int slotNumber = i + 1;
 
             if (slotNumber <= playerCurrentMana)
             {
-                // ÇöÀç »ç¿ë °¡´ÉÇÑ ¸¶³ª Ä­ (On)
+                // í˜„ì¬ ì‚¬ìš© ê°€ëŠ¥í•œ ë§ˆë‚˜ ì¹¸ (On)
                 playerManaCrystals[i].sprite = manaOnSprite;
                 playerManaCrystals[i].gameObject.SetActive(true);
                 playerManaCrystals[i].color = Color.white;
             }
             else if (slotNumber <= playerMaxMana)
             {
-                // ÀÌ¹ø ÅÏ¿¡ ÀÌ¹Ì »ç¿ëÇß°Å³ª ºñ¾îÀÖ´Â ¸¶³ª Ä­ (Off)
+                // ì´ë²ˆ í„´ì— ì´ë¯¸ ì‚¬ìš©í–ˆê±°ë‚˜ ë¹„ì–´ìˆëŠ” ë§ˆë‚˜ ì¹¸ (Off)
                 playerManaCrystals[i].sprite = manaOffSprite;
                 playerManaCrystals[i].gameObject.SetActive(true);
                 playerManaCrystals[i].color = Color.white;
             }
             else
             {
-                // ¾ÆÁ÷ Àá°ÜÀÖ´Â ¸¶³ª Ä­ (Locked)
+                // ì•„ì§ ì ê²¨ìˆëŠ” ë§ˆë‚˜ ì¹¸ (Locked)
                 if (manaLockedSprite != null)
                 {
                     playerManaCrystals[i].sprite = manaLockedSprite;
@@ -228,7 +261,7 @@ public class BattleManager : MonoBehaviour
                 }
                 else
                 {
-                    // Àá±ä ÀÌ¹ÌÁö°¡ ¾øÀ¸¸é ¾Æ¿¹ ºñÈ°¼ºÈ­ÇÏ°Å³ª ¹İÅõ¸íÇÏ°Ô Ã³¸®
+                    // ì ê¸´ ì´ë¯¸ì§€ê°€ ì—†ìœ¼ë©´ ì•„ì˜ˆ ë¹„í™œì„±í™”í•˜ê±°ë‚˜ ë°˜íˆ¬ëª…í•˜ê²Œ ì²˜ë¦¬
                     playerManaCrystals[i].gameObject.SetActive(false);
                 }
             }
@@ -236,17 +269,17 @@ public class BattleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ä«µå¸¦ µå·¡±×ÇÒ ¶§ È£ÃâÇÏ¿© ¼Ò¸ğµÉ ¿¹Á¤ÀÎ ¸¶³ª¸¦ ½Ã°¢ÀûÀ¸·Î °­Á¶ÇÕ´Ï´Ù.
+    /// ì¹´ë“œë¥¼ ë“œë˜ê·¸í•  ë•Œ í˜¸ì¶œí•˜ì—¬ ì†Œëª¨ë  ì˜ˆì •ì¸ ë§ˆë‚˜ë¥¼ ì‹œê°ì ìœ¼ë¡œ ê°•ì¡°í•©ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="cost">°­Á¶ÇÒ ¸¶³ª °³¼ö</param>
+    /// <param name="cost">ê°•ì¡°í•  ë§ˆë‚˜ ê°œìˆ˜</param>
     public void HighlightManaCost(int cost)
     {
-        // ¸ÕÀú UI¸¦ ±âº» »óÅÂ·Î µÇµ¹·Á³õ°í ½ÃÀÛÇÕ´Ï´Ù.
+        // ë¨¼ì € UIë¥¼ ê¸°ë³¸ ìƒíƒœë¡œ ë˜ëŒë ¤ë†“ê³  ì‹œì‘í•©ë‹ˆë‹¤.
         UpdateManaUI();
 
         if (cost <= 0 || !isPlayerTurn) return;
 
-        // ÇöÀç °¡Áö°í ÀÖ´Â ¸¶³ª Áß¿¡¼­ µÚ¿¡¼­ºÎÅÍ cost¸¸Å­ °­Á¶ÇÕ´Ï´Ù.
+        // í˜„ì¬ ê°€ì§€ê³  ìˆëŠ” ë§ˆë‚˜ ì¤‘ì—ì„œ ë’¤ì—ì„œë¶€í„° costë§Œí¼ ê°•ì¡°í•©ë‹ˆë‹¤.
         int highlightedCount = 0;
         for (int i = playerCurrentMana - 1; i >= 0 && highlightedCount < cost; i--)
         {
@@ -254,10 +287,10 @@ public class BattleManager : MonoBehaviour
             highlightedCount++;
         }
 
-        // ¸¸¾à ¸¶³ª°¡ ºÎÁ·ÇÏ´Ù¸é ºÎÁ·ÇÑ ºÎºĞ¸¸Å­ °æ°í(»¡°£»ö µî)¸¦ ÁÙ ¼öµµ ÀÖ½À´Ï´Ù. (¼±ÅÃ »çÇ×)
+        // ë§Œì•½ ë§ˆë‚˜ê°€ ë¶€ì¡±í•˜ë‹¤ë©´ ë¶€ì¡±í•œ ë¶€ë¶„ë§Œí¼ ê²½ê³ (ë¹¨ê°„ìƒ‰ ë“±)ë¥¼ ì¤„ ìˆ˜ë„ ìˆìŠµë‹ˆë‹¤. (ì„ íƒ ì‚¬í•­)
         if (cost > playerCurrentMana)
         {
-            // ¿¹: ¸¶³ª°¡ ºÎÁ·ÇÔÀ» ¾Ë¸®±â À§ÇØ È°¼ºÈ­µÈ ¸ğµç ¸¶³ª¸¦ ºÓ°Ô Ç¥½Ã
+            // ì˜ˆ: ë§ˆë‚˜ê°€ ë¶€ì¡±í•¨ì„ ì•Œë¦¬ê¸° ìœ„í•´ í™œì„±í™”ëœ ëª¨ë“  ë§ˆë‚˜ë¥¼ ë¶‰ê²Œ í‘œì‹œ
             for (int i = 0; i < playerCurrentMana; i++)
             {
                 playerManaCrystals[i].color = Color.red;
@@ -265,30 +298,120 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    // ÅÏÁ¾·á Å¸ÀÌ¹ÖÀ» ¸ÂÃß±â À§ÇÑ º¯¼ö ÃÊ±âÈ­
-    public void SetTimer()
+    // ì„œë²„ë¡œë¶€í„° íƒ€ê²Ÿ ëª©ë¡ì´ ë„ì°©í–ˆì„ ë•Œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+    private void OnReceiveValidTargets(S_ValidTargetResponse response)
     {
-        prevRemainingTime = float.MaxValue; // ÃÊ±âÈ­
+        // 1. ê¸°ì¡´ì— ì¼œì ¸ ìˆë˜ í•˜ì´ë¼ì´íŠ¸ë“¤ì„ ëª¨ë‘ ë•ë‹ˆë‹¤.
+        ResetHighlights();
+
+        if (response.ValidTargetIds == null) return;
+
+        // 2. ì „ë‹¬ë°›ì€ ìœ íš¨ íƒ€ê²Ÿ ID ëª©ë¡ì„ ìºì‹œì— ì €ì¥í•©ë‹ˆë‹¤.
+        _serverValidTargetIds = response.ValidTargetIds;
+
+        // 3. í•„ë“œ ìœ„ì— ì†Œí™˜ëœ ì¹´ë“œë“¤ ì¤‘, ì„œë²„ê°€ í—ˆìš©í•œ ì¹´ë“œë“¤ë§Œ ì°¾ì•„ì„œ í•˜ì´ë¼ì´íŠ¸ë¥¼ ì¼­ë‹ˆë‹¤.
+        foreach (int targetId in _serverValidTargetIds)
+        {
+            // í˜„ì¥ ê°ë…(EntityManager)ì—ê²Œ IDë¡œ ì¹´ë“œ ë””ìŠ¤í”Œë ˆì´ë¥¼ ì°¾ìŠµë‹ˆë‹¤.
+            if (GameEntityManager.Instance._spawnedEntities.TryGetValue(targetId, out var targetCard))
+            {
+                targetCard.SetGlowState(true); // í•˜ì´ë¼ì´íŠ¸ On!
+                _highlightedTargets.Add(targetCard);
+            }
+        }
     }
 
-    // Å¸ÀÌ¸Ó °è»ê
+    // S_RequestTargetForPlay íŒ¨í‚·ì „ìš© ì „íˆ¬ì˜ í•¨ì„±ìœ¼ë¡œ íƒ€ê²Ÿì´ í•„ìš”í•œ ê²½ìš°
+    public void OnReceiveValidTargetsRequestTargetForPlay(S_RequestTargetForPlay response)
+    {
+        // 1. ê¸°ì¡´ì— ì¼œì ¸ ìˆë˜ í•˜ì´ë¼ì´íŠ¸ë“¤ì„ ëª¨ë‘ ë•ë‹ˆë‹¤.
+        ResetHighlights();
+
+        if (response.ValidTargetIds == null) return;
+
+        // 2. ì „ë‹¬ë°›ì€ ìœ íš¨ íƒ€ê²Ÿ ID ëª©ë¡ì„ ìºì‹œì— ì €ì¥í•©ë‹ˆë‹¤.
+        _serverValidTargetIds = response.ValidTargetIds;
+
+        // 3. í•„ë“œ ìœ„ì— ì†Œí™˜ëœ ì¹´ë“œë“¤ ì¤‘, ì„œë²„ê°€ í—ˆìš©í•œ ì¹´ë“œë“¤ë§Œ ì°¾ì•„ì„œ í•˜ì´ë¼ì´íŠ¸ë¥¼ ì¼­ë‹ˆë‹¤.
+        foreach (int targetId in _serverValidTargetIds)
+        {
+            // í˜„ì¥ ê°ë…(EntityManager)ì—ê²Œ IDë¡œ ì¹´ë“œ ë””ìŠ¤í”Œë ˆì´ë¥¼ ì°¾ìŠµë‹ˆë‹¤.
+            if (GameEntityManager.Instance._spawnedEntities.TryGetValue(targetId, out var targetCard))
+            {
+                targetCard.SetGlowState(true); // í•˜ì´ë¼ì´íŠ¸ On!
+                _highlightedTargets.Add(targetCard);
+            }
+        }
+    }
+
+    /// <summary>
+    /// ì„œë²„ë¡œë¶€í„° ìœ íš¨í•œ ê³µê²© ìˆ˜ë¹„ ëŒ€ìƒ ëª©ë¡ì´ ìˆ˜ì‹ ë˜ë©´ ì‹¤í–‰ë©ë‹ˆë‹¤.
+    /// </summary>
+    private void OnReceiveValidAttackTargets(S_ValidAttackTargetsResponse response)
+    {
+        // 1. ê¸°ì¡´ì— ì¼œì ¸ ìˆë˜ ëª¨ë“  í•˜ì´ë¼ì´íŠ¸ë¥¼ ì´ˆê¸°í™”í•©ë‹ˆë‹¤ [12].
+        ResetHighlights();
+
+        if (response.validDefenderEntityIds == null) return;
+
+        // 2. ì „ë‹¬ë°›ì€ ìœ íš¨ íƒ€ê²Ÿ ID ëª©ë¡ì„ IsServerValidTarget ê²€ì‚¬ìš© ìºì‹œì— ì €ì¥í•©ë‹ˆë‹¤ [11, 12].
+        _serverValidTargetIds = response.validDefenderEntityIds;
+
+        // 3. í•„ë“œ ìœ„ì˜ ì¹´ë“œë“¤ ì¤‘ ì„œë²„ê°€ ìŠ¹ì¸í•´ ì¤€ IDë¥¼ ê°€ì§„ ì¹´ë“œë“¤ë§Œ ì°¾ì•„ì„œ ë°˜ì§ì´ê²Œ ì¼­ë‹ˆë‹¤ [12, 13].
+        foreach (int targetId in _serverValidTargetIds)
+        {
+            if (GameEntityManager.Instance._spawnedEntities.TryGetValue(targetId, out var targetCard))
+            {
+                targetCard.SetGlowState(true); // í•˜ì´ë¼ì´íŠ¸ On! [12, 16]
+                _highlightedTargets.Add(targetCard); // ë‚˜ì¤‘ì— ëŒ ìˆ˜ ìˆë„ë¡ ë¦¬ìŠ¤íŠ¸ì— ì €ì¥ [12]
+            }
+        }
+    }
+
+    /// <summary>                                                                                                                                           
+    /// íŠ¹ì • ì—”í‹°í‹° IDê°€ ì„œë²„ë¡œë¶€í„° ìŠ¹ì¸ë°›ì€ ìœ íš¨í•œ íƒ€ê²Ÿ(ê³µê²© ëŒ€ìƒ ë˜ëŠ” ì¹´ë“œ íš¨ê³¼ ëŒ€ìƒ)ì¸ì§€ í™•ì¸í•©ë‹ˆë‹¤.
+    /// </summary>
+    public bool IsServerValidTarget(int entityId)
+    {
+        if (_serverValidTargetIds == null || _serverValidTargetIds.Count == 0) return false;
+        return _serverValidTargetIds.Contains(entityId);
+    }
+
+    // í•˜ì´ë¼ì´íŠ¸ ë„ê¸° ë° ìºì‹œ ì´ˆê¸°í™”
+    public void ResetHighlights()
+    {
+        foreach (var target in _highlightedTargets)
+        {
+            if (target != null) target.SetGlowState(false);
+        }
+        _highlightedTargets.Clear();
+        _serverValidTargetIds.Clear();
+    }
+
+    // í„´ì¢…ë£Œ íƒ€ì´ë°ì„ ë§ì¶”ê¸° ìœ„í•œ ë³€ìˆ˜ ì´ˆê¸°í™”
+    public void SetTimer()
+    {
+        prevRemainingTime = float.MaxValue; // ì´ˆê¸°í™”
+    }
+
+    // íƒ€ì´ë¨¸ ê³„ì‚°
     private void UpdateRemainingTime()
     {
         long currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         float diff = _turnEndTimeTimestamp - currentUnixTime;
         remainingTime = Mathf.Max(0, diff);
-        // "Ã³À½ 0ÀÌ µÇ´Â ¼ø°£"¸¸ °¨Áö
+        // "ì²˜ìŒ 0ì´ ë˜ëŠ” ìˆœê°„"ë§Œ ê°ì§€
         if (prevRemainingTime > 0 && remainingTime <= 0)
         {
-            Debug.Log("½Ã°£ ÃÊ°ú·Î ÅÏ º¯°æ");
+            Debug.Log("ì‹œê°„ ì´ˆê³¼ë¡œ í„´ ë³€ê²½");
             RequestEndTurn();
         }
 
-        prevRemainingTime = remainingTime;  // prevRemainingTime = 0 ÀÌ µÇ¸é¼­ ÅÏÁ¾·á Áõº¹ ½ÇÇà ¹æÁö
+        prevRemainingTime = remainingTime;  // prevRemainingTime = 0 ì´ ë˜ë©´ì„œ í„´ì¢…ë£Œ ì¦ë³µ ì‹¤í–‰ ë°©ì§€
 
     }
 
-    // Å¸ÀÌ¸Ó °¨¼Ò
+    // íƒ€ì´ë¨¸ ê°ì†Œ
     private void UpdateTimerUI()
     {
         if (timerSlider == null) return;
@@ -301,28 +424,28 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    // ÅÏÁ¾·á ¹öÆ° ¼³Á¤
+    // í„´ì¢…ë£Œ ë²„íŠ¼ ì„¤ì •
     private void RefreshTurnUI()
     {
         if (turnButton == null || statusText == null) return;
 
         if (isPlayerTurn)
         {
-            statusText.text = "³ªÀÇ ÅÏ";
+            statusText.text = "ë‚˜ì˜ í„´";
             statusText.color = Color.white;
             turnButton.interactable = true;
             if (sliderFillImage != null) sliderFillImage.color = myTurnColor;
         }
         else
         {
-            statusText.text = "»ó´ëÀÇ ÅÏ";
+            statusText.text = "ìƒëŒ€ì˜ í„´";
             statusText.color = Color.gray;
             turnButton.interactable = false;
             if (sliderFillImage != null) sliderFillImage.color = enemyTurnColor;
         }
     }
 
-    // ÅÏÁ¾·á
+    // í„´ì¢…ë£Œ
     public void RequestEndTurn()
     {
         GameClient.Instance.RequestEndTurn();

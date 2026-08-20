@@ -1,22 +1,22 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
 public class EffectInstance
 {
-    // ¿¹: ON_PLAY | DAMAGE : 3 : 0 : TARGET
-    public string trigger;        // ¹ßµ¿ ½ÃÁ¡ (¿¹: ON_PLAY, ON_DEATH)
-    public string effectName;     // È¿°ú Á¾·ù (¿¹: DAMAGE, HEAL, BUFF)
-    public int value1;            // °ª1 (ÇÇÇØ·®, µå·Î¿ì ¼ö µî)
-    public int value2;            // °ª2 (Ã¼·Â ¹öÇÁ µî)
-    public string target;         // ´ë»ó (¿¹: TARGET_ENEMY, SELF)
-    public string condition;      // Á¶°Ç (¿¹: TRIBE)
-    public string conditionValue; // Á¶°Ç°ª (¿¹: ¸â¹ö)
-    public int count;             // ¹İº¹ È½¼ö
+    // ì˜ˆ: ON_PLAY | DAMAGE : 3 : 0 : TARGET
+    public string trigger;        // ë°œë™ ì‹œì  (ì˜ˆ: ON_PLAY, ON_DEATH)
+    public string effectName;     // íš¨ê³¼ ì¢…ë¥˜ (ì˜ˆ: DAMAGE, HEAL, BUFF)
+    public int value1;            // ê°’1 (í”¼í•´ëŸ‰, ë“œë¡œìš° ìˆ˜ ë“±)
+    public int value2;            // ê°’2 (ì²´ë ¥ ë²„í”„ ë“±)
+    public string target;         // ëŒ€ìƒ (ì˜ˆ: TARGET_ENEMY, SELF)
+    public string condition;      // ì¡°ê±´ (ì˜ˆ: TRIBE)
+    public string conditionValue; // ì¡°ê±´ê°’ (ì˜ˆ: ë©¤ë²„)
+    public int count;             // ë°˜ë³µ íšŸìˆ˜
 
-    // [¼öÁ¤µÊ] '/' ¿¬»êÀÚ(Else) Ã³¸®¸¦ À§ÇÑ Àç±ÍÀû ÇÊµå
-    // ¾ÕÀÇ È¿°ú Á¶°ÇÀÌ ¸ÂÁö ¾ÊÀ» ¶§ ½ÇÇàÇÒ ´ëÃ¼ È¿°ú
+    // [ìˆ˜ì •ë¨] '/' ì—°ì‚°ì(Else) ì²˜ë¦¬ë¥¼ ìœ„í•œ ì¬ê·€ì  í•„ë“œ
+    // ì•ì˜ íš¨ê³¼ ì¡°ê±´ì´ ë§ì§€ ì•Šì„ ë•Œ ì‹¤í–‰í•  ëŒ€ì²´ íš¨ê³¼
     [SerializeReference]
     public EffectInstance elseEffect;
 }
@@ -31,19 +31,19 @@ public enum CardClass
 public enum CardType
 {
     UNKNOWN = 0,
-    ÇÏ¼öÀÎ,
-    ÁÖ¹®,
-    ¸â¹ö,
+    í•˜ìˆ˜ì¸,
+    ì£¼ë¬¸,
+    ë©¤ë²„,
     READER
 }
 
 public enum CardTribe
 {
-    ¹«¼Ò¼Ó,
-    °­µµ´Ü,
-    ¾Æ¸£³É,
-    ¹ÙÄí,
-    ¸â¹ö
+    ë¬´ì†Œì†,
+    ê°•ë„ë‹¨,
+    ì•„ë¥´ëƒ¥,
+    ë°”ì¿ ,
+    ë©¤ë²„
 }
 
 public enum CardRarity
@@ -54,74 +54,33 @@ public enum CardRarity
     legendary
 
 }
-public enum Expansion { ±âº» }
+public enum Expansion { ê¸°ë³¸ }
 
 public enum CardKeywords
 {
     Default = 0,
-    Charge = 1,       // µ¹Áø
-    Rush = 2,         // ¼Ó°ø
-    Taunt = 3,        // µµ¹ß
-    DivineShield = 4, // Ãµº¸
-    Poisonous = 5,    // µ¶¼º
-    Stealth = 6,      // Àº½Å
-    Lifesteal = 7,    // »ıÈí
-    Windfury = 8,      // ÁúÇ³
-    Bind = 9,          // ¼Ó¹Ú
+    Charge = 1,       // ëŒì§„
+    Rush = 2,         // ì†ê³µ
+    Taunt = 3,        // ë„ë°œ
+    DivineShield = 4, // ì²œë³´
+    Poisonous = 5,    // ë…ì„±
+    Stealth = 6,      // ì€ì‹ 
+    Lifesteal = 7,    // ìƒí¡
+    Windfury = 8,      // ì§ˆí’
+    Bind = 9,          // ì†ë°•
 }
 
-public enum TargetRule
-{
-    None,
-
-    // --- ´ÜÀÏ ÁöÁ¤ (ÇÃ·¹ÀÌ¾î°¡ Á÷Á¢ Å¬¸¯ÇØ¾ß ÇÔ) ---
-    Target_All,                 // ¸ğµç Ä³¸¯ÅÍ Áß ÇÏ³ª ÁöÁ¤ 
-    Target_Minion,              // ¸ğµç ÇÏ¼öÀÎ Áß ÇÏ³ª ÁöÁ¤
-    Target_Enemy_All,           // Àû Ä³¸¯ÅÍ Áß ÇÏ³ª ÁöÁ¤
-    Target_Enemy_Minion,        // Àû ÇÏ¼öÀÎ Áß ÇÏ³ª ÁöÁ¤
-    Target_Enemy_Leader,        // Àû ¿µ¿õ(¸íÄ¡) ÁöÁ¤ 
-    Target_Friend_All,          // ¾Æ±º Ä³¸¯ÅÍ Áß ÇÏ³ª ÁöÁ¤
-    Target_Friend_Minion,       // ¾Æ±º ÇÏ¼öÀÎ Áß ÇÏ³ª ÁöÁ¤
-    Target_Friend_Leader,       // ¾Æ±º ¿µ¿õ ÁöÁ¤ 
-
-    // --- ±¤¿ª / ÀÚµ¿ (Å¬¸¯ ºÒÇÊ¿ä, ¹üÀ§ ÁöÁ¤) ---
-    All_Characters,             // ¸ğµç Ä³¸¯ÅÍ 
-    All_Minions,                // ¸ğµç ÇÏ¼öÀÎ
-    All_Enemies,                // ¸ğµç Àû
-    All_Enemy_Minions,          // ¸ğµç Àû ÇÏ¼öÀÎ
-    All_Friends,                // ¸ğµç ¾Æ±º
-    All_Friendly_Minions,       // ¸ğµç ¾Æ±º ÇÏ¼öÀÎ
-
-    Random,                     // ·£´ı
-
-    Self                        // ÀÚ±â ÀÚ½Å
-}
-
-public enum CardCondition
-{
-    NONE,
-    TRIBE,
-    HAS_KEYWORD,
-    CARD_ID,
-    CARD_TYPE,
-    COST_LESS,
-    COST_MORE,
-    ATTACK_MORE,
-    ATTACK_LESS,
-    HEALTH_MORE,
-    HEALTH_LESS
-}
 
 [CreateAssetMenu(fileName = "New Card", menuName = "Card Game/Card Data")]
 public class CardData : ScriptableObject
 {
-    [Header("1. ½Äº° Á¤º¸")]
+    [Header("1. ì‹ë³„ ì •ë³´")]
     public string cardID;       // CSV: CardID
     public string cardName;     // CSV: name
 
-    [Header("2. °ÔÀÓ ·ÎÁ÷ (Stats)")]
-    public CardClass cardClass;   // CSV: type (ÇÏ¼öÀÎ, ÁÖ¹® µî)
-    public CardType cardType;       // CSV ÆÄÀÏ¸íÀÌ³ª ºĞ·ù (°­Áö, À¯´Ï µî)
+    [Header("2. ê²Œì„ ë¡œì§ (Stats)")]
+    public CardClass cardClass;   // CSV: type (í•˜ìˆ˜ì¸, ì£¼ë¬¸ ë“±)
+    public CardType cardType;       // CSV íŒŒì¼ëª…ì´ë‚˜ ë¶„ë¥˜ (ê°•ì§€, ìœ ë‹ˆ ë“±)
     public CardRarity rarity;       // CSV: rarity
     public Expansion expansion; // CSV: expansion
 
@@ -136,36 +95,34 @@ public class CardData : ScriptableObject
     [TextArea(3, 10)]
     public string additionalExplanation; // CSV: additional
 
-    [Header("3. È¿°ú µ¥ÀÌÅÍ")]
-    public List<string> keyward;
-    // [¼öÁ¤µÊ] ÆÄ½ÌµÈ È¿°ú ¸®½ºÆ®
-    public List<EffectInstance> effects = new List<EffectInstance>();
+    [Header("3. íš¨ê³¼ ë°ì´í„°")]
+    public List<CardKeywords> keyward;
 
-    // ÇÊ¿ä ½Ã »ç¿ëÇÏ´Â Ãß°¡ ÇÊµåµé
-    public TargetRule targetRule;
+    // í•„ìš” ì‹œ ì‚¬ìš©í•˜ëŠ” ì¶”ê°€ í•„ë“œë“¤
+    public bool targeting;
 
-    [Header("Æ®¸®°Åº° °íÀ¯ ¿¬Ãâ (VFX Data)")]
+    [Header("íŠ¸ë¦¬ê±°ë³„ ê³ ìœ  ì—°ì¶œ (VFX Data)")]
     public List<CardVFXData> triggerVFXList = new List<CardVFXData>();
 
-    [Header("4. ¸®¼Ò½º (Art & Sound)")]
+    [Header("4. ë¦¬ì†ŒìŠ¤ (Art & Sound)")]
 
-    // ¿òÁ÷ÀÌ´Â ÀÌ¹ÌÁö¸¦ À§ÇØ ¹è¿­·Î º¯°æ
-    [Tooltip("¾Ö´Ï¸ŞÀÌ¼Ç ÇÁ·¹ÀÓµéÀ» ¼ø¼­´ë·Î ³ÖÀ¸¼¼¿ä. Á¤Áö È­»óÀº 1°³¸¸ ³ÖÀ¸¼¼¿ä.")]
+    // ì›€ì§ì´ëŠ” ì´ë¯¸ì§€ë¥¼ ìœ„í•´ ë°°ì—´ë¡œ ë³€ê²½
+    [Tooltip("ì• ë‹ˆë©”ì´ì…˜ í”„ë ˆì„ë“¤ì„ ìˆœì„œëŒ€ë¡œ ë„£ìœ¼ì„¸ìš”. ì •ì§€ í™”ìƒì€ 1ê°œë§Œ ë„£ìœ¼ì„¸ìš”.")]
     public Sprite[] animationFrames;
-    [Tooltip("Ä«µå »ç¿ë ÀÌÆÑÆ®")]
+    [Tooltip("ì¹´ë“œ ì‚¬ìš© ì´íŒ©íŠ¸")]
     public DissolveEffect cardDissolveEffect;
-    [Tooltip("½ºÆù ÀÌÆÑÆ®")]
+    [Tooltip("ìŠ¤í° ì´íŒ©íŠ¸")]
     public SpawnEffectData spawnEffectData;
-    [Tooltip("Á÷¾÷ ¾ÆÀÌÄÜ")]
-    public Sprite memberIcon;       // Á÷¾÷ ¾ÆÀÌÄÜ
+    [Tooltip("ì§ì—… ì•„ì´ì½˜")]
+    public Sprite memberIcon;       // ì§ì—… ì•„ì´ì½˜
 
-    // ½æ³×ÀÏ (¹è¿­ÀÇ Ã¹ ¹øÂ° ÀåÀ» ´ëÇ¥ ÀÌ¹ÌÁö·Î »ç¿ë)
+    // ì¸ë„¤ì¼ (ë°°ì—´ì˜ ì²« ë²ˆì§¸ ì¥ì„ ëŒ€í‘œ ì´ë¯¸ì§€ë¡œ ì‚¬ìš©)
     public Sprite thumbnail => (animationFrames != null && animationFrames.Length > 0) ? animationFrames[0] : null;
 
-    public GameObject spawnEffect;  // ¼ÒÈ¯ ÀÌÆåÆ® ÇÁ¸®ÆÕ
-    public AudioClip attackSound;   // °ø°İ »ç¿îµå
+    public GameObject spawnEffect;  // ì†Œí™˜ ì´í™íŠ¸ í”„ë¦¬íŒ¹
+    public AudioClip attackSound;   // ê³µê²© ì‚¬ìš´ë“œ
 
-    [Header("ÀüÅõ ¿¬Ãâ")]
-    [Tooltip("ÀÏ¹İ °ø°İ¿ë")]
-    public GameObject projectilePrefab; // ³¯¾Æ°¥ Åõ»çÃ¼ ÇÁ¸®ÆÕ (ÆÄÀÌ¾îº¼, È­»ì µî)
+    [Header("ì „íˆ¬ ì—°ì¶œ")]
+    [Tooltip("ì¼ë°˜ ê³µê²©ìš©")]
+    public GameObject projectilePrefab; // ë‚ ì•„ê°ˆ íˆ¬ì‚¬ì²´ í”„ë¦¬íŒ¹ (íŒŒì´ì–´ë³¼, í™”ì‚´ ë“±)
 }

@@ -1,51 +1,51 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
-using DG.Tweening; // ºÎµå·¯¿î UI ÀÌµ¿ ¹× ¾Ö´Ï¸ŞÀÌ¼ÇÀ» À§ÇÑ ¶óÀÌºê·¯¸®
-using UnityEngine.UI; // ¹öÆ° µî UI ÄÄÆ÷³ÍÆ®¸¦ »ç¿ëÇÏ±â À§ÇØ ÇÊ¼ö
+using DG.Tweening; // ë¶€ë“œëŸ¬ìš´ UI ì´ë™ ë° ì• ë‹ˆë©”ì´ì…˜ì„ ìœ„í•œ ë¼ì´ë¸ŒëŸ¬ë¦¬
+using UnityEngine.UI; // ë²„íŠ¼ ë“± UI ì»´í¬ë„ŒíŠ¸ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ í•„ìˆ˜
 using System.Collections;
 
 /// <summary>
-/// 2D UI Äµ¹ö½º ±â¹İ: °ÔÀÓ ½ÃÀÛ Àü, '¸Ö¸®°Ç(Mulligan)' ´Ü°è¸¦ °ü¸®ÇÕ´Ï´Ù.
-/// Ã³À½¿¡ »ÌÈù Ä«µåµé Áß ¸¶À½¿¡ ¾È µå´Â Ä«µå¸¦ ¼±ÅÃÇÏ¸é µ¦¿¡ ³Ö°í ´Ù¸¥ Ä«µå·Î ±³Ã¼ÇØÁÖ´Â ½Ã½ºÅÛÀÔ´Ï´Ù.
+/// 2D UI ìº”ë²„ìŠ¤ ê¸°ë°˜: ê²Œì„ ì‹œì‘ ì „, 'ë©€ë¦¬ê±´(Mulligan)' ë‹¨ê³„ë¥¼ ê´€ë¦¬í•©ë‹ˆë‹¤.
+/// ì²˜ìŒì— ë½‘íŒ ì¹´ë“œë“¤ ì¤‘ ë§ˆìŒì— ì•ˆ ë“œëŠ” ì¹´ë“œë¥¼ ì„ íƒí•˜ë©´ ë±ì— ë„£ê³  ë‹¤ë¥¸ ì¹´ë“œë¡œ êµì²´í•´ì£¼ëŠ” ì‹œìŠ¤í…œì…ë‹ˆë‹¤.
 /// </summary>
 public class GameMulliganManager : MonoBehaviour
 {
     public static GameMulliganManager instance;
 
-    [Header("¿¬°á")]
-    [Tooltip("¼ÕÆĞ °ü¸®¸¦ ´ã´çÇÏ´Â ¸Å´ÏÀú (Ä«µå ¼±ÅÃ/Ãë¼Ò ½Ã ¼ÕÆĞ¿Í ¿¬µ¿)")]
+    [Header("ì—°ê²°")]
+    [Tooltip("ì†íŒ¨ ê´€ë¦¬ë¥¼ ë‹´ë‹¹í•˜ëŠ” ë§¤ë‹ˆì € (ì¹´ë“œ ì„ íƒ/ì·¨ì†Œ ì‹œ ì†íŒ¨ì™€ ì—°ë™)")]
     public HandCardControllManager handManager;
     public CardDrawManager cardDrawManager;
 
-    [Tooltip("¼±ÅÃµÈ Ä«µåµéÀÌ ¸ğ¿©¼­ º¸¿©Áú È­¸é Áß¾ÓÀÇ UI ºó °´Ã¼")]
+    [Tooltip("ì„ íƒëœ ì¹´ë“œë“¤ì´ ëª¨ì—¬ì„œ ë³´ì—¬ì§ˆ í™”ë©´ ì¤‘ì•™ì˜ UI ë¹ˆ ê°ì²´")]
     public RectTransform centerAnchor;
-    [Tooltip("±³Ã¼ÇÒ Ä«µåµéÀÌ ¹ö·ÁÁú(µ¹¾Æ°¥) µ¦ÀÇ UI À§Ä¡")]
+    [Tooltip("êµì²´í•  ì¹´ë“œë“¤ì´ ë²„ë ¤ì§ˆ(ëŒì•„ê°ˆ) ë±ì˜ UI ìœ„ì¹˜")]
     public RectTransform deckTransform;
-    [Tooltip("±³Ã¼¸¦ È®Á¤Áş´Â 'È®ÀÎ' ¹öÆ°")]
+    [Tooltip("êµì²´ë¥¼ í™•ì •ì§“ëŠ” 'í™•ì¸' ë²„íŠ¼")]
     public Button mulliganCheck;
 
-    [Header("¼³Á¤")]
-    [Tooltip("Áß¾Ó¿¡ ¼±ÅÃµÈ Ä«µåµéÀÌ ³ª¿­µÉ ¶§ÀÇ °£°İ (UI ÇÈ¼¿ ´ÜÀ§ÀÌ¹Ç·Î 200~300 µî Å« °ª ÇÊ¿ä)")]
+    [Header("ì„¤ì •")]
+    [Tooltip("ì¤‘ì•™ì— ì„ íƒëœ ì¹´ë“œë“¤ì´ ë‚˜ì—´ë  ë•Œì˜ ê°„ê²© (UI í”½ì…€ ë‹¨ìœ„ì´ë¯€ë¡œ 200~300 ë“± í° ê°’ í•„ìš”)")]
     public float cardSpacing = 250f;
-    [Tooltip("Ä«µå°¡ ¼ÕÆĞ ¡ê Áß¾ÓÀ¸·Î ÀÌµ¿ÇÒ ¶§ °É¸®´Â ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£")]
+    [Tooltip("ì¹´ë“œê°€ ì†íŒ¨ â†” ì¤‘ì•™ìœ¼ë¡œ ì´ë™í•  ë•Œ ê±¸ë¦¬ëŠ” ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„")]
     public float animDuration = 0.3f;
-    [Tooltip("¸Ö¸®°Ç ´Ü°èÀÓÀ» ¾Ë¸®´Â ¾È³» ÀÌ¹ÌÁö (¿¹: '±³Ã¼ÇÒ Ä«µå¸¦ ¼±ÅÃÇÏ¼¼¿ä')")]
+    [Tooltip("ë©€ë¦¬ê±´ ë‹¨ê³„ì„ì„ ì•Œë¦¬ëŠ” ì•ˆë‚´ ì´ë¯¸ì§€ (ì˜ˆ: 'êµì²´í•  ì¹´ë“œë¥¼ ì„ íƒí•˜ì„¸ìš”')")]
     public GameObject mulliganImg;
-    [Tooltip("¼±ÅÃµÇ¾î Áß¾ÓÀ¸·Î ¿Â Ä«µåÀÇ Å©±â ¹èÀ² (1.0 = ¿ø·¡ Å©±â À¯Áö)")]
+    [Tooltip("ì„ íƒë˜ì–´ ì¤‘ì•™ìœ¼ë¡œ ì˜¨ ì¹´ë“œì˜ í¬ê¸° ë°°ìœ¨ (1.0 = ì›ë˜ í¬ê¸° ìœ ì§€)")]
     public float selectedCardScaleMultiplier = 1.0f;
 
-    // --- ³»ºÎ º¯¼ö ---
-    [Tooltip("ÇöÀç ±³Ã¼ÇÏ·Á°í Å¬¸¯(¼±ÅÃ)ÇÑ Ä«µåµéÀÇ ¸®½ºÆ®")]
+    // --- ë‚´ë¶€ ë³€ìˆ˜ ---
+    [Tooltip("í˜„ì¬ êµì²´í•˜ë ¤ê³  í´ë¦­(ì„ íƒ)í•œ ì¹´ë“œë“¤ì˜ ë¦¬ìŠ¤íŠ¸")]
     public List<GameObject> _selectedCards = new List<GameObject>();
     private Dictionary<GameObject, int> _originalIndices = new Dictionary<GameObject, int>();
 
     private void Awake()
     {
-        // ½Ì±ÛÅæ ÆĞÅÏ (¾îµğ¼­µç ½±°Ô Á¢±Ù °¡´ÉÇÏµµ·Ï)
+        // ì‹±ê¸€í†¤ íŒ¨í„´ (ì–´ë””ì„œë“  ì‰½ê²Œ ì ‘ê·¼ ê°€ëŠ¥í•˜ë„ë¡)
         if (instance != null && instance != this) Destroy(this.gameObject);
         else instance = this;
 
-        // È®ÀÎ ¹öÆ°¿¡ Å¬¸¯ ÀÌº¥Æ®(ConfirmMulligan ÇÔ¼ö)¸¦ ¿¬°áÇÕ´Ï´Ù.
+        // í™•ì¸ ë²„íŠ¼ì— í´ë¦­ ì´ë²¤íŠ¸(ConfirmMulligan í•¨ìˆ˜)ë¥¼ ì—°ê²°í•©ë‹ˆë‹¤.
         if (mulliganCheck != null) mulliganCheck.onClick.AddListener(ConfirmMulligan);
     }
 
@@ -55,16 +55,16 @@ public class GameMulliganManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Ä«µå¸¦ Å¬¸¯ÇßÀ» ¶§ ½ÇÇàµÇ´Â ÇÔ¼öÀÔ´Ï´Ù. (GameInputManager³ª ¼ÕÆĞ ¸Å´ÏÀú¿¡¼­ È£ÃâµÊ)
+    /// ì¹´ë“œë¥¼ í´ë¦­í–ˆì„ ë•Œ ì‹¤í–‰ë˜ëŠ” í•¨ìˆ˜ì…ë‹ˆë‹¤. (GameInputManagerë‚˜ ì†íŒ¨ ë§¤ë‹ˆì €ì—ì„œ í˜¸ì¶œë¨)
     /// </summary>
     public void OnCardClicked(GameObject card)
     {
-        // ÀÌ¹Ì Áß¾Ó¿¡ ¿Ã¶ó°¡ ÀÖ´Â Ä«µå¶ó¸é -> ¼±ÅÃ Ãë¼Ò (´Ù½Ã ¼ÕÆĞ·Î)
+        // ì´ë¯¸ ì¤‘ì•™ì— ì˜¬ë¼ê°€ ìˆëŠ” ì¹´ë“œë¼ë©´ -> ì„ íƒ ì·¨ì†Œ (ë‹¤ì‹œ ì†íŒ¨ë¡œ)
         if (_selectedCards.Contains(card))
         {
             DeselectCard(card);
         }
-        // ¼ÕÆĞ¿¡ ÀÖ´Â Ä«µå¶ó¸é -> ±³Ã¼ÇÒ Ä«µå·Î ¼±ÅÃ (Áß¾ÓÀ¸·Î)
+        // ì†íŒ¨ì— ìˆëŠ” ì¹´ë“œë¼ë©´ -> êµì²´í•  ì¹´ë“œë¡œ ì„ íƒ (ì¤‘ì•™ìœ¼ë¡œ)
         else
         {
             SelectCard(card);
@@ -72,48 +72,48 @@ public class GameMulliganManager : MonoBehaviour
     }
 
     // ==========================================================
-    // Ä«µå ¼±ÅÃ / Ãë¼Ò ·ÎÁ÷
+    // ì¹´ë“œ ì„ íƒ / ì·¨ì†Œ ë¡œì§
     // ==========================================================
     private void SelectCard(GameObject card)
     {
-        // ¼±ÅÃ ¸®½ºÆ®¿¡ Ãß°¡
+        // ì„ íƒ ë¦¬ìŠ¤íŠ¸ì— ì¶”ê°€
         _selectedCards.Add(card);
 
-        // [Áß¿ä] ºÎ¸ğ¸¦ ¼ÕÆĞ¿¡¼­ È­¸é Áß¾Ó(centerAnchor)À¸·Î º¯°æÇÕ´Ï´Ù.
-        // ÀÌ¶§ ¸Å°³º¯¼ö true¸¦ ÁÖ¾î È­¸é»óÀÇ ÇöÀç À§Ä¡(½Ã°¢Àû ÁÂÇ¥)¸¦ À¯ÁöÇÏ°Ô ¸¸µé¾î ¼ø°£ÀÌµ¿À» ¹æÁöÇÕ´Ï´Ù.
+        // [ì¤‘ìš”] ë¶€ëª¨ë¥¼ ì†íŒ¨ì—ì„œ í™”ë©´ ì¤‘ì•™(centerAnchor)ìœ¼ë¡œ ë³€ê²½í•©ë‹ˆë‹¤.
+        // ì´ë•Œ ë§¤ê°œë³€ìˆ˜ trueë¥¼ ì£¼ì–´ í™”ë©´ìƒì˜ í˜„ì¬ ìœ„ì¹˜(ì‹œê°ì  ì¢Œí‘œ)ë¥¼ ìœ ì§€í•˜ê²Œ ë§Œë“¤ì–´ ìˆœê°„ì´ë™ì„ ë°©ì§€í•©ë‹ˆë‹¤.
         card.transform.SetParent(centerAnchor, true);
 
-        // Áß¾Ó Ä«µåµé°ú ¼ÕÆĞ Ä«µåµéÀ» °¢°¢ ¿¹»Ú°Ô ÀçÁ¤·ÄÇÕ´Ï´Ù.
+        // ì¤‘ì•™ ì¹´ë“œë“¤ê³¼ ì†íŒ¨ ì¹´ë“œë“¤ì„ ê°ê° ì˜ˆì˜ê²Œ ì¬ì •ë ¬í•©ë‹ˆë‹¤.
         UpdateCenterLayout();
         handManager.AlignHand();
     }
 
     private void DeselectCard(GameObject card)
     {
-        // ¼±ÅÃ ¸®½ºÆ®¿¡¼­ Á¦°Å
+        // ì„ íƒ ë¦¬ìŠ¤íŠ¸ì—ì„œ ì œê±°
         _selectedCards.Remove(card);
 
-        // ºÎ¸ğ¸¦ ´Ù½Ã ¼ÕÆĞ ¾ŞÄ¿(handAnchor)·Î µ¹·Á³õ½À´Ï´Ù. (¸¶Âù°¡Áö·Î true·Î ¼ø°£ÀÌµ¿ ¹æÁö)
+        // ë¶€ëª¨ë¥¼ ë‹¤ì‹œ ì†íŒ¨ ì•µì»¤(handAnchor)ë¡œ ëŒë ¤ë†“ìŠµë‹ˆë‹¤. (ë§ˆì°¬ê°€ì§€ë¡œ trueë¡œ ìˆœê°„ì´ë™ ë°©ì§€)
         card.transform.SetParent(handManager.handAnchor, true);
 
-        // Áß¾Ó Ä«µåµé°ú ¼ÕÆĞ Ä«µåµéÀ» °¢°¢ ¿¹»Ú°Ô ÀçÁ¤·ÄÇÕ´Ï´Ù.
+        // ì¤‘ì•™ ì¹´ë“œë“¤ê³¼ ì†íŒ¨ ì¹´ë“œë“¤ì„ ê°ê° ì˜ˆì˜ê²Œ ì¬ì •ë ¬í•©ë‹ˆë‹¤.
         UpdateCenterLayout();
         handManager.AlignHand();
     }
 
     // ==========================================================
-    // Áß¾Ó ¼±ÅÃ ¿µ¿ª 2D UI Á¤·Ä ·ÎÁ÷
+    // ì¤‘ì•™ ì„ íƒ ì˜ì—­ 2D UI ì •ë ¬ ë¡œì§
     // ==========================================================
     private void UpdateCenterLayout()
     {
         int count = _selectedCards.Count;
         if (count == 0) return;
 
-        // ¼±ÅÃµÈ Ä«µå °³¼ö¿¡ µû¶ó ÀüÃ¼ ³Êºñ¸¦ ±¸ÇÏ°í, ½ÃÀÛ ÁöÁ¡(startX)À» °è»êÇØ Ä«µå¸¦ °¡¿îµ¥ Á¤·ÄÇÕ´Ï´Ù.
+        // ì„ íƒëœ ì¹´ë“œ ê°œìˆ˜ì— ë”°ë¼ ì „ì²´ ë„ˆë¹„ë¥¼ êµ¬í•˜ê³ , ì‹œì‘ ì§€ì (startX)ì„ ê³„ì‚°í•´ ì¹´ë“œë¥¼ ê°€ìš´ë° ì •ë ¬í•©ë‹ˆë‹¤.
         float totalWidth = (count - 1) * cardSpacing;
         float startX = -totalWidth / 2.0f;
 
-        // ±âÁØ ½ºÄÉÀÏ°ª¿¡ ¹èÀ²À» °öÇØ ¸ñÇ¥ Å©±â¸¦ °è»êÇÕ´Ï´Ù.
+        // ê¸°ì¤€ ìŠ¤ì¼€ì¼ê°’ì— ë°°ìœ¨ì„ ê³±í•´ ëª©í‘œ í¬ê¸°ë¥¼ ê³„ì‚°í•©ë‹ˆë‹¤.
         Vector3 baseScale = (handManager != null) ? handManager.OriginalCardScale : Vector3.one;
         Vector3 targetScale = baseScale * selectedCardScaleMultiplier;
 
@@ -122,14 +122,14 @@ public class GameMulliganManager : MonoBehaviour
             GameObject card = _selectedCards[i];
             RectTransform cardRect = card.GetComponent<RectTransform>();
 
-            // XÃà À§Ä¡¸¸ ³ª¶õÈ÷ ¶ç¿ì°í(startX + i * °£°İ), YÃàÀº 0À¸·Î Áß¾Ó¿¡ ¸ÂÃä´Ï´Ù.
+            // Xì¶• ìœ„ì¹˜ë§Œ ë‚˜ë€íˆ ë„ìš°ê³ (startX + i * ê°„ê²©), Yì¶•ì€ 0ìœ¼ë¡œ ì¤‘ì•™ì— ë§ì¶¥ë‹ˆë‹¤.
             Vector2 targetPos = new Vector2(startX + (i * cardSpacing), 0);
 
-            // Áß¾Ó¿¡ ¶á Ä«µå°¡ ´Ù¸¥ ¼ÕÆĞ Ä«µå¿¡ °¡¸®Áö ¾Êµµ·Ï ·»´õ¸µ ¼ø¼­¸¦ ¸Ç ¾ÕÀ¸·Î ´ç±é´Ï´Ù.
+            // ì¤‘ì•™ì— ëœ¬ ì¹´ë“œê°€ ë‹¤ë¥¸ ì†íŒ¨ ì¹´ë“œì— ê°€ë¦¬ì§€ ì•Šë„ë¡ ë Œë”ë§ ìˆœì„œë¥¼ ë§¨ ì•ìœ¼ë¡œ ë‹¹ê¹ë‹ˆë‹¤.
             cardRect.SetAsLastSibling();
 
             cardRect.DOKill();
-            // ºÎµå·¯¿î ÀÌµ¿(DOAnchorPos), È¸Àü(±â¿ï¾îÁø Ä«µå¸¦ ¶È¹Ù·Î Æï), Å©±â Á¶Àı ¾Ö´Ï¸ŞÀÌ¼Ç ½ÇÇà
+            // ë¶€ë“œëŸ¬ìš´ ì´ë™(DOAnchorPos), íšŒì „(ê¸°ìš¸ì–´ì§„ ì¹´ë“œë¥¼ ë˜‘ë°”ë¡œ í„), í¬ê¸° ì¡°ì ˆ ì• ë‹ˆë©”ì´ì…˜ ì‹¤í–‰
             cardRect.DOAnchorPos(targetPos, animDuration).SetEase(Ease.OutQuad);
             cardRect.DOLocalRotateQuaternion(Quaternion.identity, animDuration).SetEase(Ease.OutQuad);
             cardRect.DOScale(targetScale, animDuration).SetEase(Ease.OutQuad);
@@ -137,7 +137,7 @@ public class GameMulliganManager : MonoBehaviour
     }
 
     // ==========================================================
-    // ¸Ö¸®°Ç È®Á¤ (µ¦À¸·Î Ä«µå µ¹·Áº¸³»±â)
+    // ë©€ë¦¬ê±´ í™•ì • (ë±ìœ¼ë¡œ ì¹´ë“œ ëŒë ¤ë³´ë‚´ê¸°)
     // ==========================================================
     public void ConfirmMulligan()
     {
@@ -145,7 +145,7 @@ public class GameMulliganManager : MonoBehaviour
 
         HandCardControllManager.instance.isMulligan = true;
 
-        // ¼­¹ö¿¡ 'ÀÌ Ä«µåµéÀ» ±³Ã¼ÇØÁÖ¼¼¿ä'¶ó°í ¾Ë¸®±â À§ÇØ ID¸¦ ¸ğ¾ÆµÑ ¸®½ºÆ®ÀÔ´Ï´Ù.
+        // ì„œë²„ì— 'ì´ ì¹´ë“œë“¤ì„ êµì²´í•´ì£¼ì„¸ìš”'ë¼ê³  ì•Œë¦¬ê¸° ìœ„í•´ IDë¥¼ ëª¨ì•„ë‘˜ ë¦¬ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
         List<string> idsToSend = new List<string>();
 
         foreach (GameObject cardObj in _selectedCards)
@@ -154,45 +154,45 @@ public class GameMulliganManager : MonoBehaviour
             if (cardScript != null) idsToSend.Add(cardScript.InstanceId);
         }
 
-        // ¿©·¯ Ä«µåÀÇ ¾Ö´Ï¸ŞÀÌ¼ÇÀ» ÇÏ³ª·Î ¹­¾î¼­ °ü¸®ÇÏ´Â DOTween Sequence¸¦ »ı¼ºÇÕ´Ï´Ù.
+        // ì—¬ëŸ¬ ì¹´ë“œì˜ ì• ë‹ˆë©”ì´ì…˜ì„ í•˜ë‚˜ë¡œ ë¬¶ì–´ì„œ ê´€ë¦¬í•˜ëŠ” DOTween Sequenceë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
         Sequence returnSequence = DOTween.Sequence();
 
-        // ¿øº» ¸®½ºÆ®¸¦ º¹»çÇØµÎ°í, ¼±ÅÃ ¸®½ºÆ®´Â ºñ¿ó´Ï´Ù.
+        // ì›ë³¸ ë¦¬ìŠ¤íŠ¸ë¥¼ ë³µì‚¬í•´ë‘ê³ , ì„ íƒ ë¦¬ìŠ¤íŠ¸ëŠ” ë¹„ì›ë‹ˆë‹¤.
         List<GameObject> cardsToReturn = new List<GameObject>(_selectedCards);
         _selectedCards.Clear();
 
-        // °¢ Ä«µå¸¦ µ¦À¸·Î ³¯·Áº¸³»´Â ¿¬ÃâÀ» »ı¼ºÇÕ´Ï´Ù.
+        // ê° ì¹´ë“œë¥¼ ë±ìœ¼ë¡œ ë‚ ë ¤ë³´ë‚´ëŠ” ì—°ì¶œì„ ìƒì„±í•©ë‹ˆë‹¤.
         for (int i = 0; i < cardsToReturn.Count; i++)
         {
             GameObject card = cardsToReturn[i];
             RectTransform cardRect = card.GetComponent<RectTransform>();
 
-            // Ä«µå°¡ µ¿½Ã¿¡ ³¯¾Æ°¡Áö ¾Ê°í ¾à°£ÀÇ ½ÃÂ÷(0.1ÃÊ °£°İ)¸¦ µÎ°í Â÷·Ê´ë·Î ³¯¾Æ°¡µµ·Ï ½ÃÀÛ ½Ã°£À» ¼³Á¤ÇÕ´Ï´Ù.
+            // ì¹´ë“œê°€ ë™ì‹œì— ë‚ ì•„ê°€ì§€ ì•Šê³  ì•½ê°„ì˜ ì‹œì°¨(0.1ì´ˆ ê°„ê²©)ë¥¼ ë‘ê³  ì°¨ë¡€ëŒ€ë¡œ ë‚ ì•„ê°€ë„ë¡ ì‹œì‘ ì‹œê°„ì„ ì„¤ì •í•©ë‹ˆë‹¤.
             float startTime = i * 0.1f;
             float flightDuration = 0.5f;
 
-            // ½ÇÁ¦ ¼ÕÆĞ °ü¸® µ¥ÀÌÅÍ¿¡¼­µµ ÀÌ Ä«µå¸¦ ¿ÏÀüÈ÷ »èÁ¦ÇÕ´Ï´Ù.
+            // ì‹¤ì œ ì†íŒ¨ ê´€ë¦¬ ë°ì´í„°ì—ì„œë„ ì´ ì¹´ë“œë¥¼ ì™„ì „íˆ ì‚­ì œí•©ë‹ˆë‹¤.
             handManager.RemoveCardFromHandListOnly(card);
 
-            // [¾Ö´Ï¸ŞÀÌ¼Ç 1] µ¦ÀÇ È­¸é À§Ä¡(position)¸¦ ÇâÇØ °î¼± ÇüÅÂ(InCubic)·Î °¡¼ÓÇÏ¸ç ³¯¾Æ°©´Ï´Ù.
+            // [ì• ë‹ˆë©”ì´ì…˜ 1] ë±ì˜ í™”ë©´ ìœ„ì¹˜(position)ë¥¼ í–¥í•´ ê³¡ì„  í˜•íƒœ(InCubic)ë¡œ ê°€ì†í•˜ë©° ë‚ ì•„ê°‘ë‹ˆë‹¤.
             returnSequence.Insert(startTime, cardRect.DOMove(deckTransform.position, flightDuration).SetEase(Ease.InCubic));
 
-            // [¾Ö´Ï¸ŞÀÌ¼Ç 2] ³¯¾Æ°¡¸é¼­ YÃàÀ» 180µµ È¸Àü½ÃÄÑ µ¦¿¡ ²ÈÈ÷´Â ´À³¦(µŞ¸é º¸ÀÌ±â)À» Áİ´Ï´Ù.
+            // [ì• ë‹ˆë©”ì´ì…˜ 2] ë‚ ì•„ê°€ë©´ì„œ Yì¶•ì„ 180ë„ íšŒì „ì‹œì¼œ ë±ì— ê½‚íˆëŠ” ëŠë‚Œ(ë’·ë©´ ë³´ì´ê¸°)ì„ ì¤ë‹ˆë‹¤.
             returnSequence.Insert(startTime, cardRect.DORotateQuaternion(deckTransform.rotation * Quaternion.Euler(0, 180f, 0), flightDuration));
 
-            // [¾Ö´Ï¸ŞÀÌ¼Ç 3] µ¦ ¾ÈÀ¸·Î »¡·Á µé¾î°¡´Â °ÍÃ³·³ Å©±â¸¦ 0À¸·Î ÁÙÀÔ´Ï´Ù.
+            // [ì• ë‹ˆë©”ì´ì…˜ 3] ë± ì•ˆìœ¼ë¡œ ë¹¨ë ¤ ë“¤ì–´ê°€ëŠ” ê²ƒì²˜ëŸ¼ í¬ê¸°ë¥¼ 0ìœ¼ë¡œ ì¤„ì…ë‹ˆë‹¤.
             returnSequence.Insert(startTime, cardRect.DOScale(Vector3.zero, flightDuration));
 
-            // Ä«µå°¡ µ¦¿¡ ¿ÏÀüÈ÷ µµÂøÇÒ ½Ã°£ÀÌ µÇ¸é ¸Ş¸ğ¸®¿¡¼­ Ä«µå¸¦ ÆÄ±«(»èÁ¦)ÇÕ´Ï´Ù.
+            // ì¹´ë“œê°€ ë±ì— ì™„ì „íˆ ë„ì°©í•  ì‹œê°„ì´ ë˜ë©´ ë©”ëª¨ë¦¬ì—ì„œ ì¹´ë“œë¥¼ íŒŒê´´(ì‚­ì œ)í•©ë‹ˆë‹¤.
             returnSequence.InsertCallback(startTime + flightDuration, () => { Destroy(card); });
         }
 
-        // ¸ğµç Ä«µå°¡ µ¦À¸·Î µé¾î°¡´Â ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ¿ÏÀüÈ÷ ³¡³µÀ» ¶§ ¼­¹ö¿¡ ¸Ş½ÃÁö¸¦ º¸³À´Ï´Ù.
+        // ëª¨ë“  ì¹´ë“œê°€ ë±ìœ¼ë¡œ ë“¤ì–´ê°€ëŠ” ì• ë‹ˆë©”ì´ì…˜ì´ ì™„ì „íˆ ëë‚¬ì„ ë•Œ ì„œë²„ì— ë©”ì‹œì§€ë¥¼ ë³´ëƒ…ë‹ˆë‹¤.
         returnSequence.OnComplete(() =>
         {
-            Debug.Log($"[Mulligan] °áÁ¤ ¿Ï·á. ±³Ã¼ ¼ö: {idsToSend.Count}");
+            Debug.Log($"[Mulligan] ê²°ì • ì™„ë£Œ. êµì²´ ìˆ˜: {idsToSend.Count}");
 
-            // ³×Æ®¿öÅ©¸¦ ÅëÇØ ¼­¹ö·Î ¸Ö¸®°Ç È®Á¤ ¸Ş½ÃÁö¸¦ Àü¼ÛÇÕ´Ï´Ù.
+            // ë„¤íŠ¸ì›Œí¬ë¥¼ í†µí•´ ì„œë²„ë¡œ ë©€ë¦¬ê±´ í™•ì • ë©”ì‹œì§€ë¥¼ ì „ì†¡í•©ë‹ˆë‹¤.
             var decision = new C_MulliganDecision
             {
                 action = GameActionType.MULLIGAN_DECISION,
@@ -201,7 +201,7 @@ public class GameMulliganManager : MonoBehaviour
 
             if (GameClient.Instance != null) GameClient.Instance.SendMessageAsync(decision);
 
-            // "±³Ã¼ÇÒ Ä«µå¸¦ ¼±ÅÃÇÏ¼¼¿ä" µîÀÇ ¾È³» UI¸¦ È­¸é¿¡¼­ ¼û±é´Ï´Ù.
+            // "êµì²´í•  ì¹´ë“œë¥¼ ì„ íƒí•˜ì„¸ìš”" ë“±ì˜ ì•ˆë‚´ UIë¥¼ í™”ë©´ì—ì„œ ìˆ¨ê¹ë‹ˆë‹¤.
             if (mulliganImg != null) mulliganImg.SetActive(false);
         });
     }
@@ -217,29 +217,29 @@ using UnityEngine.UI;
 using System.Collections;
 
 /// <summary>
-/// °ÔÀÓ ½ÃÀÛ Àü, '¸Ö¸®°Ç(Mulligan)' ´Ü°è¸¦ °ü¸®ÇÕ´Ï´Ù.
-/// ¸¶À½¿¡ ¾È µå´Â Ä«µå¸¦ ¼±ÅÃÇÏ¸é ±³Ã¼ÇØÁÖ´Â ½Ã½ºÅÛÀÔ´Ï´Ù.
+/// ê²Œì„ ì‹œì‘ ì „, 'ë©€ë¦¬ê±´(Mulligan)' ë‹¨ê³„ë¥¼ ê´€ë¦¬í•©ë‹ˆë‹¤.
+/// ë§ˆìŒì— ì•ˆ ë“œëŠ” ì¹´ë“œë¥¼ ì„ íƒí•˜ë©´ êµì²´í•´ì£¼ëŠ” ì‹œìŠ¤í…œì…ë‹ˆë‹¤.
 /// </summary>
 public class GameMulliganManager : MonoBehaviour
 {
     public static GameMulliganManager instance;
 
-    [Header("¿¬°á")]
-    public HandInteractionManager handManager; // ¼ÕÆĞ °ü¸®ÀÚ
-    public CardDrawManager cardDrawManager;    // µå·Î¿ì °ü¸®ÀÚ
-    public Transform centerAnchor;             // ¼±ÅÃµÈ Ä«µå°¡ ¸ğÀÏ Áß¾Ó À§Ä¡
-    public Transform deckTransform;            // Ä«µå°¡ µ¹¾Æ°¥ µ¦ À§Ä¡
-    public Button mulliganCheck;               // 'È®ÀÎ(±³Ã¼)' ¹öÆ°
+    [Header("ì—°ê²°")]
+    public HandInteractionManager handManager; // ì†íŒ¨ ê´€ë¦¬ì
+    public CardDrawManager cardDrawManager;    // ë“œë¡œìš° ê´€ë¦¬ì
+    public Transform centerAnchor;             // ì„ íƒëœ ì¹´ë“œê°€ ëª¨ì¼ ì¤‘ì•™ ìœ„ì¹˜
+    public Transform deckTransform;            // ì¹´ë“œê°€ ëŒì•„ê°ˆ ë± ìœ„ì¹˜
+    public Button mulliganCheck;               // 'í™•ì¸(êµì²´)' ë²„íŠ¼
 
-    [Header("¼³Á¤")]
-    public float cardSpacing = 2.5f;           // Áß¾Ó Á¤·Ä °£°İ
-    public float animDuration = 0.3f;          // ÀÌµ¿ ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£
-    public GameObject mulliganImg;             // ¸Ö¸®°Ç ¾È³» ÀÌ¹ÌÁö
-    public float selectedCardScaleMultiplier = 1.0f; // ¼±ÅÃµÈ Ä«µå Å©±â
+    [Header("ì„¤ì •")]
+    public float cardSpacing = 2.5f;           // ì¤‘ì•™ ì •ë ¬ ê°„ê²©
+    public float animDuration = 0.3f;          // ì´ë™ ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„
+    public GameObject mulliganImg;             // ë©€ë¦¬ê±´ ì•ˆë‚´ ì´ë¯¸ì§€
+    public float selectedCardScaleMultiplier = 1.0f; // ì„ íƒëœ ì¹´ë“œ í¬ê¸°
 
-    // ÇöÀç ±³Ã¼ÇÏ·Á°í ¼±ÅÃÇÑ Ä«µå ¸ñ·Ï
+    // í˜„ì¬ êµì²´í•˜ë ¤ê³  ì„ íƒí•œ ì¹´ë“œ ëª©ë¡
     public List<GameObject> _selectedCards = new List<GameObject>();
-    // Ä«µåÀÇ ¿ø·¡ ÀÎµ¦½º¸¦ ÀúÀåÇÒ »çÀü Ãß°¡
+    // ì¹´ë“œì˜ ì›ë˜ ì¸ë±ìŠ¤ë¥¼ ì €ì¥í•  ì‚¬ì „ ì¶”ê°€
     private Dictionary<GameObject, int> _originalIndices = new Dictionary<GameObject, int>();
 
     private void Awake()
@@ -247,52 +247,52 @@ public class GameMulliganManager : MonoBehaviour
         if (instance != null && instance != this) Destroy(this.gameObject);
         else instance = this;
 
-        mulliganCheck.onClick.AddListener(ConfirmMulligan); // ¹öÆ° Å¬¸¯ ½Ã ÇÔ¼ö ¿¬°á
+        mulliganCheck.onClick.AddListener(ConfirmMulligan); // ë²„íŠ¼ í´ë¦­ ì‹œ í•¨ìˆ˜ ì—°ê²°
     }
 
     /// <summary>
-    /// Ä«µå¸¦ Å¬¸¯ÇßÀ» ¶§ (HandInteractionManager°¡ È£ÃâÇØÁÜ)
+    /// ì¹´ë“œë¥¼ í´ë¦­í–ˆì„ ë•Œ (HandInteractionManagerê°€ í˜¸ì¶œí•´ì¤Œ)
     /// </summary>
     public void OnCardClicked(GameObject card)
     {
         if (_selectedCards.Contains(card))
         {
-            // ÀÌ¹Ì ¼±ÅÃµÈ Ä«µå¸é -> ¼±ÅÃ Ãë¼Ò (´Ù½Ã ¼ÕÆĞ·Î)
+            // ì´ë¯¸ ì„ íƒëœ ì¹´ë“œë©´ -> ì„ íƒ ì·¨ì†Œ (ë‹¤ì‹œ ì†íŒ¨ë¡œ)
             DeselectCard(card);
         }
         else
         {
-            // ¼ÕÆĞ¿¡ ÀÖ´ø Ä«µå¸é -> ¼±ÅÃ (Áß¾ÓÀ¸·Î)
+            // ì†íŒ¨ì— ìˆë˜ ì¹´ë“œë©´ -> ì„ íƒ (ì¤‘ì•™ìœ¼ë¡œ)
             SelectCard(card);
         }
     }
 
-    // Ä«µå ¼±ÅÃ (¼ÕÆĞ -> Áß¾Ó)
+    // ì¹´ë“œ ì„ íƒ (ì†íŒ¨ -> ì¤‘ì•™)
     private void SelectCard(GameObject card)
     {
-        // ¸®½ºÆ®¿¡¼­ Á¦°ÅÇÏÁö ¾Ê½À´Ï´Ù!
+        // ë¦¬ìŠ¤íŠ¸ì—ì„œ ì œê±°í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤!
         _selectedCards.Add(card);
 
         card.transform.SetParent(centerAnchor);
 
         UpdateCenterLayout();
-        // ¸®½ºÆ®´Â ±×´ë·ÎÀÌ¹Ç·Î AlignHand()¸¦ È£ÃâÇØµµ ºóÀÚ¸®°¡ »ı±âÁö ¾Êµµ·Ï Ã³¸®°¡ ÇÊ¿äÇÕ´Ï´Ù.
+        // ë¦¬ìŠ¤íŠ¸ëŠ” ê·¸ëŒ€ë¡œì´ë¯€ë¡œ AlignHand()ë¥¼ í˜¸ì¶œí•´ë„ ë¹ˆìë¦¬ê°€ ìƒê¸°ì§€ ì•Šë„ë¡ ì²˜ë¦¬ê°€ í•„ìš”í•©ë‹ˆë‹¤.
         handManager.AlignHand();
     }
 
-    // Ä«µå ¼±ÅÃ Ãë¼Ò (Áß¾Ó -> ¼ÕÆĞ)
+    // ì¹´ë“œ ì„ íƒ ì·¨ì†Œ (ì¤‘ì•™ -> ì†íŒ¨)
     private void DeselectCard(GameObject card)
     {
         _selectedCards.Remove(card);
 
-        // ´Ù½Ã ¼ÕÆĞ ¾ŞÄ¿·Î ºÎ¸ğ ¼³Á¤
+        // ë‹¤ì‹œ ì†íŒ¨ ì•µì»¤ë¡œ ë¶€ëª¨ ì„¤ì •
         card.transform.SetParent(handManager.handAnchor);
 
         UpdateCenterLayout();
-        handManager.AlignHand(); // ¿ø·¡ À§Ä¡·Î ÀÚ¿¬½º·´°Ô µ¹¾Æ°©´Ï´Ù.
+        handManager.AlignHand(); // ì›ë˜ ìœ„ì¹˜ë¡œ ìì—°ìŠ¤ëŸ½ê²Œ ëŒì•„ê°‘ë‹ˆë‹¤.
     }
 
-    // Áß¾Ó¿¡ ¸ğÀÎ Ä«µåµé ¿¹»Ú°Ô Á¤·ÄÇÏ±â
+    // ì¤‘ì•™ì— ëª¨ì¸ ì¹´ë“œë“¤ ì˜ˆì˜ê²Œ ì •ë ¬í•˜ê¸°
     private void UpdateCenterLayout()
     {
         int count = _selectedCards.Count;
@@ -317,26 +317,26 @@ public class GameMulliganManager : MonoBehaviour
     }
 
     /// <summary>
-    /// [È®ÀÎ] ¹öÆ° Å¬¸¯ ½Ã ½ÇÇà.
-    /// ¼±ÅÃµÈ Ä«µåµéÀ» µ¦À¸·Î º¸³»°í, ¼­¹ö¿¡ ±³Ã¼ ¿äÃ»À» º¸³À´Ï´Ù.
+    /// [í™•ì¸] ë²„íŠ¼ í´ë¦­ ì‹œ ì‹¤í–‰.
+    /// ì„ íƒëœ ì¹´ë“œë“¤ì„ ë±ìœ¼ë¡œ ë³´ë‚´ê³ , ì„œë²„ì— êµì²´ ìš”ì²­ì„ ë³´ëƒ…ë‹ˆë‹¤.
     /// </summary>
     public void ConfirmMulligan()
     {
         if (deckTransform == null) return;
 
-        List<string> idsToSend = new List<string>(); // ¼­¹ö¿¡ º¸³¾ ID ¸ñ·Ï
+        List<string> idsToSend = new List<string>(); // ì„œë²„ì— ë³´ë‚¼ ID ëª©ë¡
 
-        // ¼±ÅÃµÈ Ä«µåµéÀÇ ID ÃßÃâ
+        // ì„ íƒëœ ì¹´ë“œë“¤ì˜ ID ì¶”ì¶œ
         foreach (GameObject cardObj in _selectedCards)
         {
             var cardScript = cardObj.GetComponent<GameCardDisplay>();
             if (cardScript != null) idsToSend.Add(cardScript.InstanceId);
         }
 
-        // ¾Ö´Ï¸ŞÀÌ¼Ç: Ä«µåµéÀÌ µ¦À¸·Î ³¯¾Æ°¨
+        // ì• ë‹ˆë©”ì´ì…˜: ì¹´ë“œë“¤ì´ ë±ìœ¼ë¡œ ë‚ ì•„ê°
         Sequence returnSequence = DOTween.Sequence();
         List<GameObject> cardsToReturn = new List<GameObject>(_selectedCards);
-        _selectedCards.Clear(); // ¸®½ºÆ® ºñ¿ò
+        _selectedCards.Clear(); // ë¦¬ìŠ¤íŠ¸ ë¹„ì›€
 
         for (int i = 0; i < cardsToReturn.Count; i++)
         {
@@ -344,21 +344,21 @@ public class GameMulliganManager : MonoBehaviour
             float startTime = i * 0.1f;
             float flightDuration = 0.5f;
 
-            // ÀÌÁ¦ ¿©±â¼­ ½ÇÁ¦ ¼ÕÆĞ ¸®½ºÆ®¿¡¼­ Á¦°ÅÇÕ´Ï´Ù.
+            // ì´ì œ ì—¬ê¸°ì„œ ì‹¤ì œ ì†íŒ¨ ë¦¬ìŠ¤íŠ¸ì—ì„œ ì œê±°í•©ë‹ˆë‹¤.
             handManager.RemoveCardFromHandListOnly(card);
 
-            // µ¦À¸·Î ÀÌµ¿ + È¸Àü
+            // ë±ìœ¼ë¡œ ì´ë™ + íšŒì „
             returnSequence.Insert(startTime, card.transform.DOMove(deckTransform.position, flightDuration).SetEase(Ease.InCubic));
             returnSequence.Insert(startTime, card.transform.DORotateQuaternion(deckTransform.rotation, flightDuration));
 
-            // µµÂø ÈÄ ÆÄ±«
+            // ë„ì°© í›„ íŒŒê´´
             returnSequence.InsertCallback(startTime + flightDuration, () => { Destroy(card); });
         }
 
-        // ¾Ö´Ï¸ŞÀÌ¼Ç ³¡³ª¸é ¼­¹ö·Î Àü¼Û
+        // ì• ë‹ˆë©”ì´ì…˜ ëë‚˜ë©´ ì„œë²„ë¡œ ì „ì†¡
         returnSequence.OnComplete(() =>
         {
-            Debug.Log($"[Mulligan] °áÁ¤ ¿Ï·á. ±³Ã¼ ¼ö: {idsToSend.Count}");
+            Debug.Log($"[Mulligan] ê²°ì • ì™„ë£Œ. êµì²´ ìˆ˜: {idsToSend.Count}");
 
             var decision = new C_MulliganDecision
             {
@@ -366,12 +366,12 @@ public class GameMulliganManager : MonoBehaviour
                 cardInstanceIdsToReplace = idsToSend
             };
             GameClient.Instance.SendMessageAsync(decision);
-            mulliganImg.SetActive(false); // UI ²ô±â
+            mulliganImg.SetActive(false); // UI ë„ê¸°
         });
 
         if (HandInteractionManager.instance != null)
         {
-            HandInteractionManager.instance.isMulliganPhase = false; // ¸Ö¸®°Ç ¸ğµå Á¾·á
+            HandInteractionManager.instance.isMulliganPhase = false; // ë©€ë¦¬ê±´ ëª¨ë“œ ì¢…ë£Œ
         }
     }
 }

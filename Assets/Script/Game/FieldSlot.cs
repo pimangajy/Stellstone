@@ -1,16 +1,16 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ÇÏ¼öÀÎÀÌ ³õÀÏ ¼ö ÀÖ´Â 'ÀÚ¸®(Slot)' ÇÏ³ª¸¦ ³ªÅ¸³À´Ï´Ù.
+/// í•˜ìˆ˜ì¸ì´ ë†“ì¼ ìˆ˜ ìˆëŠ” 'ìë¦¬(Slot)' í•˜ë‚˜ë¥¼ ë‚˜íƒ€ëƒ…ë‹ˆë‹¤.
 /// </summary>
 public class FieldSlot : MonoBehaviour
 {
-    [Tooltip("¸î ¹øÂ° ÀÚ¸®ÀÎ°¡¿ä? (0~6)")]
+    [Tooltip("ëª‡ ë²ˆì§¸ ìë¦¬ì¸ê°€ìš”? (0~6)")]
     public int slotIndex;
 
-    [Tooltip("´©±º°¡ ÀÌ ÀÚ¸®¿¡ ÀÖ³ª¿ä?")]
+    [Tooltip("ëˆ„êµ°ê°€ ì´ ìë¦¬ì— ìˆë‚˜ìš”?")]
     public bool IsOccupied = false;
 
-    // (¼±ÅÃ) ÇöÀç ÀÌ ÀÚ¸®¿¡ ÀÖ´Â Ä«µå Á¤º¸
+    // (ì„ íƒ) í˜„ì¬ ì´ ìë¦¬ì— ìˆëŠ” ì¹´ë“œ ì •ë³´
     public CardData cardData;
 }
