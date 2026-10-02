@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
@@ -48,6 +48,16 @@ public class OpponentHandVisualizer : MonoBehaviour
     public float returnDuration = 0.5f;
     public Ease returnEase = Ease.InQuad;
 
+    [Header("카드 생성(Generate) 연출 설정")]
+    [Tooltip("카드가 화면 중앙에 생성될 3D 월드 위치 (미지정 시 CardDrawManager.showCardTransform 자동 참조)")]
+    public Transform generateCenterTransform;
+    [Tooltip("화면 중앙에서 커지며 나타나는 시간")]
+    public float generateSpawnDuration = 0.35f;
+    [Tooltip("화면 중앙에서 카드가 머무르는 시간")]
+    public float generateShowDuration = 0.65f;
+    [Tooltip("중앙에 나타났을 때의 크기 배율")]
+    public float generateScaleMultiplier = 1.2f;
+
     // --- 내부 변수 ---
     private List<GameObject> opponentCards = new List<GameObject>(); // 상대방 손패 리스트
     private Vector3 _originalCardScale = Vector3.one;
@@ -62,6 +72,12 @@ public class OpponentHandVisualizer : MonoBehaviour
         // 싱글톤 초기화
         if (Instance != null && Instance != this) Destroy(this.gameObject);
         else Instance = this;
+
+        if (cardBackPrefab != null && !_isScaleSet)
+        {
+            _originalCardScale = cardBackPrefab.transform.localScale;
+            _isScaleSet = true;
+        }
     }
 
     private void Start()
@@ -142,8 +158,10 @@ public class OpponentHandVisualizer : MonoBehaviour
             {
                 // 즉시 이동 (주로 인스펙터 수치 변경 테스트용)
                 cardRect.anchoredPosition = targetPos;
+                var lp = cardRect.localPosition;
+                cardRect.localPosition = new Vector3(lp.x, lp.y, 0f);
                 cardRect.localRotation = targetLocalRot;
-                cardRect.localScale = _originalCardScale;
+                cardRect.localScale = _originalCardScale * cardSize;
             }
             else
             {
@@ -151,8 +169,10 @@ public class OpponentHandVisualizer : MonoBehaviour
                 float duration = (card == newCard) ? drawMoveDuration : alignDuration;
                 Ease easeType = (card == newCard) ? Ease.OutCubic : Ease.OutQuad;
 
-                // 2D UI 환경에 맞게 DOAnchorPos를 사용하여 부드럽게 목표 픽셀 좌표로 이동시킵니다.
+                // 2D UI 환경에 맞게 DOAnchorPos를 사용하여 부드럽게 목표 픽셀 좌표로 이동시키고,
+                // 생성 연출 등으로 남아있을 수 있는 Z(깊이) 오프셋을 0으로 안착시킵니다.
                 cardRect.DOAnchorPos(targetPos, duration).SetEase(easeType);
+                cardRect.DOLocalMoveZ(0f, duration).SetEase(easeType);
                 cardRect.DOLocalRotateQuaternion(targetLocalRot, duration).SetEase(easeType);
                 cardRect.DOScale(_originalCardScale * cardSize, duration).SetEase(easeType);
             }
@@ -241,26 +261,235 @@ public class OpponentHandVisualizer : MonoBehaviour
         Destroy(card);
     }
 
+    /// <summary>
+    /// 상대방 손패에서 1장을 버리는(Discard) 연출입니다.
+    /// </summary>
+    public void DiscardOneCard()
+    {
+        if (opponentCards.Count == 0) return;
+        GameObject card = opponentCards[opponentCards.Count - 1];
+        opponentCards.RemoveAt(opponentCards.Count - 1);
+        cardSpacing += cardSpacingSize;
+        _lastSpacing = cardSpacing;
+        UpdateHandLayout();
+        if (card != null)
+        {
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            cardRect.DOKill();
+            cardRect.DOScale(Vector3.zero, 0.25f).OnComplete(() => Destroy(card));
+        }
+    }
+
     private void Update()
     {
-        // 유니티 에디터 인스펙터 창에서 개발자가 수치를 변경하면,
-        // 게임을 껐다 켜지 않아도 카드가 즉시 움직이며 실시간으로 확인되도록 하는 편의 기능입니다.
-        if (!Mathf.Approximately(_lastSpacing, cardSpacing) ||
-            !Mathf.Approximately(_lastDepthOffset, cardDepthOffset))
+        // --- 테스트 입력 ---
+        if (HandCardControllManager.instance == null || HandCardControllManager.instance.isTestMode)
         {
-            UpdateHandLayout(null, true);
-            _lastSpacing = cardSpacing;
-            _lastDepthOffset = cardDepthOffset;
+            if (Input.GetKeyDown(KeyCode.O)) DrawCard();
+            if (Input.GetKeyDown(KeyCode.P)) GenerateCard();
+        }
+    }
+
+    // ==========================================================
+    // 카드 생성(Generate) 전용 애니메이션
+    // (화면 중앙 등장(뒷면) -> 잠시 대기 -> 상대 손패로 부드럽게 이동)
+    // ==========================================================
+
+    private int _pendingGenerateCount = 0;
+    private Coroutine _generateBufferCoroutine = null;
+
+    /// <summary>
+    /// 상대방 카드 생성(Generate) 연출을 요청합니다.
+    /// 동일 프레임 또는 매우 짧은 시간(0.08초) 내에 여러 장이 요청되면 자동으로 묶어 다중 생성 연출을 실행합니다.
+    /// </summary>
+    public void GenerateCard()
+    {
+        _pendingGenerateCount++;
+
+        if (_generateBufferCoroutine == null)
+        {
+            _generateBufferCoroutine = StartCoroutine(ProcessGenerateBufferRoutine());
+        }
+    }
+
+    private IEnumerator ProcessGenerateBufferRoutine()
+    {
+        yield return YieldInstructionCache.WaitForSeconds(0.08f);
+
+        int count = _pendingGenerateCount;
+        _pendingGenerateCount = 0;
+        _generateBufferCoroutine = null;
+
+
+        if (count == 1)
+        {
+            StartCoroutine(SingleGenerateRoutine());
+        }
+        else if (count > 1)
+        {
+            StartCoroutine(BatchGenerateRoutine(count));
+        }
+    }
+
+    /// <summary>
+    /// 카드가 중앙에 생성될 월드 기준 위치를 반환합니다.
+    /// </summary>
+    public Vector3 GetGenerateCenterPosition()
+    {
+        if (generateCenterTransform != null)
+        {
+            return generateCenterTransform.position;
         }
 
-        // --- 테스트 입력 ---
-        if (Input.GetKeyDown(KeyCode.O)) DrawCard();
-
-        if (Input.GetKeyDown(KeyCode.K) && opponentCards.Count > 0)
+        if (CardDrawManager.Instance != null)
         {
-            var testCardData = new CardInfo { cardId = "cards-gangzi-001", instanceId = "inst_" + Random.Range(1000, 9999) };
-            var s_OpponentPlayCard = new S_OpponentPlayCard { cardPlayed = testCardData, handNum = Random.Range(0, opponentCards.Count), targetEntityId = 0 };
-            PlayUseCardAnimation(s_OpponentPlayCard);
+            if (CardDrawManager.Instance.generateCardTransform != null)
+            {
+                return CardDrawManager.Instance.generateCardTransform.position;
+            }
+            if (CardDrawManager.Instance.showCardTransform != null)
+            {
+                return CardDrawManager.Instance.showCardTransform.position;
+            }
+        }
+
+        if (CardActionQueueManager.Instance != null && CardActionQueueManager.Instance.centerShowAnchor != null)
+        {
+            return CardActionQueueManager.Instance.centerShowAnchor.position;
+        }
+
+        if (opponentHandAnchor != null)
+        {
+            return opponentHandAnchor.position + Vector3.down * 300f;
+        }
+
+        return Vector3.zero;
+    }
+
+    /// <summary>
+    /// [단일 카드 생성] 중앙 위치에 카드가 뒷면으로 나타난 후 손패로 들어가는 연출
+    /// </summary>
+    private IEnumerator SingleGenerateRoutine()
+    {
+        if (cardBackPrefab == null || opponentHandAnchor == null)
+        {
+            Debug.LogWarning("[OpponentHandVisualizer] cardBackPrefab 또는 opponentHandAnchor가 누락되었습니다.");
+            yield break;
+        }
+
+        Vector3 centerPos = GetGenerateCenterPosition();
+        Transform parentTransform = opponentHandAnchor.parent != null ? opponentHandAnchor.parent : opponentHandAnchor;
+        // 중앙 생성 시 앞면이 카메라를 정면으로 바라보도록 Canvas 평면 회전 적용
+        Quaternion rot = parentTransform.rotation;
+
+        GameObject newCard = Instantiate(cardBackPrefab, centerPos, rot, parentTransform);
+        newCard.name = "OpponentCard (Generating)";
+
+        if (!_isScaleSet)
+        {
+            _originalCardScale = newCard.transform.localScale;
+            _isScaleSet = true;
+        }
+
+        // 초기 스케일 0
+        newCard.transform.localScale = Vector3.zero;
+
+        // 1. 화면 중앙에서 앞면이 카메라를 향한 채로 뿅 나타남 (OutBack)
+        Vector3 targetScale = _originalCardScale * generateScaleMultiplier;
+        newCard.transform.DOScale(targetScale, generateSpawnDuration).SetEase(Ease.OutBack);
+        yield return YieldInstructionCache.WaitForSeconds(generateSpawnDuration);
+
+        // 2. 중앙에서 잠시 확인 대기
+        yield return YieldInstructionCache.WaitForSeconds(generateShowDuration);
+
+        // 3. 손패로 부드럽게 흡수 이동
+        if (newCard != null)
+        {
+            newCard.name = "OpponentCard";
+            newCard.transform.SetParent(opponentHandAnchor, true);
+            opponentCards.Add(newCard);
+
+            cardSpacing -= cardSpacingSize;
+            cardSpacing = Mathf.Max(30f, cardSpacing);
+            _lastSpacing = cardSpacing;
+
+            UpdateHandLayout(newCard);
+        }
+    }
+
+    /// <summary>
+    /// [다중 카드 생성] 여러 장이 동시에 생성될 때 살짝 펼쳐졌다가 순서대로 손패로 들어가는 연출
+    /// </summary>
+    private IEnumerator BatchGenerateRoutine(int count)
+    {
+        if (cardBackPrefab == null || opponentHandAnchor == null)
+        {
+            Debug.LogWarning("[OpponentHandVisualizer] cardBackPrefab 또는 opponentHandAnchor가 누락되었습니다.");
+            yield break;
+        }
+
+        Vector3 centerPos = GetGenerateCenterPosition();
+        Transform parentTransform = opponentHandAnchor.parent != null ? opponentHandAnchor.parent : opponentHandAnchor;
+        // 중앙 생성 시 앞면이 카메라를 정면으로 바라보도록 Canvas 평면 회전 적용
+        Quaternion baseRot = parentTransform.rotation;
+
+        List<GameObject> spawnedCards = new List<GameObject>();
+
+        if (!_isScaleSet)
+        {
+            _originalCardScale = cardBackPrefab.transform.localScale;
+            _isScaleSet = true;
+        }
+
+        // 1단계: 화면 중앙에 약간의 깊이 오프셋을 두고 겹쳐서(Stacked) 등장
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 stackedPos = centerPos + parentTransform.forward * (i * -0.04f);
+            GameObject newCard = Instantiate(cardBackPrefab, stackedPos, baseRot, parentTransform);
+            newCard.name = $"OpponentCard (Generating_{i})";
+            newCard.transform.localScale = Vector3.zero;
+
+            spawnedCards.Add(newCard);
+
+            Vector3 targetScale = _originalCardScale * generateScaleMultiplier;
+            newCard.transform.DOScale(targetScale, generateSpawnDuration).SetEase(Ease.OutBack);
+        }
+
+        yield return YieldInstructionCache.WaitForSeconds(generateSpawnDuration + 0.1f);
+
+        // 2단계: 중앙에 겹친 카드들이 살짝 가로로 펼쳐짐 (월드 단위 간격)
+        float spacing = Mathf.Min(1.8f, 6.0f / Mathf.Max(1, count - 1));
+        for (int i = 0; i < count; i++)
+        {
+            var cardObj = spawnedCards[i];
+            if (cardObj == null) continue;
+
+            float offsetRatio = i - (count - 1) * 0.5f;
+            Vector3 targetPos = centerPos + parentTransform.right * (offsetRatio * spacing);
+
+            cardObj.transform.DOMove(targetPos, 0.35f).SetEase(Ease.OutCubic);
+        }
+
+        // 대기
+        yield return YieldInstructionCache.WaitForSeconds(generateShowDuration);
+
+        // 3단계: 순서대로 상대방 손패로 들어감
+        for (int i = 0; i < count; i++)
+        {
+            var cardObj = spawnedCards[i];
+            if (cardObj != null)
+            {
+                cardObj.name = "OpponentCard";
+                cardObj.transform.SetParent(opponentHandAnchor, true);
+                opponentCards.Add(cardObj);
+
+                cardSpacing -= cardSpacingSize;
+                cardSpacing = Mathf.Max(30f, cardSpacing);
+                _lastSpacing = cardSpacing;
+
+                UpdateHandLayout(cardObj);
+            }
+            yield return YieldInstructionCache.WaitForSeconds(0.15f);
         }
     }
 
@@ -277,7 +506,7 @@ public class OpponentHandVisualizer : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             DrawCard();
-            yield return new WaitForSeconds(batchDrawInterval);
+            yield return YieldInstructionCache.WaitForSeconds(batchDrawInterval);
         }
     }
 
@@ -289,260 +518,3 @@ public class OpponentHandVisualizer : MonoBehaviour
         }
     }
 }
-
-
-/*
-
-using UnityEngine;
-using System.Collections.Generic;
-using DG.Tweening;
-using System.Collections;
-
-/// <summary>
-/// 상대방의 손패를 가로 일자(Linear) 형태로 정렬하고, 드로우 및 카드 사용 연출을 관리합니다.
-/// 인스펙터 수치 변경 시 실시간 반영 및 카드 사용 시의 페이드 아웃 연출이 포함되어 있습니다.
-/// </summary>
-public class OpponentHandVisualizer : MonoBehaviour
-{
-    public static OpponentHandVisualizer Instance;
-
-    [Header("프리팹 및 위치")]
-    public GameObject cardBackPrefab;      // 상대방 카드 뒷면 프리팹
-    public Transform opponentHandAnchor;  // 상대방 손패 기준점 (화면 상단)
-    public Transform opponentDeckTransform; // 상대방 덱 위치
-
-    [Header("손패 레이아웃 설정 (가로 정렬)")]
-    [Tooltip("손패 정렬 회전각도")]
-    public Vector3 handRotation = new Vector3(0,0,0);
-    [Tooltip("카드 사이의 가로 간격입니다.")]
-    public float cardSpacing = 1.2f;
-    [Tooltip("카드 간의 겹침 순서를 위한 Y축 오프셋입니다.")]
-    public float cardDepthOffset = 0.02f;
-    [Tooltip("일반 정렬 애니메이션 시간입니다.")]
-    public float alignDuration = 0.3f;
-
-    [Header("드로우 애니메이션 설정")]
-    public float drawMoveDuration = 0.5f;
-    [Tooltip("연속으로 뽑을시 딜레이 시간.")]
-    public float batchDrawInterval = 0.2f;
-
-    [Header("카드 사용(Use) 연출 설정")]
-    [Tooltip("카드를 낼 때 앞으로 이동하는 방향과 거리입니다.")]
-    public Vector3 useMoveOffset = new Vector3(0, -1.5f, 0);
-    public float useSize = 0.8f;
-    public float useDuration = 0.6f;
-    public float fadeOutDelay = 0.2f;
-
-    [Header("덱 귀환(Return) 연출 설정")]
-    public float returnDuration = 0.5f;
-    public Ease returnEase = Ease.InQuad;
-
-    private List<GameObject> opponentCards = new List<GameObject>();
-    private Vector3 _originalCardScale = Vector3.one;
-    private bool _isScaleSet = false;
-
-    // 실시간 변경 감지용 변수
-    private float _lastSpacing;
-    private float _lastDepthOffset;
-
-    private void Awake()
-    {
-        if (Instance != null && Instance != this) Destroy(this.gameObject);
-        else Instance = this;
-    }
-
-    private void Start()
-    {
-        if (GameClient.Instance != null)
-        {
-            GameClient.Instance.OnOpponentPlayCardEvent += PlayUseCardAnimation;
-        }
-
-        _lastSpacing = cardSpacing;
-        _lastDepthOffset = cardDepthOffset;
-    }
-
-    /// <summary>
-    /// 카드를 드로우합니다.
-    /// </summary>
-    public void DrawCard()
-    {
-        if (BattleManager.Instance.isPlayerTurn) return;
-
-        if (cardBackPrefab == null || opponentDeckTransform == null || opponentHandAnchor == null) return;
-
-        GameObject newCard = Instantiate(cardBackPrefab, opponentDeckTransform.position, opponentDeckTransform.rotation);
-
-        if (!_isScaleSet)
-        {
-            _originalCardScale = newCard.transform.localScale;
-            _isScaleSet = true;
-        }
-
-        newCard.transform.SetParent(opponentHandAnchor);
-        opponentCards.Add(newCard);
-
-        UpdateHandLayout(newCard);
-    }
-
-    /// <summary>
-    /// 손패의 모든 카드를 가로로 재정렬합니다. (Y축 레이어링 적용)
-    /// </summary>
-    public void UpdateHandLayout(GameObject newCard = null, bool instant = false)
-    {
-        int cardCount = opponentCards.Count;
-        if (cardCount == 0) return;
-
-        float totalWidth = (cardCount - 1) * cardSpacing;
-        float startX = -totalWidth / 2.0f;
-
-        for (int i = 0; i < cardCount; i++)
-        {
-            GameObject card = opponentCards[i];
-
-            // 위치 계산: X는 간격대로, Y는 겹침 방지를 위해 조정
-            float targetX = startX + (i * cardSpacing);
-            float targetY = i * cardDepthOffset; // 유저 요청에 따라 Z가 아닌 Y축으로 변경
-
-            Vector3 targetLocalPos = new Vector3(targetX, targetY, 0);
-            Quaternion targetLocalRot = Quaternion.Euler(handRotation);
-
-            card.transform.DOKill();
-
-            if (instant)
-            {
-                card.transform.localPosition = targetLocalPos;
-                card.transform.localRotation = targetLocalRot;
-                card.transform.localScale = _originalCardScale;
-            }
-            else
-            {
-                float duration = (card == newCard) ? drawMoveDuration : alignDuration;
-                Ease easeType = (card == newCard) ? Ease.OutCubic : Ease.OutQuad;
-
-                card.transform.DOLocalMove(targetLocalPos, duration).SetEase(easeType);
-                card.transform.DOLocalRotateQuaternion(targetLocalRot, duration).SetEase(easeType);
-                card.transform.DOScale(_originalCardScale, duration).SetEase(easeType);
-            }
-        }
-    }
-
-
-    /// <summary>
-    /// [핵심] 카드를 필드 쪽으로 내는 연출을 실행하고 파괴합니다.
-    /// </summary>
-    /// <param name="cardIndex">사용할 카드의 인덱스</param>
-    public void PlayUseCardAnimation(S_OpponentPlayCard cardIndex)
-    {
-        if (cardIndex.handNum < 0 || cardIndex.handNum >= opponentCards.Count) return;
-
-        GameObject card = opponentCards[cardIndex.handNum];
-        opponentCards.RemoveAt(cardIndex.handNum); // 리스트에서 먼저 제거하여 다른 카드들이 즉시 정렬되게 함
-
-        CardInfo cardInfo = cardIndex.cardPlayed;
-        CardData cardData = CardDrawManager.Instance.GetCardDataById(cardIndex.cardPlayed.cardId);
-
-
-        if (cardInfo != null && cardData != null)
-        {
-            card.GetComponent<GameCardDisplay>().Setup(cardData, cardInfo);
-        }
-        else Debug.Log("상대가 카드를 사용했지만 카드데이터 & 카드인포 없음");
-
-        CardActionQueueManager.Instance.PreparePlay(card, true);
-        // CardActionQueueManager.Instance.AddToQueue(card, true);
-    }
-
-    /// <summary>
-    /// 특정 인덱스의 카드를 덱으로 되돌리는 애니메이션을 실행합니다.
-    /// </summary>
-    public void ReturnCardToDeck(int cardIndex)
-    {
-        if (cardIndex < 0 || cardIndex >= opponentCards.Count) return;
-        StartCoroutine(ReturnToDeckRoutine(opponentCards[cardIndex]));
-    }
-    private IEnumerator ReturnToDeckRoutine(GameObject card)
-    {
-        // 1. 리스트에서 제거 및 즉시 정렬
-        opponentCards.Remove(card);
-        UpdateHandLayout();
-
-        // 2. 덱으로 날아가는 연출
-        card.transform.DOKill();
-
-        // 월드 좌표 기준으로 덱 위치로 이동해야 하므로 부모 해제 혹은 월드 트윈 사용
-        // 여기서는 깔끔하게 월드 좌표 이동을 사용합니다.
-        Sequence returnSeq = DOTween.Sequence();
-
-        // 살짝 위로 들렸다가 덱으로 들어가는 느낌
-        returnSeq.Append(card.transform.DOMove(card.transform.position + Vector3.up * 0.5f, 0.15f).SetEase(Ease.OutQuad));
-        returnSeq.Append(card.transform.DOMove(opponentDeckTransform.position, returnDuration).SetEase(returnEase));
-        returnSeq.Join(card.transform.DORotateQuaternion(opponentDeckTransform.rotation, returnDuration).SetEase(returnEase));
-        returnSeq.Join(card.transform.DOScale(Vector3.zero, returnDuration).SetEase(Ease.InExpo));
-
-        yield return returnSeq.WaitForCompletion();
-
-        Destroy(card);
-    }
-
-    private void Update()
-    {
-        // 실시간 수치 변경 감지
-        if (!Mathf.Approximately(_lastSpacing, cardSpacing) ||
-            !Mathf.Approximately(_lastDepthOffset, cardDepthOffset))
-        {
-            UpdateHandLayout(null, true);
-            _lastSpacing = cardSpacing;
-            _lastDepthOffset = cardDepthOffset;
-        }
-
-        // --- 테스트 입력 ---
-        if (Input.GetKeyDown(KeyCode.O))
-        {
-            DrawCard();
-        }
-
-        // K키를 누르면 맨 앞의 카드(0번)를 사용하는 연출 실행
-        if (Input.GetKeyDown(KeyCode.K) && opponentCards.Count > 0)
-        {
-            var testCardData = new CardInfo
-            {
-                cardId = "cards-gangzi-001",
-                instanceId = "instance_" + Random.Range(1000, 9999)
-            };
-            var s_OpponentPlayCard = new S_OpponentPlayCard
-            {
-                cardPlayed = testCardData,
-                handNum = Random.Range(0, opponentCards.Count),
-                targetEntityId = 0
-            };
-            
-            PlayUseCardAnimation(s_OpponentPlayCard);
-        }
-    }
-
-    // 여러장 뻡는 함수
-    public void PerformBatchDraw(int count)
-    {
-        StartCoroutine(BatchDrawRoutine(count));
-    }
-
-    private IEnumerator BatchDrawRoutine(int count)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            DrawCard();
-            yield return new WaitForSeconds(batchDrawInterval);
-        }
-    }
-
-    private void OnValidate()
-    {
-        if (Application.isPlaying && opponentCards.Count > 0)
-        {
-            UpdateHandLayout(null, true);
-        }
-    }
-}
-
-*/

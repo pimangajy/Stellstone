@@ -1,44 +1,50 @@
 using Firebase.Firestore;
 
 /// <summary>
-/// FirestoreÀÇ 'MatchmakingQueue' ÄÃ·º¼Ç¿¡ ÀúÀåµÉ ¹®¼­ÀÇ µ¥ÀÌÅÍ ±¸Á¶ÀÔ´Ï´Ù.
+/// Firestoreì˜ 'MatchmakingQueue' ì»¬ë ‰ì…˜ì— ì €ì¥ë  ë¬¸ì„œì˜ ë°ì´í„° êµ¬ì¡°ì…ë‹ˆë‹¤.
 /// </summary>
 [FirestoreData]
 public class MatchmakingEntry
 {
     /// <summary>
-    /// ÇöÀç ¸ÅÄª »óÅÂ (¿¹: "waiting", "matched")
+    /// í˜„ì¬ ë§¤ì¹­ ìƒíƒœ (ì˜ˆ: "waiting", "matched")
     /// </summary>
     [FirestoreProperty]
     public string status { get; set; }
 
     /// <summary>
-    /// ¸ÅÄª¿¡ »ç¿ëÇÒ À¯ÀúÀÇ Á¡¼ö ¶Ç´Â ·¹º§
+    /// ë§¤ì¹­ì— ì‚¬ìš©í•  ìœ ì €ì˜ ì ìˆ˜ ë˜ëŠ” ë ˆë²¨
     /// </summary>
     [FirestoreProperty]
-    public int level { get; set; } // TODO: ½ÇÁ¦ À¯Àú ·¹º§/Á¡¼ö ½Ã½ºÅÛ°ú ¿¬µ¿
+    public int level { get; set; } // TODO: ì‹¤ì œ ìœ ì € ë ˆë²¨/ì ìˆ˜ ì‹œìŠ¤í…œê³¼ ì—°ë™
 
     /// <summary>
-    /// À¯Àú°¡ ¼±ÅÃÇÑ µ¦ÀÇ ID
+    /// ìœ ì €ê°€ ì„ íƒí•œ ë±ì˜ ID
     /// </summary>
     [FirestoreProperty]
     public string deckId { get; set; }
 
     /// <summary>
-    /// À¯ÀúÀÇ ´Ğ³×ÀÓ (»ó´ë¹æ¿¡°Ô Ç¥½ÃµÉ ¼ö ÀÖÀ½)
+    /// ìœ ì €ì˜ ë‹‰ë„¤ì„ (ìƒëŒ€ë°©ì—ê²Œ í‘œì‹œë  ìˆ˜ ìˆìŒ)
     /// </summary>
     [FirestoreProperty]
     public string playerName { get; set; }
 
     /// <summary>
-    /// ¸ÅÄªÀÌ ¼º»çµÈ »ó´ë¹æÀÇ UID (¸ÅÄª ¼º°ø ½Ã Ã¤¿öÁü)
+    /// ë§¤ì¹­ì´ ì„±ì‚¬ëœ ìƒëŒ€ë°©ì˜ UID (ë§¤ì¹­ ì„±ê³µ ì‹œ ì±„ì›Œì§)
     /// </summary>
     [FirestoreProperty]
     public string opponentUid { get; set; }
 
     /// <summary>
-    /// ¸ÅÄªÀÌ ¼º»çµÈ °ÔÀÓ¹æÀÇ °íÀ¯ ID (¸ÅÄª ¼º°ø ½Ã Ã¤¿öÁü)
+    /// ë§¤ì¹­ì´ ì„±ì‚¬ëœ ê²Œì„ë°©ì˜ ê³ ìœ  ID (ë§¤ì¹­ ì„±ê³µ ì‹œ ì±„ì›Œì§)
     /// </summary>
     [FirestoreProperty]
     public string gameId { get; set; }
+
+    /// <summary>
+    /// ë§¤ì¹­ì´ ì„±ì‚¬ëœ ìƒëŒ€ë°©ì˜ ë‹‰ë„¤ì„ (ë§¤ì¹­ ì„±ê³µ ì‹œ ì±„ì›Œì§)
+    /// </summary>
+    [FirestoreProperty]
+    public string opponentName { get; set; }
 }

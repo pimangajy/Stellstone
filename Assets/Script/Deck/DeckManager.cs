@@ -1,82 +1,224 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq; // ¸®½ºÆ® µ¥ÀÌÅÍ¸¦ ´Ù·ç´Â °­·ÂÇÑ µµ±¸(LINQ)
+using System.Linq; // ë¦¬ìŠ¤íŠ¸ ë°ì´í„°ë¥¼ ë‹¤ë£¨ëŠ” ê°•ë ¥í•œ ë„êµ¬(LINQ)
 using UnityEngine;
 using System;
 using TMPro;
 
 /// <summary>
-/// [ÇöÀç ÆíÁı ÁßÀÎ µ¦]À» °ü¸®ÇÏ´Â ¸Å´ÏÀúÀÔ´Ï´Ù.
-/// ¿À¸¥ÂÊ È­¸éÀÇ 'ÇöÀç µ¦ ¸®½ºÆ®'¿¡ Ä«µå¸¦ Ãß°¡/Á¦°ÅÇÏ°í, ±ÔÄ¢(30Àå Á¦ÇÑ µî)À» °Ë»çÇÕ´Ï´Ù.
+/// [í˜„ì¬ í¸ì§‘ ì¤‘ì¸ ë±]ì„ ê´€ë¦¬í•˜ëŠ” ë§¤ë‹ˆì €ì…ë‹ˆë‹¤.
+/// ì˜¤ë¥¸ìª½ í™”ë©´ì˜ 'í˜„ì¬ ë± ë¦¬ìŠ¤íŠ¸'ì— ì¹´ë“œë¥¼ ì¶”ê°€/ì œê±°í•˜ê³ , ê·œì¹™(30ì¥ ì œí•œ ë“±)ì„ ê²€ì‚¬í•©ë‹ˆë‹¤.
 /// </summary>
 public class DeckManager : MonoBehaviour
 {
-    // ½Ì±ÛÅæ ÆĞÅÏ: ¾îµğ¼­µç DeckManager.instance ·Î Á¢±Ù °¡´ÉÇÏ°Ô ÇÔ
+    // ì‹±ê¸€í†¤ íŒ¨í„´: ì–´ë””ì„œë“  DeckManager.instance ë¡œ ì ‘ê·¼ ê°€ëŠ¥í•˜ê²Œ í•¨
     public static DeckManager instance;
 
-    [Header("µ¦ ±ÔÄ¢ ¼³Á¤")]
-    [SerializeField] private int maxDeckSize = 30; // µ¦ ÃÖ´ë Àå¼ö Á¦ÇÑ
+    // í˜„ì¬ ë±ì˜ ì¹´ë“œ êµ¬ì„±ì´ ë³€ê²½ë  ë•Œ ë°œìƒí•˜ëŠ” ì´ë²¤íŠ¸ (ì»¬ë ‰ì…˜ ì”ì—¬ ìˆ˜ëŸ‰ ê°±ì‹ ìš©)
+    public static event Action OnCurrentDeckCardsChanged;
+    // ë± ì´ë¦„ì´ ë³€ê²½ë  ë•Œ ë°œìƒí•˜ëŠ” ì´ë²¤íŠ¸ (ì™¼ìª½ ë± ëª©ë¡ ì‹¤ì‹œê°„ ë°˜ì˜ìš©)
+    public static event Action<DeckData, string> OnDeckNameChanged;
 
-    [Header("»çÀÌµå µ¦ ¼³Á¤")]
+    [Header("ë± ê·œì¹™ ì„¤ì •")]
+    [SerializeField] private int maxDeckSize = 30; // ë± ìµœëŒ€ ì¥ìˆ˜ ì œí•œ
+
+    [Header("ì‚¬ì´ë“œ ë± ì„¤ì •")]
     private int maxSideDeckSize = 5;
-    public bool isEditingSideDeck = false; // ÇöÀç »çÀÌµå µ¦ ÆíÁı ÁßÀÎÁö ¿©ºÎ
+    public bool isEditingSideDeck = false; // í˜„ì¬ ì‚¬ì´ë“œ ë± í¸ì§‘ ì¤‘ì¸ì§€ ì—¬ë¶€
 
-    [Header("UI ¿¬°á")]
+    [Header("UI ì—°ê²°")]
     public TMP_Text deckName;
-    public Transform mainDeckListParent; // Ä«µå ¸ñ·ÏÀÌ Ç¥½ÃµÉ UI ºÎ¸ğ (Content)
-    public Transform sideDeckListParent; // Ä«µå ¸ñ·ÏÀÌ Ç¥½ÃµÉ UI ºÎ¸ğ (Content)
-    public GameObject deckCardPrefab; // ¸ñ·Ï¿¡ Ãß°¡µÉ Ä«µå ÁÙ(Item) ÇÁ¸®ÆÕ
+    public Transform mainDeckListParent; // ì¹´ë“œ ëª©ë¡ì´ í‘œì‹œë  UI ë¶€ëª¨ (Content)
+    public Transform sideDeckListParent; // ì¹´ë“œ ëª©ë¡ì´ í‘œì‹œë  UI ë¶€ëª¨ (Content)
+    public GameObject deckCardPrefab; // ëª©ë¡ì— ì¶”ê°€ë  ì¹´ë“œ ì¤„(Item) í”„ë¦¬íŒ¹
 
-    // ÇöÀç µ¦ÀÇ Á÷¾÷ (¿¹: "Mage", "Warrior"). ¹®ÀÚ¿­·Î ÀúÀåµË´Ï´Ù.
+    [Header("ì‚¬ì´ë“œ ë± ì „í™˜ UI")]
+    [Tooltip("Deck View ë°°ê²½ ì´ë¯¸ì§€ (ìŠ¤í”„ë¼ì´íŠ¸ êµì²´ìš©)")]
+    public UnityEngine.UI.Image deckViewImage;
+    [Tooltip("ë©”ì¸ ë± ë°°ê²½ ìŠ¤í”„ë¼ì´íŠ¸ (Window_Pink_57x81)")]
+    public Sprite mainDeckSprite;
+    [Tooltip("ì‚¬ì´ë“œ ë± ë°°ê²½ ìŠ¤í”„ë¼ì´íŠ¸ (Window_Green_47x48)")]
+    public Sprite sideDeckSprite;
+    [Tooltip("ì‚¬ì´ë“œ ë± ì „í™˜ ë²„íŠ¼ í…ìŠ¤íŠ¸ (OpenSideDeckButton ì•ˆì˜ í…ìŠ¤íŠ¸)")]
+    public TMP_Text sideDeckButtonText;
+    [Tooltip("Deck Viewì˜ ScrollRect")]
+    public UnityEngine.UI.ScrollRect deckViewScrollRect;
+
+    [Header("ë± ì¹´ë“œ ì¥ìˆ˜ í‘œì‹œ í…ìŠ¤íŠ¸")]
+    [Tooltip("ë‹¨ì¼ ë± ì¹´ë“œ ì¥ìˆ˜ í‘œì‹œ í…ìŠ¤íŠ¸ (ì‚¬ì´ë“œ ë± ë‹«í˜: 14/30, ì‚¬ì´ë“œ ë± ì—´ë¦¼: 3/5)")]
+    public TMP_Text deckCountText;
+
+    [Tooltip("ê°œë³„ í…ìŠ¤íŠ¸ ì‚¬ìš© ì‹œ (ì„ íƒ ì‚¬í•­)")]
+    public TMP_Text mainDeckCountText;
+    public TMP_Text sideDeckCountText;
+
+    // ì„ íƒí•œ ë±ì˜ ì§ì—… (ì˜ˆ: "Mage", "Warrior"). LINQì—ì„œ ì‚¬ìš©ë©ë‹ˆë‹¤.
     private string selectedClass = "";
+    public string SelectedClass => selectedClass;
 
-    // ÇöÀç µ¦¿¡ Æ÷ÇÔµÈ ½ÇÁ¦ Ä«µå µ¥ÀÌÅÍµéÀÇ ¸®½ºÆ® (Àå¹Ù±¸´Ï)
+    // í˜„ì¬ ë±ì— í¬í•¨ëœ ì‹¤ì œ ì¹´ë“œ ë°ì´í„°ë“¤ì˜ ë¦¬ìŠ¤íŠ¸ (ì¥ë°”êµ¬ë‹ˆ)
     private List<CardData> currentDeck = new List<CardData>();
 
-    // ÇöÀç ÆíÁı ÁßÀÎ »çÀÌµå µ¦ Àå¹Ù±¸´Ï
+    // í˜„ì¬ í¸ì§‘ ì¤‘ì¸ ì‚¬ì´ë“œ ë± ì¥ë°”êµ¬ë‹ˆ
     private List<CardData> currentSideDeck = new List<CardData>();
 
-    // Áö±İ ÆíÁıÇÏ°í ÀÖ´Â µ¦ÀÇ ²®µ¥±â Á¤º¸ (ÀÌ¸§, ID µî)
+    // í˜„ì¬ í¸ì§‘ ì¤‘ì¸ ë±ì˜ ì •ë³´ (ì´ë¦„, ID ë“±)
     private DeckData currentlyEditingDeck;
+    public DeckData CurrentlyEditingDeck => currentlyEditingDeck;
+
+    // í˜„ì¬ ë±ì— ì¥ì°©ë  ì„ íƒëœ ìŠ¤í‚¨ ID
+    public string selectedSkinId { get; private set; } = "";
+
+    // [ìµœì í™”] ë± ìŠ¬ë¡¯ UI ì¬í™œìš© í’€ (Destroy/Instantiate ë°˜ë³µ ë°©ì§€)
+    private readonly List<DeckListItemDisplay> _mainDeckSlotPool = new List<DeckListItemDisplay>();
+    private readonly List<DeckListItemDisplay> _sideDeckSlotPool = new List<DeckListItemDisplay>();
 
     void Awake()
     {
-        // ½Ì±ÛÅæ ÃÊ±âÈ­
+        // ì‹±ê¸€í†¤ ì´ˆê¸°í™”
         if (instance == null) instance = this;
         else Destroy(gameObject);
     }
 
+    void Start()
+    {
+        InitSideDeckComponents();
+        UpdateSideDeckVisuals();
+        UpdateDeckCountUI();
+    }
+
     /// <summary>
-    /// [»õ µ¦ ¸¸µé±â] ºó µ¦À¸·Î ÆíÁıÀ» ½ÃÀÛÇÕ´Ï´Ù.
+    /// ì‚¬ì´ë“œ ë± ì „í™˜ì— í•„ìš”í•œ UI ì»´í¬ë„ŒíŠ¸ ë° ìŠ¤í”„ë¼ì´íŠ¸ë¥¼ ì´ˆê¸°í™”/ìºì‹±í•©ë‹ˆë‹¤.
+    private bool _isSideDeckComponentsInitialized = false;
+
+    /// <summary>
+    /// ì‚¬ì´ë“œ ë± ì „í™˜ì— í•„ìš”í•œ UI ì»´í¬ë„ŒíŠ¸ ë° ìŠ¤í”„ë¼ì´íŠ¸ë¥¼ ì´ˆê¸°í™”/ìºì‹±í•©ë‹ˆë‹¤.
+    /// </summary>
+    public void InitSideDeckComponents()
+    {
+        if (_isSideDeckComponentsInitialized) return;
+
+        if (deckViewImage == null)
+        {
+            var deckViewObj = GameObject.Find("Canvas/Deck/Deck/Panel/Deck View");
+            if (deckViewObj != null)
+            {
+                deckViewImage = deckViewObj.GetComponent<UnityEngine.UI.Image>();
+                deckViewScrollRect = deckViewObj.GetComponent<UnityEngine.UI.ScrollRect>();
+            }
+        }
+
+        if (sideDeckButtonText == null)
+        {
+            var btnObj = GameObject.Find("Canvas/Deck/Deck/Panel/Deck View/OpenSideDeckButton");
+            if (btnObj != null)
+            {
+                sideDeckButtonText = btnObj.GetComponentInChildren<TMP_Text>(true);
+            }
+        }
+
+        _isSideDeckComponentsInitialized = true;
+    }
+
+    /// <summary>
+    /// ì‚¬ì´ë“œ ë± í¸ì§‘ ëª¨ë“œ ì—¬ë¶€ì— ë§ì¶° Deck View ìŠ¤í”„ë¼ì´íŠ¸, ì»¨í…ì¸  í™œì„±í™”, ë²„íŠ¼ í…ìŠ¤íŠ¸ë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// </summary>
+    public void UpdateSideDeckVisuals()
+    {
+        InitSideDeckComponents();
+
+        // 1. Deck View ë‚´ì˜ ë©”ì¸ë±/ì‚¬ì´ë“œë± ì»¨í…ì¸  í™œì„±í™” ì „í™˜
+        if (mainDeckListParent != null)
+        {
+            mainDeckListParent.gameObject.SetActive(!isEditingSideDeck);
+        }
+        if (sideDeckListParent != null)
+        {
+            sideDeckListParent.gameObject.SetActive(isEditingSideDeck);
+        }
+
+        // 2. ScrollRect ì»¨í…ì¸  í¬ì¸í„° ì „í™˜
+        if (deckViewScrollRect != null)
+        {
+            deckViewScrollRect.content = isEditingSideDeck && sideDeckListParent != null
+                ? (sideDeckListParent as RectTransform)
+                : (mainDeckListParent as RectTransform);
+        }
+
+        // 3. Deck View ë°°ê²½ ì´ë¯¸ì§€ ìŠ¤í”„ë¼ì´íŠ¸ ì „í™˜ (ë©”ì¸: í•‘í¬, ì‚¬ì´ë“œ: ê·¸ë¦°)
+        if (deckViewImage != null)
+        {
+            if (isEditingSideDeck && sideDeckSprite != null)
+            {
+                deckViewImage.sprite = sideDeckSprite;
+            }
+            else if (!isEditingSideDeck && mainDeckSprite != null)
+            {
+                deckViewImage.sprite = mainDeckSprite;
+            }
+        }
+
+        // 4. ì „í™˜ ë²„íŠ¼ í…ìŠ¤íŠ¸ ê°±ì‹ 
+        if (sideDeckButtonText != null)
+        {
+            if (isEditingSideDeck)
+            {
+                sideDeckButtonText.text = $"â˜… ë©”ì¸ ë±ìœ¼ë¡œ ({currentDeck.Count}/{maxDeckSize}) â˜…";
+            }
+            else
+            {
+                sideDeckButtonText.text = $"â˜… ì‚¬ì´ë“œ ë± ({currentSideDeck.Count}/{maxSideDeckSize}) â˜…";
+            }
+        }
+
+        UpdateDeckCountUI();
+    }
+
+    /// <summary>
+    /// [ìƒˆ ë± ë§Œë“¤ê¸°] ìƒˆ ë±ì˜ ê¸°ë³¸ ì •ë³´ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
     /// </summary>
     public void StartNewDeck(DeckData newDeck)
     {
         isEditingSideDeck = false;
         currentlyEditingDeck = newDeck;
-        selectedClass = newDeck.deckClass; // µ¦ÀÇ Á÷¾÷ ¼³Á¤
-        currentDeck.Clear(); // Àå¹Ù±¸´Ï ºñ¿ì±â
+        selectedClass = newDeck.deckClass; // ë±ì˜ ì§ì—… ì„¤ì •
+        selectedSkinId = newDeck.GetEquippedSkinId(); // ì§ì—… ê¸°ë³¸ ìŠ¤í‚¨ ë˜ëŠ” ê¸°ì¡´ ìŠ¤í‚¨ ì„¤ì •
+        currentDeck.Clear(); // ì¥ë°”êµ¬ë‹ˆ ë¹„ìš°ê¸°
         currentSideDeck.Clear();
-        UpdateDeckListUI();  // È­¸é °»½Å
-        Debug.Log($"'{newDeck.deckName}' ¸¸µé±â¸¦ ½ÃÀÛÇÕ´Ï´Ù.");
+
+        if (deckName != null)
+        {
+            deckName.text = string.IsNullOrEmpty(newDeck.deckName) ? "ìƒˆë¡œìš´ ë±" : newDeck.deckName;
+        }
+
+        UpdateSideDeckVisuals();
+        UpdateDeckListUI();  // í™”ë©´ ê°±ì‹ 
+
+        // ìŠ¤í‚¨ ëª©ë¡ì´ ì—´ë ¤ ìˆì—ˆë‹¤ë©´ ì¹´ë“œ ëª©ë¡ìœ¼ë¡œ ìë™ ë³µê·€
+        DeckSkinSelectManager.Instance?.ShowCardList();
+
+        Debug.Log($"'{newDeck.deckName}' ë§Œë“¤ê¸°ë¥¼ ì‹œì‘í•©ë‹ˆë‹¤.");
     }
 
-    // UIÀÇ '»çÀÌµå µ¦ ¹öÆ°'À» ´©¸£¸é È£ÃâµÉ ÇÔ¼ö
+    // UIì˜ 'ì‚¬ì´ë“œ ë± ë²„íŠ¼'ì„ ëˆ„ë¥´ë©´ í˜¸ì¶œë  í•¨ìˆ˜
     public void ToggleSideDeckEditing()
     {   
-        // ÇöÀç ÆíÁı ÁßÀÎ µ¦ÀÌ ¾ø´Ù¸é(´Ü¼ø ¿­¶÷ ÁßÀÌ¶ó¸é) ÇÔ¼ö¸¦ ¹Ù·Î Á¾·áÇÕ´Ï´Ù.
+        // í˜„ì¬ í¸ì§‘ ì¤‘ì¸ ë±ì´ ì—†ë‹¤ë©´(ë‹¨ìˆœ ì—´ëŒ ì¤‘ì´ë¼ë©´) í•¨ìˆ˜ë¥¼ ë°”ë¡œ ì¢…ë£Œí•©ë‹ˆë‹¤.
         if (currentlyEditingDeck == null)
         {
-            Debug.LogWarning("ÇöÀç µ¦ Æí¼º ÁßÀÌ ¾Æ´Õ´Ï´Ù. »õ µ¦À» ¸¸µé°Å³ª ±âÁ¸ µ¦À» ¼±ÅÃÇØ ÁÖ¼¼¿ä.");
+            Debug.LogWarning("í˜„ì¬ ë± í¸ì„± ì¤‘ì´ ì•„ë‹™ë‹ˆë‹¤. ìƒˆ ë±ì„ ë§Œë“¤ê±°ë‚˜ ê¸°ì¡´ ë±ì„ ì„ íƒí•´ ì£¼ì„¸ìš”.");
             return;
         }
 
         isEditingSideDeck = !isEditingSideDeck;
-        Debug.Log(isEditingSideDeck ? "»çÀÌµå µ¦ ÆíÁı ¸ğµå" : "¸ŞÀÎ µ¦ ÆíÁı ¸ğµå");
-        // TODO: UI¿¡¼­ ½Ã°¢ÀûÀ¸·Î ¾î¶² µ¦À» ÆíÁı ÁßÀÎÁö Ç¥½Ã(°­Á¶)ÇÏ´Â ·ÎÁ÷ Ãß°¡
+        Debug.Log(isEditingSideDeck ? "ì‚¬ì´ë“œ ë± í¸ì§‘ ëª¨ë“œ" : "ë©”ì¸ ë± í¸ì§‘ ëª¨ë“œ");
+
+        UpdateSideDeckVisuals();
+        UpdateDeckListUI();
     }
 
     /// <summary>
-    /// [±âÁ¸ µ¦ ºÒ·¯¿À±â] ÀúÀåµÈ µ¦À» ºÒ·¯¿Í¼­ ÆíÁıÀ» ½ÃÀÛÇÕ´Ï´Ù.
+    /// [ê¸°ì¡´ ë± ë¶ˆëŸ¬ì˜¤ê¸°] ì €ì¥ëœ ë±ì„ ë¶ˆëŸ¬ì™€ì„œ í¸ì§‘ì„ ì‹œì‘í•©ë‹ˆë‹¤.
     /// </summary>
     public void LoadDeck(DeckData deckToLoad, List<CardData> mainCards, List<CardData> sideCards)
     {
@@ -84,95 +226,190 @@ public class DeckManager : MonoBehaviour
 
         currentlyEditingDeck = deckToLoad;
         selectedClass = deckToLoad.deckClass;
-        // ±âÁ¸ Ä«µå ¸®½ºÆ®¸¦ º¹»çÇØ¼­ Àå¹Ù±¸´Ï¿¡ ´ã½À´Ï´Ù.
+        selectedSkinId = deckToLoad.GetEquippedSkinId(); // ê¸°ì¡´ ë±ì— ì €ì¥ëœ ìŠ¤í‚¨(ë˜ëŠ” ê¸°ë³¸ ìŠ¤í‚¨) ë¶ˆëŸ¬ì˜¤ê¸°
+        // ê¸°ì¡´ ì¹´ë“œ ë¦¬ìŠ¤íŠ¸ë¥¼ ë³µì‚¬í•´ì„œ ì¥ë°”êµ¬ë‹ˆì— ë‹´ìŠµë‹ˆë‹¤.
         currentDeck = new List<CardData>(mainCards);
         currentSideDeck = new List<CardData>(sideCards);
+
+        if (deckName != null)
+        {
+            deckName.text = deckToLoad.deckName;
+        }
+
+        UpdateSideDeckVisuals();
         UpdateDeckListUI();
-        Debug.Log($"'{deckToLoad.deckName}' µ¦À» ºÒ·¯¿Ô½À´Ï´Ù.");
+
+        // ìŠ¤í‚¨ ëª©ë¡ì´ ì—´ë ¤ ìˆì—ˆë‹¤ë©´ ì¹´ë“œ ëª©ë¡ìœ¼ë¡œ ìë™ ë³µê·€
+        DeckSkinSelectManager.Instance?.ShowCardList();
+
+        Debug.Log($"'{deckToLoad.deckName}' ë±ì„ ë¶ˆëŸ¬ì™”ìŠµë‹ˆë‹¤. (ì¥ì°© ìŠ¤í‚¨: {selectedSkinId})");
     }
 
     /// <summary>
-    /// ÇöÀç ÆíÁı ÁßÀÎ µ¦À» ¼­¹ö¿¡¼­ »èÁ¦ÇÕ´Ï´Ù.
+    /// UIì—ì„œ ë¦¬ë” ìŠ¤í‚¨ì„ ì„ íƒí–ˆì„ ë•Œ í˜¸ì¶œí•˜ì—¬ í˜„ì¬ ì„ íƒëœ ìŠ¤í‚¨ IDë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
+    /// </summary>
+    public void SelectSkin(string skinId)
+    {
+        selectedSkinId = skinId;
+        if (currentlyEditingDeck != null)
+        {
+            currentlyEditingDeck.leaderSkinId = skinId;
+        }
+        Debug.Log($"[DeckManager] ë¦¬ë” ìŠ¤í‚¨ ì„ íƒë¨: {skinId}");
+    }
+
+    /// <summary>
+    /// í˜„ì¬ í¸ì§‘ ì¤‘ì¸ ë±ì„ ì„œë²„ì—ì„œ ì‚­ì œí•©ë‹ˆë‹¤. (ì„ì‹œ ë±ì€ ì„œë²„ ì‚­ì œ ìš”ì²­ ì—†ì´ ë©”ëª¨ë¦¬ì—ì„œë§Œ ì •ë¦¬)
     /// </summary>
     public async void DeleteDeck()
     {
-        // ¼­¹ö ¸Å´ÏÀú¿¡°Ô »èÁ¦ ¿äÃ»
-        await DeckSaveManager_Firebase.instance.ServerDeleteDeck(currentlyEditingDeck.deckId);
+        if (currentlyEditingDeck == null) return;
 
-        // µ¥ÀÌÅÍ ÃÊ±âÈ­
-        currentDeck.Clear(); // Àå¹Ù±¸´Ï ºñ¿ì±â
-        currentSideDeck.Clear();
-        currentlyEditingDeck = null;
-        selectedClass = null;
-        UpdateDeckListUI();
+        // ì„œë²„ì— ì¡´ì¬í•˜ëŠ” ë±(deckIdê°€ ìˆëŠ” ë±)ë§Œ ì„œë²„ ì‚­ì œ ìš”ì²­
+        if (!string.IsNullOrEmpty(currentlyEditingDeck.deckId))
+        {
+            await DeckSaveManager_Firebase.instance.ServerDeleteDeck(currentlyEditingDeck.deckId);
+        }
+
+        // ë°ì´í„° ì´ˆê¸°í™”
+        ClearCurrentEditingDeck();
     }
 
     /// <summary>
-    /// [ÀúÀå ¹öÆ°] ÇöÀç Àå¹Ù±¸´Ï(currentDeck) »óÅÂ¸¦ ¼­¹ö¿¡ ÀúÀåÇÕ´Ï´Ù.
+    /// [ì €ì¥ ë²„íŠ¼] í˜„ì¬ ì¥ë°”êµ¬ë‹ˆ(currentDeck) ìƒíƒœì™€ ì„ íƒëœ ìŠ¤í‚¨ì„ ì„œë²„ì— ì¼ê´„ ì €ì¥í•©ë‹ˆë‹¤.
+    /// (ìƒˆ ë± ì‘ì„± ì¤‘ì¼ ë•Œ ì €ì¥ ë²„íŠ¼ì„ ëˆŒëŸ¬ì•¼ ë¹„ë¡œì†Œ ì„œë²„ì— ë±ì´ ìƒì„±/ì¶”ê°€ë©ë‹ˆë‹¤)
     /// </summary>
     public async void SaveCurrentDeck()
     {
         if (currentlyEditingDeck == null)
         {
-            Debug.LogWarning("ÀúÀåÇÒ µ¦ÀÌ ¼±ÅÃµÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            Debug.LogWarning("ì €ì¥í•  ë±ì´ ì„ íƒë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
             return;
         }
 
         if (currentSideDeck.Count > 0 && currentSideDeck.Count != 5)
         {
-            Debug.LogWarning("»çÀÌµå µ¦À» 5Àå ²Ë Ã¤¿ö¾ß ÀúÀåÇÒ ¼ö ÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("ì‚¬ì´ë“œ ë±ì„ 5ì¥ ê½‰ ì±„ì›Œì•¼ ì €ì¥í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.");
             return;
         }
 
-        // 1. ±âÁ¸¿¡ ÀúÀåµÈ ID ¸ñ·ÏÀ» ½Ï ºñ¿ó´Ï´Ù.
+        // 1. ê¸°ì¡´ì— ì €ì¥ëœ ID ëª©ë¡ì„ ì‹¹ ë¹„ì›ë‹ˆë‹¤.
         currentlyEditingDeck.cardIds.Clear();
         currentlyEditingDeck.sideDeckCardIds.Clear();
         currentlyEditingDeck.sideDeckFirstTurnCardIds.Clear();
 
-        // 2. ¸ŞÀÎ µ¦ 30Àå ÀúÀå
+        // 2. ë©”ì¸ ë± 30ì¥ ì €ì¥
         foreach (var card in currentDeck)
         {
             currentlyEditingDeck.cardIds.Add(card.cardID);
         }
 
-        // 3. »çÀÌµå µ¦ 5Àå ÀüÃ¼ ÀúÀå
+        // 3. ì‚¬ì´ë“œ ë± 5ì¥ ì „ì²´ ì €ì¥
         foreach (var card in currentSideDeck)
         {
             currentlyEditingDeck.sideDeckCardIds.Add(card.cardID);
         }
 
-        // 4. »çÀÌµå µ¦¿¡ µé¾î¿Â ¼ø¼­´ë·Î ¾ÕÀÇ 3ÀåÀ» ¼±°ø¿ëÀ¸·Î ÀÚµ¿ ÁöÁ¤
-        // (Mathf.MinÀ» ½á¼­ ¸¸¾à 3Àå ¹Ì¸¸ÀÌ¾îµµ ¿¡·¯°¡ ¾È ³ª°Ô ¾ÈÀüÇÏ°Ô Ã³¸®)
+        // 4. ì‚¬ì´ë“œ ë±ì— ë“¤ì–´ì˜¨ ìˆœì„œëŒ€ë¡œ ì•ì˜ 3ì¥ì„ ì„ ê³µìš©ìœ¼ë¡œ ìë™ ì§€ì •
         int firstTurnCount = Mathf.Min(3, currentSideDeck.Count);
         for (int i = 0; i < firstTurnCount; i++)
         {
             currentlyEditingDeck.sideDeckFirstTurnCardIds.Add(currentSideDeck[i].cardID);
         }
 
-        // ¼­¹ö·Î µ¥ÀÌÅÍ µ¤¾î¾²±â ¿äÃ» Àü¼Û
+        // 5. ì„ íƒëœ ìŠ¤í‚¨ ì •ë³´ ì €ì¥
+        if (!string.IsNullOrEmpty(selectedSkinId))
+        {
+            currentlyEditingDeck.leaderSkinId = selectedSkinId;
+        }
+        else if (string.IsNullOrEmpty(currentlyEditingDeck.leaderSkinId))
+        {
+            currentlyEditingDeck.leaderSkinId = currentlyEditingDeck.GetEquippedSkinId();
+        }
+
+        // 6. [ì‹ ê·œ ë± ìƒì„± ì²˜ë¦¬]
+        // ì„œë²„ IDê°€ ì—†ëŠ” ìƒˆ ë±(Draft)ì¸ ê²½ìš°, ìœ ì €ê°€ ì €ì¥ì„ ëˆ„ë¥¸ ì§€ê¸ˆ ì‹œì ì— ë¹„ë¡œì†Œ ì„œë²„ì— ìƒì„±ì„ ìš”ì²­í•©ë‹ˆë‹¤!
+        if (string.IsNullOrEmpty(currentlyEditingDeck.deckId))
+        {
+            DeckData createdDeck = await DeckSaveManager_Firebase.instance.ServerCreateNewDeck(currentlyEditingDeck.deckClass);
+            if (createdDeck == null)
+            {
+                Debug.LogError("[DeckManager] ì„œë²„ì— ìƒˆ ë±ì„ ìƒì„±í•˜ì§€ ëª»í–ˆìŠµë‹ˆë‹¤.");
+                return;
+            }
+            currentlyEditingDeck.deckId = createdDeck.deckId;
+
+            // ìœ ì €ê°€ ì´ë¦„ì„ ë³€ê²½í•˜ì§€ ì•Šì€ ìƒíƒœë©´ ì„œë²„ê°€ ìƒì„±í•´ ì¤€ ê¸°ë³¸ ë± ì´ë¦„ ì‚¬ìš©
+            if (string.IsNullOrEmpty(currentlyEditingDeck.deckName) || currentlyEditingDeck.deckName == "ìƒˆë¡œìš´ ë±")
+            {
+                currentlyEditingDeck.deckName = createdDeck.deckName;
+            }
+        }
+
+        // ì„œë²„ë¡œ ë°ì´í„° ë®ì–´ì“°ê¸° ìš”ì²­ ì „ì†¡
         await DeckSaveManager_Firebase.instance.ServerUpdateDeck(currentlyEditingDeck);
-        Debug.Log($"'{currentlyEditingDeck.deckName}' µ¦(¸ŞÀÎ+»çÀÌµå)ÀÌ ÀúÀåµÇ¾ú½À´Ï´Ù.");
+        Debug.Log($"'{currentlyEditingDeck.deckName}' ë±(ë©”ì¸+ì‚¬ì´ë“œ / ìŠ¤í‚¨: {currentlyEditingDeck.leaderSkinId})ì´ ì €ì¥ë˜ì—ˆìŠµë‹ˆë‹¤.");
+
+        // ì €ì¥ ì™„ë£Œ í›„ í¸ì§‘ ì¤‘ì¸ ë± ë¹„ìš°ê¸° ë° ì´ˆê¸°í™”
+        ClearCurrentEditingDeck();
     }
 
     /// <summary>
-    /// µ¦¿¡ Ä«µå¸¦ ÇÑ Àå Ãß°¡ÇÕ´Ï´Ù. (¿ŞÂÊ ¸®½ºÆ®¿¡¼­ Å¬¸¯ ½Ã È£Ãâ)
+    /// [ë‹«ê¸° ë²„íŠ¼] í˜„ì¬ ë± í¸ì§‘ì„ ì¢…ë£Œí•˜ê³  ëª©ë¡ê³¼ í¸ì§‘ ìƒíƒœë¥¼ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
+    /// (ì €ì¥í•˜ì§€ ì•Šì€ ìƒˆ ë±ì€ ì„œë²„ì— ë“±ë¡ë˜ì§€ ì•Šê³  ê¹”ë”í•˜ê²Œ ì†Œë©¸í•©ë‹ˆë‹¤)
+    /// </summary>
+    public void CloseDeckEditing()
+    {
+        if (currentlyEditingDeck != null)
+        {
+            Debug.Log($"'{currentlyEditingDeck.deckName}' ë± í¸ì§‘ì„ ë‹«ìŠµë‹ˆë‹¤ (ì €ì¥ë˜ì§€ ì•Šì€ ì„ì‹œ ì •ë³´ íê¸°).");
+        }
+        ClearCurrentEditingDeck();
+    }
+
+    /// <summary>
+    /// í˜„ì¬ í¸ì§‘ ì¤‘ì¸ ë± ë°ì´í„°ì™€ ì¥ë°”êµ¬ë‹ˆ, í™”ë©´ì„ ëª¨ë‘ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
+    /// </summary>
+    public void ClearCurrentEditingDeck()
+    {
+        currentDeck.Clear(); // ì¥ë°”êµ¬ë‹ˆ ë¹„ìš°ê¸°
+        currentSideDeck.Clear();
+        currentlyEditingDeck = null;
+        selectedClass = null;
+        selectedSkinId = "";
+        isEditingSideDeck = false;
+
+        if (deckName != null)
+        {
+            deckName.text = "";
+        }
+
+        UpdateSideDeckVisuals();
+        UpdateDeckListUI();
+
+        // ìŠ¤í‚¨ ëª©ë¡ì´ ì—´ë ¤ ìˆì—ˆë‹¤ë©´ ì¹´ë“œ ëª©ë¡ìœ¼ë¡œ ìë™ ë³µê·€
+        DeckSkinSelectManager.Instance?.ShowCardList();
+    }
+
+    /// <summary>
+    /// ë±ì— ì¹´ë“œë¥¼ í•œ ì¥ ì¶”ê°€í•©ë‹ˆë‹¤. (ì™¼ìª½ ë¦¬ìŠ¤íŠ¸ì—ì„œ í´ë¦­ ì‹œ í˜¸ì¶œ)
     /// </summary>
     public void AddCard(CardData cardToAdd)
     {
-        // µ¦À» ¸¸µé°í ÀÖ´Â »óÅÂ°¡ ¾Æ´Ï¸é ¹«½Ã
+        // ë±ì„ ë§Œë“¤ê³  ìˆëŠ” ìƒíƒœê°€ ì•„ë‹ˆë©´ ë¬´ì‹œ
         if (currentlyEditingDeck == null)
         {
-            Debug.LogWarning("¸ÕÀú µ¦À» ¼±ÅÃÇÏ°Å³ª »õ·Î ¸¸µé¾î¾ß Ä«µå¸¦ Ãß°¡ÇÒ ¼ö ÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("ë¨¼ì € ë±ì„ ì„ íƒí•˜ê±°ë‚˜ ìƒˆë¡œ ë§Œë“¤ì–´ì•¼ ì¹´ë“œë¥¼ ì¶”ê°€í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.");
             return;
         }
 
-        // Ä«µå¸¦ ³ÖÀ» ¼ö ÀÖ´ÂÁö ±ÔÄ¢ °Ë»ç (30Àå ²Ë Ã¡´ÂÁö, Á÷¾÷ÀÌ ¸Â´ÂÁö µî)
+        // ì¹´ë“œë¥¼ ë„£ì„ ìˆ˜ ìˆëŠ”ì§€ ê·œì¹™ ê²€ì‚¬ (30ì¥ ê½‰ ì°¼ëŠ”ì§€, ì§ì—…ì´ ë§ëŠ”ì§€ ë“±)
         if (!IsCardAddable(cardToAdd))
         {
-            return; // Ãß°¡ ºÒ°¡´ÉÇÏ¸é ¿©±â¼­ ÇÔ¼ö Á¾·á
+            return; // ì¶”ê°€ ë¶ˆê°€ëŠ¥í•˜ë©´ ì—¬ê¸°ì„œ í•¨ìˆ˜ ì¢…ë£Œ
         }
 
-        // ¸ğµå¿¡ µû¶ó ¾Ë¸ÂÀº µ¦¿¡ Ãß°¡
+        // ëª¨ë“œì— ë”°ë¼ ì•Œë§ì€ ë±ì— ì¶”ê°€
         if (isEditingSideDeck)
         {
             currentSideDeck.Add(cardToAdd);
@@ -181,18 +418,18 @@ public class DeckManager : MonoBehaviour
         {
             currentDeck.Add(cardToAdd);
         }
-        // È­¸é °»½Å
+        // í™”ë©´ ê°±ì‹ 
         UpdateDeckListUI();
     }
 
     /// <summary>
-    /// µ¦¿¡¼­ Ä«µå¸¦ ÇÑ Àå »®´Ï´Ù. (¿À¸¥ÂÊ ¸®½ºÆ®¿¡¼­ Å¬¸¯ ½Ã È£Ãâ)
+    /// ë±ì—ì„œ ì¹´ë“œë¥¼ í•œ ì¥ ëºë‹ˆë‹¤. (ì˜¤ë¥¸ìª½ ë¦¬ìŠ¤íŠ¸ì—ì„œ í´ë¦­ ì‹œ í˜¸ì¶œ)
     /// </summary>
     public void RemoveCard(CardData cardToRemove)
     {
         if (isEditingSideDeck)
         {
-            // »çÀÌµå µ¦¿¡¼­ Ä«µå Á¦°Å (°¡Àå ¸ÕÀú ³ÖÀº ÇØ´ç Ä«µå¸¦ »­)
+            // ì‚¬ì´ë“œ ë±ì—ì„œ ì¹´ë“œ ì œê±° (ê°€ì¥ ë¨¼ì € ë„£ì€ í•´ë‹¹ ì¹´ë“œë¥¼ ëºŒ)
             CardData cardInSideDeck = currentSideDeck.FirstOrDefault(c => c.cardID == cardToRemove.cardID);
             if (cardInSideDeck != null)
             {
@@ -202,7 +439,7 @@ public class DeckManager : MonoBehaviour
         }
         else
         {
-            // ¸ŞÀÎ µ¦¿¡¼­ Ä«µå Á¦°Å (±âÁ¸ ·ÎÁ÷ À¯Áö)
+            // ë©”ì¸ ë±ì—ì„œ ì¹´ë“œ ì œê±° (ê¸°ì¡´ ë¡œì§ ìœ ì§€)
             CardData cardInDeck = currentDeck.FirstOrDefault(c => c.cardID == cardToRemove.cardID);
             if (cardInDeck != null)
             {
@@ -213,153 +450,285 @@ public class DeckManager : MonoBehaviour
     }
 
     /// <summary>
-    /// [±ÔÄ¢ °Ë»ç±â] ÀÌ Ä«µå¸¦ µ¦¿¡ ³ÖÀ» ¼ö ÀÖ´ÂÁö È®ÀÎÇÕ´Ï´Ù.
+    /// [ê·œì¹™ ê²€ì‚¬ê¸°] ì´ ì¹´ë“œë¥¼ ë±ì— ë„£ì„ ìˆ˜ ìˆëŠ”ì§€ í™•ì¸í•©ë‹ˆë‹¤.
     /// </summary>
     private bool IsCardAddable(CardData card)
     {
-        // 1. °øÅë ±ÔÄ¢: Á÷¾÷ Á¦ÇÑ È®ÀÎ (³» Á÷¾÷ÀÌ°Å³ª Áß¸³(°­Áö) Ä«µå¿©¾ß ÇÔ)
+        // 1. ê³µí†µ ê·œì¹™: ì§ì—… ì œí•œ í™•ì¸ (ë‚´ ì§ì—…ì´ê±°ë‚˜ ì¤‘ë¦½(ê°•ì§€) ì¹´ë“œì—¬ì•¼ í•¨)
         string cardMemberStr = card.cardClass.ToString();
         if (cardMemberStr != selectedClass && card.cardClass != CardClass.Gangzi)
         {
-            Debug.LogWarning($"'{card.cardName}' Ä«µå´Â '{selectedClass}' µ¦¿¡ Ãß°¡ÇÒ ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogWarning($"'{card.cardName}' ì¹´ë“œëŠ” '{selectedClass}' ë±ì— ì¶”ê°€í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             return false;
         }
 
-        // 2. ÇöÀç ÆíÁı ¸ğµå(¸ŞÀÎ/»çÀÌµå)¿¡ µû¸¥ ÃÖ´ë Àå¼ö ¹× Æ¯¼ö ±ÔÄ¢ °Ë»ç
+        // 2. í˜„ì¬ í¸ì§‘ ëª¨ë“œ(ë©”ì¸/ì‚¬ì´ë“œ)ì— ë”°ë¥¸ ìµœëŒ€ ì¥ìˆ˜ ë° íŠ¹ìˆ˜ ê·œì¹™ ê²€ì‚¬
         if (isEditingSideDeck)
         {
-            // »çÀÌµå µ¦ °Ë»ç
-            if (currentSideDeck.Count >= maxSideDeckSize) // 5Àå Á¦ÇÑ
+            // ì‚¬ì´ë“œ ë± ê²€ì‚¬
+            if (currentSideDeck.Count >= maxSideDeckSize) // 5ì¥ ì œí•œ
             {
-                Debug.LogWarning("»çÀÌµå µ¦ÀÌ °¡µæ Ã¡½À´Ï´Ù. (ÃÖ´ë 5Àå)");
+                Debug.LogWarning("ì‚¬ì´ë“œ ë±ì´ ê°€ë“ ì°¼ìŠµë‹ˆë‹¤. (ìµœëŒ€ 5ì¥)");
                 return false;
             }
 
-            if (card.cardType != CardType.ÇÏ¼öÀÎ && card.cardType != CardType.ÁÖ¹®)
+            if (card.cardType != CardType.í•˜ìˆ˜ì¸ && card.cardType != CardType.ì£¼ë¬¸)
             {
-                Debug.LogWarning("»çÀÌµå µ¦¿¡´Â ÇÏ¼öÀÎ°ú ÁÖ¹® Ä«µå¸¸ ³ÖÀ» ¼ö ÀÖ½À´Ï´Ù.");
+                Debug.LogWarning("ì‚¬ì´ë“œ ë±ì—ëŠ” í•˜ìˆ˜ì¸ê³¼ ì£¼ë¬¸ ì¹´ë“œë§Œ ë„£ì„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.");
                 return false;
             }
         }
         else
         {
-            // ¸ŞÀÎ µ¦ °Ë»ç
+            // ë©”ì¸ ë± ê²€ì‚¬
             if (currentDeck.Count >= maxDeckSize)
             {
-                Debug.LogWarning("¸ŞÀÎ µ¦ÀÌ °¡µæ Ã¡½À´Ï´Ù.");
+                Debug.LogWarning("ë©”ì¸ ë±ì´ ê°€ë“ ì°¼ìŠµë‹ˆë‹¤.");
                 return false;
             }
         }
 
-        // 3. [ÇÙ½É ¼öÁ¤] ¸ŞÀÎ µ¦°ú »çÀÌµå µ¦ÀÇ µ¿ÀÏ Ä«µå Àå¼ö¸¦ ÇÕ»ê
+        // 3. [í•µì‹¬ ìˆ˜ì •] ë©”ì¸ ë±ê³¼ ì‚¬ì´ë“œ ë±ì˜ ë™ì¼ ì¹´ë“œ ì¥ìˆ˜ë¥¼ í•©ì‚°
         int mainDeckCount = currentDeck.Count(c => c.cardID == card.cardID);
         int sideDeckCount = currentSideDeck.Count(c => c.cardID == card.cardID);
         int totalSameCardCount = mainDeckCount + sideDeckCount;
 
-        // 4. ÇÕ»êµÈ Àå¼ö·Î ÀÏ¹İ 2Àå, Àü¼³ 1Àå Á¦ÇÑ °Ë»ç
-        if (card.rarity == CardRarity.legendary)
+        // 4. ìœ ì € ì‹¤ì œ ë³´ìœ  ìˆ˜ëŸ‰ ê²€ì‚¬ (ë¯¸ë³´ìœ  ì¹´ë“œ ë˜ëŠ” ë³´ìœ  ìˆ˜ëŸ‰ ì´ˆê³¼ íˆ¬ì… ì°¨ë‹¨)
+        int ownedCount = GetOwnedCardCount(card);
+        if (ownedCount <= 0)
         {
-            if (totalSameCardCount >= 1)
-            {
-                Debug.LogWarning("Àü¼³ Ä«µå´Â ¸ŞÀÎ µ¦°ú »çÀÌµå µ¦À» ÇÕÃÄ ÇÑ Àå¸¸ ³ÖÀ» ¼ö ÀÖ½À´Ï´Ù.");
-                return false;
-            }
+            Debug.LogWarning($"ë³´ìœ í•˜ì§€ ì•Šì€ ì¹´ë“œ('{card.cardName}')ëŠ” ë±ì— ì¶”ê°€í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
+            return false;
         }
-        else
+        if (totalSameCardCount >= ownedCount)
         {
-            if (totalSameCardCount >= 2)
-            {
-                Debug.LogWarning("ÀÏ¹İ Ä«µå´Â ¸ŞÀÎ µ¦°ú »çÀÌµå µ¦À» ÇÕÃÄ ÃÖ´ë µÎ Àå±îÁö¸¸ ³ÖÀ» ¼ö ÀÖ½À´Ï´Ù.");
-                return false;
-            }
+            Debug.LogWarning($"ë³´ìœ í•œ '{card.cardName}' ì¹´ë“œë¥¼ ëª¨ë‘ ë±ì— ë„£ì—ˆìŠµë‹ˆë‹¤. (ë³´ìœ : {ownedCount}ì¥)");
+            return false;
         }
 
-        return true; // ¸ğµç °Ë»ç¸¦ Åë°úÇßÀ¸¹Ç·Î Ãß°¡ °¡´É
+        // 5. í•©ì‚°ëœ ì¥ìˆ˜ë¡œ ìµœëŒ€ 2ì¥ ì œí•œ ê²€ì‚¬ (ì „ì„¤ ì¹´ë“œ í¬í•¨ ë™ì¼ ì¹´ë“œëŠ” ìµœëŒ€ 2ì¥)
+        if (totalSameCardCount >= 2)
+        {
+            Debug.LogWarning("ë™ì¼í•œ ì¹´ë“œëŠ” ë©”ì¸ ë±ê³¼ ì‚¬ì´ë“œ ë±ì„ í•©ì³ ìµœëŒ€ ë‘ ì¥ê¹Œì§€ë§Œ ë„£ì„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.");
+            return false;
+        }
+
+        return true; // ëª¨ë“  ê²€ì‚¬ë¥¼ í†µê³¼í–ˆìœ¼ë¯€ë¡œ ì¶”ê°€ ê°€ëŠ¥
     }
 
     /// <summary>
-    /// µ¦ ÀÌ¸§À» º¯°æÇÕ´Ï´Ù. (InputFieldController¿¡¼­ È£Ãâ)
+    /// ë± ì´ë¦„ì„ ë³€ê²½í•©ë‹ˆë‹¤. (InputFieldControllerì—ì„œ í˜¸ì¶œ)
     /// </summary>
     public void UpdateDeckname(string name)
     {
-        currentlyEditingDeck.deckName = name;
+        if (currentlyEditingDeck != null)
+        {
+            currentlyEditingDeck.deckName = name;
+        }
 
         if (deckName != null)
         {
             deckName.text = name;
         }
+
+        OnDeckNameChanged?.Invoke(currentlyEditingDeck, name);
     }
 
     /// <summary>
-    /// [È­¸é °»½Å] ÇöÀç µ¦ ¸®½ºÆ®(¿À¸¥ÂÊ) UI¸¦ ´Ù½Ã ±×¸³´Ï´Ù.
+    /// [í™”ë©´ ê°±ì‹ ] í˜„ì¬ ë± ë¦¬ìŠ¤íŠ¸(ì˜¤ë¥¸ìª½) UIë¥¼ ìŠ¬ë¡¯ ì¬í™œìš© í’€ì„ ì‚¬ìš©í•˜ì—¬ ë‹¤ì‹œ ê·¸ë¦½ë‹ˆë‹¤.
+    /// (ì¹´ë“œë¥¼ ì¶”ê°€/ì œê±°í•  ë•Œë§ˆë‹¤ 30ê°œ ì „ì²´ë¥¼ Destroy/Instantiateí•˜ì§€ ì•Šê³  ì¬ì‚¬ìš©í•©ë‹ˆë‹¤)
     /// </summary>
     private void UpdateDeckListUI()
     {
-        // 1. ±âÁ¸ ¸ñ·Ï ½Ï Áö¿ì±â (DeckPlus ¹öÆ° »©°í)
-        foreach (Transform child in mainDeckListParent)
+        // -------------------------------------------------------------
+        // 1. ì‚¬ì´ë“œ ë± ë¦¬ìŠ¤íŠ¸ ê°±ì‹  (ìŠ¬ë¡¯ í’€ ì¬í™œìš©)
+        // -------------------------------------------------------------
+        int sideCount = currentSideDeck.Count;
+        while (_sideDeckSlotPool.Count < sideCount)
         {
-            if (child.gameObject.name != "DeckPlus")
-            {
-                Destroy(child.gameObject);
-            }
-        }
-        foreach (Transform child in sideDeckListParent)
-        {
-            Destroy(child.gameObject);
-        }
-
-
-        // »çÀÌµå µ¦ ¸®½ºÆ® »ı¼º
-        for (int i = 0; i < currentSideDeck.Count; i++)
-        {
-            CardData card = currentSideDeck[i];
             GameObject newDeckCardUI = Instantiate(deckCardPrefab, sideDeckListParent);
-
-            var itemDisplay = newDeckCardUI.GetComponent<ICardDataHolder>() as DeckListItemDisplay;
-            if (itemDisplay != null)
-            {
-                // »çÀÌµå µ¦Àº ¹«Á¶°Ç 1Àå¾¿ º¸¿©Áİ´Ï´Ù.
-                itemDisplay.Setup(card, 1);
-            }
-
+            DeckListItemDisplay itemDisplay = newDeckCardUI.GetComponent<ICardDataHolder>() as DeckListItemDisplay;
             CardInteraction interaction = newDeckCardUI.GetComponent<CardInteraction>();
             if (interaction != null)
             {
                 interaction.location = CardInteraction.CardLocation.Deck;
             }
+            _sideDeckSlotPool.Add(itemDisplay);
         }
-        
-        // 2. Ä«µå Á¤¸®ÇÏ±â (LINQ »ç¿ë)
-        // ¸®½ºÆ®¿¡ [È­¿°±¸, È­¿°±¸, ¾óÀ½È­»ì] ÀÌ·¸°Ô µé¾îÀÖ´Â °ÍÀ»
-        // -> [È­¿°±¸ x2], [¾óÀ½È­»ì x1] ÇüÅÂ·Î ¹­¾î¼­(GroupBy) º¸¿©Áà¾ß ÇÕ´Ï´Ù.
+
+        for (int i = 0; i < sideCount; i++)
+        {
+            DeckListItemDisplay itemDisplay = _sideDeckSlotPool[i];
+            if (itemDisplay != null)
+            {
+                if (!itemDisplay.gameObject.activeSelf) itemDisplay.gameObject.SetActive(true);
+                itemDisplay.Setup(currentSideDeck[i], 1);
+            }
+        }
+
+        for (int i = sideCount; i < _sideDeckSlotPool.Count; i++)
+        {
+            if (_sideDeckSlotPool[i] != null && _sideDeckSlotPool[i].gameObject.activeSelf)
+            {
+                _sideDeckSlotPool[i].gameObject.SetActive(false);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 2. ë©”ì¸ ë± ë¦¬ìŠ¤íŠ¸ ê°±ì‹  (ìŠ¬ë¡¯ í’€ ì¬í™œìš©)
+        // -------------------------------------------------------------
         var groupedAndSortedDeck = currentDeck
-            .GroupBy(card => card.cardID) // ID°¡ °°Àº °Í³¢¸® ¹­¾î¶ó
+            .GroupBy(card => card.cardID)
             .Select(group => new
             {
-                Card = group.First(), // ´ëÇ¥ Ä«µå Á¤º¸ ÇÏ³ª
-                Count = group.Count() // ¸î Àå ÀÖ´ÂÁö
+                Card = group.First(),
+                Count = group.Count()
             })
-            .OrderBy(item => item.Card.manaCost) // ÄÚ½ºÆ® ³·Àº ¼ø¼­·Î Á¤·Ä
-            .ThenBy(item => item.Card.cardName); // ÄÚ½ºÆ® °°À¸¸é ÀÌ¸§ ¼øÀ¸·Î Á¤·Ä
+            .OrderBy(item => item.Card.manaCost)
+            .ThenBy(item => item.Card.cardName)
+            .ToList();
 
-        // 3. Á¤¸®µÈ ¸ñ·Ï´ë·Î UI »ı¼º
-        foreach (var item in groupedAndSortedDeck)
+        int mainGroupCount = groupedAndSortedDeck.Count;
+        while (_mainDeckSlotPool.Count < mainGroupCount)
         {
             GameObject newDeckCardUI = Instantiate(deckCardPrefab, mainDeckListParent);
-
-            // UI¿¡ Á¤º¸ ÀÔ·Â (ÀÌ¸§, ÄÚ½ºÆ®, Àå¼ö)
-            var itemDisplay = newDeckCardUI.GetComponent<ICardDataHolder>() as DeckListItemDisplay;
-            if (itemDisplay != null)
-            {
-                itemDisplay.Setup(item.Card, item.Count);
-            }
-
-            // Å¬¸¯ ½Ã 'µ¦¿¡¼­ Á¦°Å'µÇµµ·Ï À§Ä¡ ¼³Á¤
+            DeckListItemDisplay itemDisplay = newDeckCardUI.GetComponent<ICardDataHolder>() as DeckListItemDisplay;
             CardInteraction interaction = newDeckCardUI.GetComponent<CardInteraction>();
             if (interaction != null)
             {
                 interaction.location = CardInteraction.CardLocation.Deck;
             }
+            _mainDeckSlotPool.Add(itemDisplay);
+        }
+
+        for (int i = 0; i < mainGroupCount; i++)
+        {
+            DeckListItemDisplay itemDisplay = _mainDeckSlotPool[i];
+            if (itemDisplay != null)
+            {
+                if (!itemDisplay.gameObject.activeSelf) itemDisplay.gameObject.SetActive(true);
+                itemDisplay.Setup(groupedAndSortedDeck[i].Card, groupedAndSortedDeck[i].Count);
+            }
+        }
+
+        for (int i = mainGroupCount; i < _mainDeckSlotPool.Count; i++)
+        {
+            if (_mainDeckSlotPool[i] != null && _mainDeckSlotPool[i].gameObject.activeSelf)
+            {
+                _mainDeckSlotPool[i].gameObject.SetActive(false);
+            }
+        }
+
+        // DeckPlus ë²„íŠ¼ì´ ìˆë‹¤ë©´ í•­ìƒ ë§¨ ì•„ë˜ë¡œ ì´ë™
+        if (mainDeckListParent != null)
+        {
+            Transform deckPlus = mainDeckListParent.Find("DeckPlus");
+            if (deckPlus != null)
+            {
+                deckPlus.SetAsLastSibling();
+            }
+        }
+
+        // 3. ë± ì¹´ë“œ ìˆ˜ ë° ì‚¬ì´ë“œ ë± ë²„íŠ¼/ë¹„ì£¼ì–¼ ê°±ì‹  (ì˜ˆ: 14/30, 3/5)
+        UpdateSideDeckVisuals();
+
+        // 4. ë± ì¹´ë“œ êµ¬ì„± ë³€ê²½ ì•Œë¦¼ (ì»¬ë ‰ì…˜ ëª©ë¡ì˜ ì¹´ë“œ ì”ì—¬ ìˆ˜ëŸ‰ ê°±ì‹ )
+        OnCurrentDeckCardsChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// í˜„ì¬ ë±(ë©”ì¸ + ì‚¬ì´ë“œ)ì— í¬í•¨ëœ íŠ¹ì • ì¹´ë“œì˜ ì´ ì¥ìˆ˜ë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
+    /// </summary>
+    public int GetCardCountInDeck(string cardId)
+    {
+        int mainCount = currentDeck.Count(c => c.cardID == cardId);
+        int sideCount = currentSideDeck.Count(c => c.cardID == cardId);
+        return mainCount + sideCount;
+    }
+
+    /// <summary>
+    /// í˜„ì¬ ë¡œê·¸ì¸ëœ ìœ ì €ì˜ íŠ¹ì • ì¹´ë“œ ì‹¤ì œ ë³´ìœ  ìˆ˜ëŸ‰ì„ ë°˜í™˜í•©ë‹ˆë‹¤.
+    /// ë¡œê·¸ì¸ ì •ë³´ê°€ ì—†ê±°ë‚˜ í…ŒìŠ¤íŠ¸ í™˜ê²½ì¸ ê²½ìš° ê¸°ë³¸ ìµœëŒ€ì¹˜(ì „ì„¤ 1, ì¼ë°˜ 2)ë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
+    /// </summary>
+    public int GetOwnedCardCount(CardData card)
+    {
+        if (card == null) return 0;
+
+        UserData user = GameClient.Instance?.CurrentUser ?? SinginManager.CurrentUserData;
+        if (user != null && user.ownedCards != null)
+        {
+            if (user.ownedCards.TryGetValue(card.cardID, out int count))
+            {
+                return count;
+            }
+            return 0; // ìœ ì € ë°ì´í„°ê°€ ì¡´ì¬í•˜ëŠ”ë° ëª©ë¡ì— ì—†ìœ¼ë©´ 0ì¥ ë³´ìœ 
+        }
+
+        // ë¡œê·¸ì¸ ë°ì´í„°ê°€ ì—†ëŠ” í…ŒìŠ¤íŠ¸ í™˜ê²½(Fallback)ì¸ ê²½ìš° ê¸°ë³¸ ë£° ìƒì˜ ìˆ˜ëŸ‰ ë°˜í™˜ (ìµœëŒ€ 2ì¥)
+        return 2;
+    }
+
+    /// <summary>
+    /// ìœ ì € ë³´ìœ ëŸ‰ê³¼ ê²Œì„ ê·œì¹™(ë™ì¼ ì¹´ë“œ ìµœëŒ€ 2ì¥)ì„ ì¢…í•©í•˜ì—¬ ë±ì— ë„£ì„ ìˆ˜ ìˆëŠ” ìµœëŒ€ì¹˜ë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
+    /// </summary>
+    public int GetMaxUsableCardCount(CardData card)
+    {
+        if (card == null) return 0;
+        int ruleMax = 2; // ì „ì„¤ ì¹´ë“œë¥¼ í¬í•¨í•˜ì—¬ ë™ì¼ ì¹´ë“œ ìµœëŒ€ 2ì¥
+        int owned = GetOwnedCardCount(card);
+        return Mathf.Min(owned, ruleMax);
+    }
+
+    /// <summary>
+    /// í˜„ì¬ ì¹´ë“œì˜ í™”ë©´ í‘œì‹œ ìˆ˜ëŸ‰ì„ ë°˜í™˜í•©ë‹ˆë‹¤.
+    /// - ë± í¸ì§‘ ìƒíƒœê°€ ì•„ë‹ ë•Œ(currentlyEditingDeck == null): ì‹¤ì œ ê³„ì • ë³´ìœ  ìˆ˜ëŸ‰ ì „ì²´(owned)ë¥¼ ë°˜í™˜ (3ì¥ ì´ìƒì´ë©´ 3ì¥ ì´ìƒ ê·¸ëŒ€ë¡œ í‘œì‹œ)
+    /// - ë± í¸ì§‘ ìƒíƒœì¼ ë•Œ(currentlyEditingDeck != null): ë± íˆ¬ì… ê°€ëŠ¥ ê·œì¹™(ìµœëŒ€ 2ì¥) ë‚´ì—ì„œ í˜„ì¬ ë±ì— ë„£ê³  ë‚¨ì€ ì”ì—¬ ìˆ˜ëŸ‰ì„ ë°˜í™˜
+    /// </summary>
+    public int GetRemainingCardCount(CardData card)
+    {
+        if (card == null) return 0;
+        int owned = GetOwnedCardCount(card);
+
+        // 1. ë± í¸ì§‘ ì¤‘ì´ ì•„ë‹ ë•ŒëŠ” 2ì¥ ì œí•œ ì—†ì´ ì‹¤ì œ ë³´ìœ  ìˆ˜ëŸ‰ ì „ì²´ë¥¼ ë°˜í™˜ (X 3, X 4 ë“±)
+        if (currentlyEditingDeck == null)
+        {
+            return owned;
+        }
+
+        // 2. ë± í¸ì§‘ ìƒíƒœì¼ ë•ŒëŠ” ë£°ìƒ ìµœëŒ€ì¹˜(ìµœëŒ€ 2ì¥)ì—ì„œ ë±ì— íˆ¬ì…ëœ ë§¤ìˆ˜ë¥¼ ëº€ ì”ì—¬ ìˆ˜ëŸ‰ ë°˜í™˜
+        int ruleMax = 2; // ì „ì„¤ ì¹´ë“œë¥¼ í¬í•¨í•˜ì—¬ ë™ì¼ ì¹´ë“œ ìµœëŒ€ 2ì¥
+        int maxUsable = Mathf.Min(owned, ruleMax);
+        return Mathf.Max(0, maxUsable - GetCardCountInDeck(card.cardID));
+    }
+
+    /// <summary>
+    /// ë©”ì¸ ë± ë° ì‚¬ì´ë“œ ë±ì˜ ì¹´ë“œ ì¥ìˆ˜ í…ìŠ¤íŠ¸ë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// ë‹¨ì¼ í…ìŠ¤íŠ¸(deckCountText) ì‚¬ìš© ì‹œ ì‚¬ì´ë“œ ë± ëª¨ë“œì— ë”°ë¼ 14/30 ë˜ëŠ” 3/5ë¡œ ìë™ ì „í™˜ë©ë‹ˆë‹¤.
+    /// </summary>
+    public void UpdateDeckCountUI()
+    {
+        // 1. ë‹¨ì¼ í†µí•© í…ìŠ¤íŠ¸ (ì‚¬ì´ë“œ ë± ì—´ë¦¼: 3/5, ë‹«í˜: 14/30)
+        if (deckCountText != null)
+        {
+            if (isEditingSideDeck)
+            {
+                deckCountText.text = $"{currentSideDeck.Count}/{maxSideDeckSize}";
+            }
+            else
+            {
+                deckCountText.text = $"{currentDeck.Count}/{maxDeckSize}";
+            }
+        }
+
+        // 2. ê°œë³„ í…ìŠ¤íŠ¸ê°€ ì—°ê²°ë˜ì–´ ìˆëŠ” ê²½ìš°ì—ë„ ì§€ì›
+        if (mainDeckCountText != null)
+        {
+            mainDeckCountText.text = $"{currentDeck.Count}/{maxDeckSize}";
+        }
+
+        if (sideDeckCountText != null)
+        {
+            sideDeckCountText.text = $"{currentSideDeck.Count}/{maxSideDeckSize}";
         }
     }
 }

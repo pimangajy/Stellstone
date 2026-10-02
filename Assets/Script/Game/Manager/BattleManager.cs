@@ -1,25 +1,29 @@
-﻿using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// 게임의 전체 규칙, 서버 동기화 데이터, 그리고 턴 종료 및 마나 UI를 통합하여 관리하는 스크립트입니다.
+/// 게임의 전체 규칙, 턴/마나/페이즈 상태 데이터, 서버 패킷 통신을 총괄하는 중앙 매니저입니다.
+/// (UI 및 타이머 로직은 BattleManager.UI.cs, 타겟팅 검증은 BattleManager.Targeting.cs에 분리되어 있습니다)
 /// </summary>
-public class BattleManager : MonoBehaviour
+public partial class BattleManager : MonoBehaviour
 {
-    public static BattleManager Instance;
+    public static BattleManager Instance { get; private set; }
 
     [Header("Game State (게임 상태)")]
     public string myUid;               // 내 계정의 고유 ID
     public bool isPlayerTurn = false;  // 현재 내 턴 여부
-    public GamePhase currentPhase;        // 현재 페이즈
-    public float remainingTime;        // 서버 동기화 기반 남은 시간
-    private long _turnEndTimeTimestamp; // 서버에서 보낸 종료 시점
-    // 서버가 보내준 유효한 타겟 ID들을 임시 저장해 둘 캐시 리스트
-    private List<int> _serverValidTargetIds = new List<int>();
-    private List<GameCardDisplay> _highlightedTargets = new List<GameCardDisplay>();
+    public bool isMulliganPhase = true; // 현재 멀리건 단계 여부
+    public GamePhase currentPhase;      // 현재 페이즈
+
+    // --- GameStateManager 호환 프로퍼티 ---
+    public bool IsMyTurn => isPlayerTurn;
+    public GamePhase CurrentPhase => currentPhase;
+    public int MyCurrentMana => playerCurrentMana;
+    public int MyMaxMana => playerMaxMana;
+    public int OppCurrentMana => enemyCurrentMana;
+    public int OppMaxMana => enemyMaxMana;
+    public string MyUid => myUid;
 
     [Header("Hand & Field Data (데이터)")]
     public List<CardInfo> playerHand = new List<CardInfo>();               // 유저 손패
@@ -32,36 +36,25 @@ public class BattleManager : MonoBehaviour
     public int enemyCurrentMana;
     public int enemyMaxMana;
 
-    [Header("Mana UI Settings (마나 시각화)")]
-    public TextMeshProUGUI manaText;      // "3 / 5" 처럼 숫자로 표시할 텍스트
-    public Image[] playerManaCrystals;    // 10개의 마나 이미지 배열
-    public Sprite manaOnSprite;           // 채워진 마나 이미지 (On)
-    public Sprite manaOffSprite;          // 사용한 마나 이미지 (Empty Slot)
-    public Sprite manaLockedSprite;       // 아직 잠긴 마나 이미지 (선택 사항, 투명하게 처리 가능)
-    public Color manaHighlightColor = Color.yellow; // 카드 드래그 시 소모될 마나 강조 색상
-
-    [Header("Turn End UI (턴 종료 UI)")]
-    public Button turnButton;          // 턴 종료 버튼
-    public TextMeshProUGUI statusText; // 버튼 중앙 텍스트 ("나의 턴" 등)
-    public Slider timerSlider;         // 시간 게이지 슬라이더
-    public Image sliderFillImage;      // 슬라이더 색상 변경을 위한 이미지
-    float prevRemainingTime;           // 턴종료 타이밍을 위한 변수
-
-    [Header("UI Settings (UI 설정)")]
-    public float warningThreshold = 10f; // 경고 색상 시작 시간 (초)
-    public Color myTurnColor = new Color(0.2f, 0.8f, 0.4f);   // 내 턴 색상 (초록)
-    public Color enemyTurnColor = new Color(0.9f, 0.3f, 0.2f); // 상대 턴 색상 (빨강)
-    public Color warningColor = new Color(1f, 0.6f, 0f);       // 경고 색상 (주황)
-
     // --- 시스템 이벤트 ---
     public event Action OnStateChanged;
     public event Action OnHandUpdated;
-    public event Action<List<EntityData>> OnEntitiesUpdated;
+
+    // --- GameStateManager 호환 이벤트 ---
+    public event Action<bool> OnTurnChanged;
+    public event Action<GamePhase> OnPhaseChanged;
+    public event Action<string, int, int> OnManaChanged;
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     void Start()
@@ -84,16 +77,8 @@ public class BattleManager : MonoBehaviour
 
         OnStateChanged += UpdateManaUI;
 
-        // 버튼 클릭 이벤트 연결
-        if (turnButton != null)
-            turnButton.onClick.AddListener(RequestEndTurn);
-
-        // 슬라이더 초기 설정
-        if (timerSlider != null)
-        {
-            timerSlider.minValue = 0;
-            timerSlider.interactable = false;
-        }
+        // UI 초기화 (BattleManager.UI.cs)
+        InitUI();
     }
 
     private void OnDisable()
@@ -114,33 +99,48 @@ public class BattleManager : MonoBehaviour
 
     void Update()
     {
-        // 1. 서버 동기화 기반 시간 계산
-        if (_turnEndTimeTimestamp > 0)
-        {
-            UpdateRemainingTime();
-        }
-
-        // 2. UI 슬라이더 업데이트
-        UpdateTimerUI();
+        UpdateTimerAndUI();
     }
 
     // --- 서버 패킷 처리 핸들러 ---
 
-    // 게임 시작시 시작 플레이어가 누구인지 내 손패와 상대폰패가 무엇인지 설정
+    // 게임 시작시 시작 플레이어가 누구인지 내 손패와 상대손패가 무엇인지 설정
     private void HandleGameReady(S_GameReady info)
     {
+        isMulliganPhase = false;
+        bool prevTurn = isPlayerTurn;
         isPlayerTurn = (info.firstPlayerUid == myUid);
         playerHand = info.finalHand;
         enemyHand = info.enermyfinalHand;
 
+        if (prevTurn != isPlayerTurn)
+        {
+            OnTurnChanged?.Invoke(isPlayerTurn);
+        }
+
         OnHandUpdated?.Invoke();
         OnStateChanged?.Invoke();
+        RefreshTurnUI();
     }
 
     // 페이즈 시작마다 실행
     private void HandlePhaseStart(S_PhaseStart info)
     {
-        currentPhase = info.phase;
+        isMulliganPhase = false;
+        if (GameMulliganManager.instance != null && GameMulliganManager.instance.mulliganImg != null && GameMulliganManager.instance.mulliganImg.activeSelf)
+        {
+            GameMulliganManager.instance.mulliganImg.SetActive(false);
+            GameMulliganManager.instance.EndMulliganPhase();
+        }
+
+        if (currentPhase != info.phase)
+        {
+            currentPhase = info.phase;
+            OnPhaseChanged?.Invoke(currentPhase);
+        }
+
+        bool prevTurn = isPlayerTurn;
+
         // Standby -> Draw -> Main 3개의 페이즈 정보를 보내주지만 info.newTurnPlayerUid의 값은 Standby,Draw 에서만 보냄
         if (info.TurnPlayerUid == myUid)
         {
@@ -150,10 +150,21 @@ public class BattleManager : MonoBehaviour
                     isPlayerTurn = (info.TurnPlayerUid == myUid);
                     break;
                 case GamePhase.DRAW:
-                    CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
+                    if (info.hasDrawn && info.drawnCard != null)
+                    {
+                        if (CardDrawManager.Instance != null)
+                        {
+                            CardDrawManager.Instance.PerformDrawAnimation(info.drawnCard);
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("[BattleManager] 🚫 드로우 불가/스킵 (드로우 봉인 또는 덱 고갈)");
+                    }
                     break;
             }
-        }else
+        }
+        else
         {
             switch (info.phase)
             {
@@ -161,9 +172,24 @@ public class BattleManager : MonoBehaviour
                     isPlayerTurn = false;
                     break;
                 case GamePhase.DRAW:
-                    OpponentHandVisualizer.Instance.DrawCard();
+                    if (info.hasDrawn)
+                    {
+                        if (OpponentHandVisualizer.Instance != null)
+                        {
+                            OpponentHandVisualizer.Instance.DrawCard();
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("[BattleManager] 🚫 상대방 드로우 불가/스킵 (드로우 봉인 또는 덱 고갈)");
+                    }
                     break;
             }
+        }
+
+        if (prevTurn != isPlayerTurn)
+        {
+            OnTurnChanged?.Invoke(isPlayerTurn);
         }
 
         _turnEndTimeTimestamp = info.turnEndTime;
@@ -185,7 +211,6 @@ public class BattleManager : MonoBehaviour
 
         foreach (var updatedCard in info.updatedCards)
         {
-            // 내 손패 목록(playerHand)에서 일치하는 인덱스를 찾아 최신 상태로 치환합니다.
             int idx = playerHand.FindIndex(c => c.instanceId == updatedCard.instanceId);
             if (idx != -1)
             {
@@ -193,7 +218,6 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // 데이터 변경 사항 브로드캐스팅
         OnHandUpdated?.Invoke();
         OnStateChanged?.Invoke();
     }
@@ -212,242 +236,23 @@ public class BattleManager : MonoBehaviour
             enemyCurrentMana = info.currentMana;
             enemyMaxMana = info.maxMana;
         }
+
+        OnManaChanged?.Invoke(info.ownerUid, info.currentMana, info.maxMana);
         OnStateChanged?.Invoke();
     }
 
+    // 턴종료 요청 중복 방지 플래그
+    [HideInInspector] public bool isTurnEndRequested = false;
 
-    // --- 내부 헬퍼 및 UI 로직 ---
-
-    /// <summary>
-    /// 10개의 마나 수정을 현재 마나와 최대 마나에 맞춰 시각화합니다.
-    /// </summary>
-    private void UpdateManaUI()
-    {
-        // 1. 텍스트 업데이트 (예: 3 / 5)
-        if (manaText != null)
-        {
-            manaText.text = $"{playerCurrentMana} / {playerMaxMana}";
-        }
-
-        // 2. 이미지 배열 업데이트 (최대 10개 가정)
-        if (playerManaCrystals == null || playerManaCrystals.Length == 0) return;
-
-        for (int i = 0; i < playerManaCrystals.Length; i++)
-        {
-            // 인덱스는 0부터 시작하므로 i+1과 마나 값을 비교합니다.
-            int slotNumber = i + 1;
-
-            if (slotNumber <= playerCurrentMana)
-            {
-                // 현재 사용 가능한 마나 칸 (On)
-                playerManaCrystals[i].sprite = manaOnSprite;
-                playerManaCrystals[i].gameObject.SetActive(true);
-                playerManaCrystals[i].color = Color.white;
-            }
-            else if (slotNumber <= playerMaxMana)
-            {
-                // 이번 턴에 이미 사용했거나 비어있는 마나 칸 (Off)
-                playerManaCrystals[i].sprite = manaOffSprite;
-                playerManaCrystals[i].gameObject.SetActive(true);
-                playerManaCrystals[i].color = Color.white;
-            }
-            else
-            {
-                // 아직 잠겨있는 마나 칸 (Locked)
-                if (manaLockedSprite != null)
-                {
-                    playerManaCrystals[i].sprite = manaLockedSprite;
-                    playerManaCrystals[i].gameObject.SetActive(true);
-                }
-                else
-                {
-                    // 잠긴 이미지가 없으면 아예 비활성화하거나 반투명하게 처리
-                    playerManaCrystals[i].gameObject.SetActive(false);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// 카드를 드래그할 때 호출하여 소모될 예정인 마나를 시각적으로 강조합니다.
-    /// </summary>
-    /// <param name="cost">강조할 마나 개수</param>
-    public void HighlightManaCost(int cost)
-    {
-        // 먼저 UI를 기본 상태로 되돌려놓고 시작합니다.
-        UpdateManaUI();
-
-        if (cost <= 0 || !isPlayerTurn) return;
-
-        // 현재 가지고 있는 마나 중에서 뒤에서부터 cost만큼 강조합니다.
-        int highlightedCount = 0;
-        for (int i = playerCurrentMana - 1; i >= 0 && highlightedCount < cost; i--)
-        {
-            playerManaCrystals[i].color = manaHighlightColor;
-            highlightedCount++;
-        }
-
-        // 만약 마나가 부족하다면 부족한 부분만큼 경고(빨간색 등)를 줄 수도 있습니다. (선택 사항)
-        if (cost > playerCurrentMana)
-        {
-            // 예: 마나가 부족함을 알리기 위해 활성화된 모든 마나를 붉게 표시
-            for (int i = 0; i < playerCurrentMana; i++)
-            {
-                playerManaCrystals[i].color = Color.red;
-            }
-        }
-    }
-
-    // 서버로부터 타겟 목록이 도착했을 때 호출되는 함수
-    private void OnReceiveValidTargets(S_ValidTargetResponse response)
-    {
-        // 1. 기존에 켜져 있던 하이라이트들을 모두 끕니다.
-        ResetHighlights();
-
-        if (response.ValidTargetIds == null) return;
-
-        // 2. 전달받은 유효 타겟 ID 목록을 캐시에 저장합니다.
-        _serverValidTargetIds = response.ValidTargetIds;
-
-        // 3. 필드 위에 소환된 카드들 중, 서버가 허용한 카드들만 찾아서 하이라이트를 켭니다.
-        foreach (int targetId in _serverValidTargetIds)
-        {
-            // 현장 감독(EntityManager)에게 ID로 카드 디스플레이를 찾습니다.
-            if (GameEntityManager.Instance._spawnedEntities.TryGetValue(targetId, out var targetCard))
-            {
-                targetCard.SetGlowState(true); // 하이라이트 On!
-                _highlightedTargets.Add(targetCard);
-            }
-        }
-    }
-
-    // S_RequestTargetForPlay 패킷전용 전투의 함성으로 타겟이 필요한 경우
-    public void OnReceiveValidTargetsRequestTargetForPlay(S_RequestTargetForPlay response)
-    {
-        // 1. 기존에 켜져 있던 하이라이트들을 모두 끕니다.
-        ResetHighlights();
-
-        if (response.ValidTargetIds == null) return;
-
-        // 2. 전달받은 유효 타겟 ID 목록을 캐시에 저장합니다.
-        _serverValidTargetIds = response.ValidTargetIds;
-
-        // 3. 필드 위에 소환된 카드들 중, 서버가 허용한 카드들만 찾아서 하이라이트를 켭니다.
-        foreach (int targetId in _serverValidTargetIds)
-        {
-            // 현장 감독(EntityManager)에게 ID로 카드 디스플레이를 찾습니다.
-            if (GameEntityManager.Instance._spawnedEntities.TryGetValue(targetId, out var targetCard))
-            {
-                targetCard.SetGlowState(true); // 하이라이트 On!
-                _highlightedTargets.Add(targetCard);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 서버로부터 유효한 공격 수비 대상 목록이 수신되면 실행됩니다.
-    /// </summary>
-    private void OnReceiveValidAttackTargets(S_ValidAttackTargetsResponse response)
-    {
-        // 1. 기존에 켜져 있던 모든 하이라이트를 초기화합니다 [12].
-        ResetHighlights();
-
-        if (response.validDefenderEntityIds == null) return;
-
-        // 2. 전달받은 유효 타겟 ID 목록을 IsServerValidTarget 검사용 캐시에 저장합니다 [11, 12].
-        _serverValidTargetIds = response.validDefenderEntityIds;
-
-        // 3. 필드 위의 카드들 중 서버가 승인해 준 ID를 가진 카드들만 찾아서 반짝이게 켭니다 [12, 13].
-        foreach (int targetId in _serverValidTargetIds)
-        {
-            if (GameEntityManager.Instance._spawnedEntities.TryGetValue(targetId, out var targetCard))
-            {
-                targetCard.SetGlowState(true); // 하이라이트 On! [12, 16]
-                _highlightedTargets.Add(targetCard); // 나중에 끌 수 있도록 리스트에 저장 [12]
-            }
-        }
-    }
-
-    /// <summary>                                                                                                                                           
-    /// 특정 엔티티 ID가 서버로부터 승인받은 유효한 타겟(공격 대상 또는 카드 효과 대상)인지 확인합니다.
-    /// </summary>
-    public bool IsServerValidTarget(int entityId)
-    {
-        if (_serverValidTargetIds == null || _serverValidTargetIds.Count == 0) return false;
-        return _serverValidTargetIds.Contains(entityId);
-    }
-
-    // 하이라이트 끄기 및 캐시 초기화
-    public void ResetHighlights()
-    {
-        foreach (var target in _highlightedTargets)
-        {
-            if (target != null) target.SetGlowState(false);
-        }
-        _highlightedTargets.Clear();
-        _serverValidTargetIds.Clear();
-    }
-
-    // 턴종료 타이밍을 맞추기 위한 변수 초기화
-    public void SetTimer()
-    {
-        prevRemainingTime = float.MaxValue; // 초기화
-    }
-
-    // 타이머 계산
-    private void UpdateRemainingTime()
-    {
-        long currentUnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        float diff = _turnEndTimeTimestamp - currentUnixTime;
-        remainingTime = Mathf.Max(0, diff);
-        // "처음 0이 되는 순간"만 감지
-        if (prevRemainingTime > 0 && remainingTime <= 0)
-        {
-            Debug.Log("시간 초과로 턴 변경");
-            RequestEndTurn();
-        }
-
-        prevRemainingTime = remainingTime;  // prevRemainingTime = 0 이 되면서 턴종료 증복 실행 방지
-
-    }
-
-    // 타이머 감소
-    private void UpdateTimerUI()
-    {
-        if (timerSlider == null) return;
-
-        timerSlider.value = remainingTime;
-
-        if (isPlayerTurn && remainingTime <= warningThreshold)
-        {
-            if (sliderFillImage != null) sliderFillImage.color = warningColor;
-        }
-    }
-
-    // 턴종료 버튼 설정
-    private void RefreshTurnUI()
-    {
-        if (turnButton == null || statusText == null) return;
-
-        if (isPlayerTurn)
-        {
-            statusText.text = "나의 턴";
-            statusText.color = Color.white;
-            turnButton.interactable = true;
-            if (sliderFillImage != null) sliderFillImage.color = myTurnColor;
-        }
-        else
-        {
-            statusText.text = "상대의 턴";
-            statusText.color = Color.gray;
-            turnButton.interactable = false;
-            if (sliderFillImage != null) sliderFillImage.color = enemyTurnColor;
-        }
-    }
-
-    // 턴종료
+    // 턴종료 요청
     public void RequestEndTurn()
     {
-        GameClient.Instance.RequestEndTurn();
+        if (isTurnEndRequested) return;
+        isTurnEndRequested = true;
+
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.RequestEndTurn();
+        }
     }
 }

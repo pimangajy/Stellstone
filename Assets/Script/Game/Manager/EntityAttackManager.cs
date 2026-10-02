@@ -74,8 +74,9 @@ public class EntityAttackManager : MonoBehaviour
             GameCardDisplay tempCard = hit.collider.GetComponentInParent<GameCardDisplay>();
             if (tempCard != null)
             {
-                // ★ 수정: 서버가 승인한 대상 목록에 있는지만 확인
-                if (BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(tempCard.EntityId))
+                // ★ 수정: 사망 예정인 타겟이 아니고 서버가 승인한 대상 목록에 있는지만 확인
+                bool isPendingDead = GameEntityManager.Instance != null && GameEntityManager.Instance.IsPendingDead(tempCard.EntityId);
+                if (!isPendingDead && BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(tempCard.EntityId))
                 {
                     hitCard = tempCard;
                 }
@@ -88,6 +89,8 @@ public class EntityAttackManager : MonoBehaviour
     // --- 로직: 공격 확정 (GameInputManager에서 호출) ---
     public void TryCompleteAttack()
     {
+        bool attackSent = false;
+
         // ★ 수정: 마지막으로 타겟이 서버 승인 대상인지 확인
         if (_currentTargetInfo != null && BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(_currentTargetInfo.EntityId))
         {
@@ -97,50 +100,91 @@ public class EntityAttackManager : MonoBehaviour
             if (GameEntityManager.Instance.test)
             {
                 GameEntityManager.Instance.TestAttack(_currentAttacker, _currentTargetInfo);
+                ResetState(false);
                 return;
             }
 
             if (GameClient.Instance != null)
             {
                 GameClient.Instance.SendAttackRequest(attackerId, targetId);
+                attackSent = true;
             }
         }
 
-        ResetState();
+        // 공격 명령이 정상 전송되었다면 공중 부양 상태를 유지(keepAttackerFloating: true), 취소/실패 시 즉시 착지
+        ResetState(keepAttackerFloating: attackSent);
     }
 
     // --- 로직: 상태 초기화 (원상복구) ---
-    public void ResetState()
+    public void ResetState(bool keepAttackerFloating = false)
     {
         _currentTargetInfo = null;
 
         if (_currentAttacker != null)
         {
-            _currentAttacker.SetFloatingState(false);
+            if (!keepAttackerFloating)
+            {
+                _currentAttacker.SetFloatingState(false);
+            }
             _currentAttacker = null;
         }
 
         if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
 
         // ★ 추가: 조준이 끝나면 반짝임 하이라이트 및 서버 타겟 목록 초기화
-        if (BattleManager.Instance != null) BattleManager.Instance.ResetHighlights();
+        // if (BattleManager.Instance != null) BattleManager.Instance.ResetHighlights();
     }
 
     // --- 검증 로직 (GameInputManager에서도 사용하므로 public으로 변경) ---
-    public bool IsValidAttacker(GameCardDisplay display)
+    /// <summary>
+    /// 내 소유의 일반 필드 하수인인지 검사합니다 (마우스 클릭 시 드래그 준비 허용 여부 판별).
+    /// </summary>
+    public bool IsFriendlyMinion(GameCardDisplay display)
     {
         if (display == null) return false;
+        if (display.IsFloating) return false;
+
         var data = display.CurrentEntityData;
-
-        // 내 하수인인지 확인
-        if (data == null || data.ownerUid != MyUid)
-        {
-            return false;
-        }
-
-        // (추후) 공격 가능 상태인지 확인: if (!data.canAttack) return false;
+        if (data == null || data.ownerUid != MyUid) return false;
+        if (data.isMember || data.isLeader) return false;
 
         return true;
+    }
+
+    /// <summary>
+    /// 해당 하수인이 현재 실제로 공격을 개시할 수 있는 상태인지 엄격하게 검증합니다.
+    /// </summary>
+    public bool CanAttack(GameCardDisplay display)
+    {
+        if (!IsFriendlyMinion(display)) return false;
+
+        // 사망 예정 하수인 확인
+        if (GameEntityManager.Instance != null && GameEntityManager.Instance.IsPendingDead(display.EntityId))
+            return false;
+
+        // 테스트 모드인 경우
+        if (GameEntityManager.Instance != null && GameEntityManager.Instance.test)
+            return true;
+
+        // 내 턴인지 확인
+        if (BattleManager.Instance != null && !BattleManager.Instance.IsMyTurn)
+            return false;
+
+        var data = display.CurrentEntityData;
+        if (data == null) return false;
+
+        // 서버에서 관리되는 공격 가능 상태 플래그 (소환 턴 질풍/속공 여부, 공격 횟수 제한, 속박 등)
+        if (!data.canAttack) return false;
+
+        // 공격력이 0 이하인 경우 공격 불가
+        if (data.attack <= 0) return false;
+
+        return true;
+    }
+
+    public bool IsValidAttacker(GameCardDisplay display)
+    {
+        return CanAttack(display);
     }
 
     private bool IsValidTarget(GameCardDisplay target)

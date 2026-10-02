@@ -1,69 +1,107 @@
-﻿using UnityEngine;
+using UnityEngine;
 using DG.Tweening;
 using System.Collections;
-using Unity.VisualScripting;
 
 /// <summary>
-/// 2D UI 기반: 손패에 있는 카드를 마우스로 집어서 움직이고,
-/// 필드(3D)에 내려놓거나 되돌려놓는 기능을 담당합니다.
+/// 3D 월드 기반: 손패 카드를 마우스로 드래그하여 필드에 배치하거나 주문을 시전하는 기능을 담당합니다.
+/// GameInputManager의 드래그 상태 머신(ReadyToDrag -> DraggingHand)과 완벽히 연동됩니다.
 /// </summary>
 public class CardDragManager : MonoBehaviour
 {
     public static CardDragManager instance;
 
-    [Header("연결")]
-    // [변경점 1] 기존 HandInteractionManager 대신 새로 만든 HandCardControllManager 연결
+    [Header("1. 매니저 및 카메라 연결")]
+    [Tooltip("손패 관리를 담당하는 3D 매니저")]
     public HandCardControllManager handManager;
+
+    [Tooltip("탑뷰 메인 카메라")]
     public Camera mainCamera;
-    public GameObject previewMinion; // 추가 타겟팅 시 보여줄 임시 하수인 오브젝트
-    private GameObject _previewMinion;
 
-    [Tooltip("UI 카드가 렌더링되는 메인 캔버스 (마우스 좌표 변환용)")]
-    public Canvas dragCanvas;
-
-    [Header("드래그 설정")]
-    // 3D용 dragHeight 제거
-    public float dragFollowSpeed = 20f;
-    private bool _wasInHandZone = true; // 드래그 시작 시점에는 무조건 손패 안에 있으므로 true
-
-    [Header("UI 틸트(기울기) 효과")]
-    public float tiltStrength = 0.5f; // 마우스 이동 속도에 따른 회전 강도
-    public float maxTiltAngle = 20f;
-    public float tiltReturnSpeed = 10f;
-
-    [Header("영역 및 레이어")]
-    public float handZoneHeightRatio = 0.35f;
-    [Tooltip("3D 필드 슬롯을 감지하기 위한 레이어")]
-    public LayerMask fieldSlotLayer;
-
-    [Header("타겟팅")]
-    public bool temp_CardIsTargeted = true;
+    [Tooltip("타겟팅 화살표의 발사 시작점 Transform (미지정 시 handAnchor 또는 리더 사용)")]
     public Transform targetingSourceTransform;
 
-    // 내부 변수들
-    private GameObject _currentCard;
+    [Header("2. 3D 드래그 이동 설정")]
+    [Tooltip("드래그 중인 카드가 바닥/손패보다 위로 떠오르는 3D Y축 추가 높이입니다.")]
+    public float dragElevationY = 0.5f;
+
+    [Tooltip("마우스 커서의 3D 월드 좌표를 따라가는 보간 속도입니다.")]
+    public float dragFollowSpeed = 25f;
+
+    [Tooltip("드래그 시 카드 크기 배율입니다 (기본: 1.0)")]
+    public float dragScaleMultiplier = 1.0f;
+
+    [Header("3. 3D 틸트(기울기) 물리 효과")]
+    [Tooltip("마우스 이동 속도에 따른 틸트 회전 강도")]
+    public float tiltStrength = 0.08f;
+
+    [Tooltip("최대 틸트 각도 (도 단위)")]
+    public float maxTiltAngle = 20f;
+
+    [Tooltip("마우스 정지 시 원래 직립 각도로 복귀하는 속도")]
+    public float tiltReturnSpeed = 10f;
+
+    [Header("4. 영역 판정 및 레이어")]
+    [Tooltip("화면 하단 손패 영역 비율 (기본 0.35 = 화면 하단 35% 이하는 손패 영역)")]
+    public float handZoneHeightRatio = 0.35f;
+
+    [Tooltip("3D 필드 슬롯 감지용 레이어 (기본: Layer 6)")]
+    public LayerMask fieldSlotLayer;
+
+    [Tooltip("하수인/영웅 엔티티 감지용 레이어 (기본: Layer 12)")]
+    public LayerMask entityLayer;
+
+    [Header("5. 타겟팅 설정")]
+    [Tooltip("true일 경우 카드의 타겟팅 속성과 관계없이 화면 일정 높이 이상 드래그 시 무조건 조준선(TargetingReticle)이 표시됩니다.")]
+    public bool forceTargetingArrow = true;
+
+    [Tooltip("기존 씬 호환용 임시 타겟 플래그")]
+    public bool temp_CardIsTargeted = true;
+
+    [Tooltip("조준선 활성화 시 드래그 중인 카드를 일시 숨겨 필드 시야를 확보할지 여부입니다.")]
+    public bool hideCardInTargetingMode = true;
+
+    // --- 상태 프로퍼티 ---
+    public bool IsDragging => _isDragging;
+    public bool IsWaitingForTarget { get; private set; } = false;
+    public int LastPlayedSlotIndex { get; private set; } = -1;
+
+    // --- 내부 변수 ---
+    public GameObject _currentCard;
     private GameObject _waitingCard;
     private bool _isDragging = false;
-    public LayerMask entityLayer; // Inspector에서 하수인/영웅 레이어를 할당해주세요.
-    public bool IsWaitingForTarget { get; private set; } = false; // InputManager와 통신용
-    public int LastPlayedSlotIndex { get; private set; } = -1; // 마지막으로 하수인을 낸 슬롯 위치
-    private int _pendingSlotIndex = -1; // 타겟팅 확정 후 보낼 슬롯 위치 임시 저장
-
-    // 기울기 계산을 위한 이전 프레임 마우스 위치
+    private bool _isTargetingMode = false;
+    private bool _wasInHandZone = true;
     private Vector2 _lastMousePosition;
 
     private void Awake()
     {
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         instance = this;
     }
 
     private void Start()
     {
         if (mainCamera == null) mainCamera = Camera.main;
+        if (handManager == null) handManager = HandCardControllManager.instance;
 
-        if (targetingSourceTransform == null && handManager != null)
+        // 기존 씬 인스펙터 값이 100 등 비정상적으로 큰 경우 3D 틸트에 맞게 자동 보정
+        if (tiltStrength > 10f) tiltStrength = 0.08f;
+
+        if (targetingSourceTransform == null)
         {
-            targetingSourceTransform = handManager.handAnchor;
+            if (GameEntityManager.Instance != null && GameEntityManager.Instance.myLeader != null)
+            {
+                targetingSourceTransform = GameEntityManager.Instance.myLeader.transform;
+            }
+            else
+            {
+                GameObject leaderObj = GameObject.Find("Reader_Frame");
+                if (leaderObj != null) targetingSourceTransform = leaderObj.transform;
+            }
         }
 
         if (GameClient.Instance != null)
@@ -75,244 +113,339 @@ public class CardDragManager : MonoBehaviour
 
     private void Update()
     {
-        if (handManager == null) return;
+        if (handManager == null) handManager = HandCardControllManager.instance;
 
-        // 1. 전투의 함성 타겟팅 대기 상태일 때의 마우스 입력 처리
+        // 1. 타겟팅 대기 상태 처리
         if (IsWaitingForTarget)
         {
             HandleTargetingPhase();
-            return; // 타겟팅 중에는 기존 드래그 로직 무시
+            return;
         }
 
-        // 2. 일반 드래그 중일 때
+        // 2. 일반 드래그 중일 때: 영역 검사 및 3D 위치/틸트 갱신
         if (_isDragging && _currentCard != null)
         {
-            CheckZoneAndToggleTargeting(); // 어느 필드에 놓을지 보여주는 본래 용도로 사용
+            CheckZoneAndToggleTargeting();
             UpdateCardPositionAndTilt();
         }
     }
 
-    // --- 서버 응답 처리 핸들러 ---
-    private void OnServerSuccessResponse(string instanceId)
-    {
-        if (_waitingCard != null)
-        {
-            var display = _waitingCard.GetComponent<GameCardDisplay>();
-            if (display != null && display.InstanceId == instanceId)
-            {
-                handManager.SetDraggedCard(null);
-
-                // [수정됨] CardActionQueueManager 연출 큐로 넘기지 않고 즉시 파괴
-                handManager.RemoveCardFromHand(_waitingCard);
-                _waitingCard = null;
-
-                handManager.AlignHand();  // 사용 성공시 핸드 정렬
-            }
-        }
-    }
-
-    private void OnServerFailResponse(string reason)
-    {
-        if (_waitingCard != null)
-        {
-            Debug.LogWarning($"카드 사용 실패 ({reason}). 손패로 복귀.");
-            _waitingCard.SetActive(true);
-            handManager.SetDraggedCard(null);
-            handManager.AlignHand();
-            _waitingCard = null;
-        }
-    }
-
     // ==========================================================
-    // 1. 드래그 시작
+    // 1. 드래그 시작 (GameInputManager 연동)
     // ==========================================================
+
+    /// <summary>
+    /// GameInputManager에서 마우스 드래그 임계값(dragThreshold)을 넘었을 때 호출되는 드래그 시작 함수
+    /// </summary>
     public void StartDrag(GameObject card)
     {
+        if (card == null) return;
+
         _currentCard = card;
         _isDragging = true;
+        _isTargetingMode = false;
         _lastMousePosition = Input.mousePosition;
         _wasInHandZone = true;
 
-        handManager.SetDraggedCard(_currentCard);
-        handManager.CreatePhantomCard(_currentCard);
+        if (handManager == null) handManager = HandCardControllManager.instance;
+        if (handManager != null)
+        {
+            handManager.SetDraggedCard(_currentCard);
+            handManager.CreatePhantomCard(_currentCard);
+        }
 
-        RectTransform cardRect = _currentCard.GetComponent<RectTransform>();
-        cardRect.DOKill();
+        // 카드 애니메이션 정리 및 최상위 렌더링
+        _currentCard.transform.DOKill();
+        _currentCard.transform.SetAsLastSibling();
 
-        // [변경점 2] Z축 이동이 아니라, UI 계층의 맨 앞으로 카드를 가져옵니다.
-        cardRect.SetAsLastSibling();
+        // 3D 카메라를 향하는 기본 직립 각도 및 크기 설정
+        Quaternion baseRot = (handManager != null) ? Quaternion.Euler(handManager.cardBaseRotation) : Quaternion.Euler(-90f, 0f, 0f);
+        Vector3 baseScale = (handManager != null) ? (handManager.OriginalCardScale * handManager.handScaleMultiplier * dragScaleMultiplier) : _currentCard.transform.localScale;
 
-        // 카드를 원래 크기로 돌리고, 각도를 똑바로 세웁니다.
-        cardRect.DOScale(handManager.OriginalCardScale, 0.2f).SetEase(Ease.OutQuad);
-        cardRect.DOLocalRotateQuaternion(Quaternion.identity, 0.2f);
+        _currentCard.transform.localRotation = baseRot;
+        _currentCard.transform.DOScale(baseScale, 0.2f).SetEase(Ease.OutQuad);
+
+        // 드래그 시작 시 소모 마나 크리스탈 하이라이트
+        if (BattleManager.Instance != null)
+        {
+            GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
+            int cost = cardDisplay != null ? (cardDisplay._cardInfo != null ? cardDisplay._cardInfo.currentCost : (cardDisplay._cardData != null ? cardDisplay._cardData.manaCost : 0)) : 0;
+            BattleManager.Instance.HighlightManaCost(cost);
+        }
     }
 
     // ==========================================================
-    // 2. 카드 이동 및 기울기
+    // 2. 3D 카드 위치 이동 및 틸트(기울기)
     // ==========================================================
+
+    /// <summary>
+    /// 3D 가상 평면 레이캐스트를 통해 마우스 커서의 3D 월드 좌표를 따라가고 3D 틸트 효과를 적용합니다.
+    /// </summary>
     private void UpdateCardPositionAndTilt()
     {
-        RectTransform cardRect = _currentCard.GetComponent<RectTransform>();
+        if (_currentCard == null || mainCamera == null) return;
 
-        // 1. 위치 이동: 가상 평면(Plane)을 삭제하고 마우스 픽셀 좌표를 직접 추적합니다.
-        Vector2 targetPos = Input.mousePosition;
+        // 1. 3D 가상 수평 평면(Plane) 레이캐스트로 마우스 3D 월드 위치 계산
+        float baseY = (handManager != null && handManager.handAnchor != null) ? handManager.handAnchor.position.y : 0f;
+        Plane dragPlane = new Plane(Vector3.up, new Vector3(0f, baseY + dragElevationY, 0f));
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
 
-        if (dragCanvas != null && dragCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+        if (dragPlane.Raycast(ray, out float enter))
         {
-            // Canvas가 Camera 공간일 때 부드러운 위치 변환
-            RectTransformUtility.ScreenPointToWorldPointInRectangle(dragCanvas.transform as RectTransform, Input.mousePosition, dragCanvas.worldCamera, out Vector3 worldPoint);
-            cardRect.position = Vector3.Lerp(cardRect.position, worldPoint, Time.deltaTime * dragFollowSpeed);
-        }
-        else
-        {
-            // Canvas가 Overlay 공간일 때
-            cardRect.position = Vector3.Lerp(cardRect.position, targetPos, Time.deltaTime * dragFollowSpeed);
+            Vector3 targetWorldPos = ray.GetPoint(enter);
+            _currentCard.transform.position = Vector3.Lerp(_currentCard.transform.position, targetWorldPos, Time.deltaTime * dragFollowSpeed);
         }
 
-        // 2. 이동 방향에 따른 기울기 효과
-        ApplyDragTilt(cardRect);
+        // 2. 3D 이동 틸트(기울기) 적용
+        Apply3DDragTilt();
         _lastMousePosition = Input.mousePosition;
     }
 
-    private void ApplyDragTilt(RectTransform cardRect)
+    /// <summary>
+    /// 마우스 이동 속도와 방향에 따라 카드가 젖혀지는 3D 틸트 효과
+    /// </summary>
+    private void Apply3DDragTilt()
     {
-        // 2D 마우스 픽셀 이동 속도를 구합니다.
-        Vector2 velocity = ((Vector2)Input.mousePosition - _lastMousePosition) / Time.deltaTime;
+        if (_currentCard == null) return;
 
-        // UI에 맞게 X, Y축 회전 계산 (마우스가 위/아래/좌/우로 움직일 때 카드가 젖혀짐)
-        float targetRotX = velocity.y * tiltStrength;
-        float targetRotY = -velocity.x * tiltStrength;
+        Vector2 mouseDelta = ((Vector2)Input.mousePosition - _lastMousePosition) / Time.deltaTime;
 
-        targetRotX = Mathf.Clamp(targetRotX, -maxTiltAngle, maxTiltAngle);
-        targetRotY = Mathf.Clamp(targetRotY, -maxTiltAngle, maxTiltAngle);
+        // 속도에 따른 틸트 각도 계산 (마우스가 움직이는 방향으로 기울어짐)
+        float tiltPitch = Mathf.Clamp(mouseDelta.y * tiltStrength, -maxTiltAngle, maxTiltAngle);
+        float tiltRoll = Mathf.Clamp(-mouseDelta.x * tiltStrength, -maxTiltAngle, maxTiltAngle);
 
-        Quaternion targetRotation = Quaternion.Euler(targetRotX, targetRotY, 0);
-        cardRect.localRotation = Quaternion.Slerp(cardRect.localRotation, targetRotation, Time.deltaTime * tiltReturnSpeed);
+        Quaternion baseRot = (handManager != null) ? Quaternion.Euler(handManager.cardBaseRotation) : Quaternion.Euler(-90f, 0f, 0f);
+        Quaternion targetRot = baseRot * Quaternion.Euler(tiltPitch, 0f, tiltRoll);
+
+        _currentCard.transform.localRotation = Quaternion.Slerp(_currentCard.transform.localRotation, targetRot, Time.deltaTime * tiltReturnSpeed);
     }
 
     // ==========================================================
-    // 3. 영역 판정 및 조준선 표시
+    // 3. 영역 판정 및 타겟팅/손패 접기 전환
     // ==========================================================
+
+    /// <summary>
+    /// 마우스가 손패 영역과 필드 영역 사이를 오갈 때 손패 접기/펼치기 및 조준선 전환을 처리합니다.
+    /// </summary>
     private void CheckZoneAndToggleTargeting()
     {
-        bool inHandZone = IsMouseInHandZone(); // [5]
-
-        // ★ 상태가 바뀌지 않았다면 아무것도 하지 않고 함수를 즉시 빠져나갑니다!
+        bool inHandZone = IsMouseInHandZone();
         if (inHandZone == _wasInHandZone) return;
 
-        // 상태가 변경되었음을 기록합니다.
         _wasInHandZone = inHandZone;
 
         if (inHandZone)
         {
-            // [필드 ➔ 손패 영역 안으로 들어올 때 단 1번 실행] [5]
-            if (!_currentCard.activeSelf) _currentCard.SetActive(true); // [5]
-            if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting(); // [2, 5]
+            // [필드 -> 손패 영역 안으로 복귀할 때]
+            _isTargetingMode = false;
+
+            if (_currentCard != null && !_currentCard.activeSelf)
+            {
+                _currentCard.SetActive(true);
+            }
+
+            if (TargetingReticle.Instance != null)
+            {
+                TargetingReticle.Instance.StopTargeting();
+            }
+
+            if (handManager != null && handManager.isFolded)
+            {
+                handManager.SpreadHand();
+            }
         }
         else
         {
-            // [손패 ➔ 필드 영역 밖으로 나갈 때 단 1번 실행] [2]
+            // [손패 -> 필드 영역으로 나갈 때]
+            GameCardDisplay cardDisplay = _currentCard != null ? _currentCard.GetComponent<GameCardDisplay>() : null;
+            bool isMinion = (cardDisplay != null && cardDisplay._cardData != null && cardDisplay._cardData.cardType == CardType.하수인);
+            bool isMember = (cardDisplay != null && cardDisplay._cardData != null && cardDisplay._cardData.cardType == CardType.멤버);
+            bool requiresTargeting = (cardDisplay != null && cardDisplay._cardData != null && cardDisplay._cardData.targeting);
 
-            // 1. 서버에 타겟팅 가능한 대상 요청을 "딱 한 번만" 전송합니다! [2]
-            GameClient.Instance.SendValidTargetResponse(_currentCard.GetComponent<GameCardDisplay>()._cardInfo.instanceId); // [2]
-
-            GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
-            if (cardDisplay != null && cardDisplay._cardData != null)
+            // 손패 접기 (필드 슬롯 및 리더 시야 확보)
+            if (handManager != null && !handManager.isFolded)
             {
-                bool requiresTargeting = cardDisplay._cardData.targeting || cardDisplay._cardData.cardType == CardType.하수인;
+                handManager.FoldHand();
+            }
 
-                if (requiresTargeting)
+            // 서버에 유효 타겟 목록 요청 (하수인/멤버는 소환 슬롯 배치 후 2차 타겟팅 단계에서 서버가 대상을 요청하므로 제외)
+            if (!isMinion && !isMember && (requiresTargeting || forceTargetingArrow || temp_CardIsTargeted))
+            {
+                if (GameClient.Instance != null && cardDisplay != null && !string.IsNullOrEmpty(cardDisplay.InstanceId))
                 {
-                    // [타겟팅 주문 / 하수인 카드 진입 시 단 1번]
-                    if (_currentCard.activeSelf) _currentCard.SetActive(false);
-                    if (TargetingReticle.Instance != null)
-                    {
-                        Transform source = targetingSourceTransform;
-                        if (source == null && GameEntityManager.Instance != null && GameEntityManager.Instance.myLeader != null)
-                        {
-                            source = GameEntityManager.Instance.myLeader.transform;
-                        }
-                        else if (source == null && handManager != null && handManager.handAnchor != null)
-                        {
-                            source = handManager.handAnchor;
-                        }
-                        else if (source == null)
-                        {
-                            source = transform;
-                        }
-
-                        TargetingReticle.Instance.StartTargeting(source);
-                    }
+                    GameClient.Instance.SendValidTargetResponse(cardDisplay.InstanceId);
                 }
-                else
+            }
+
+            // 조준선 발동 여부: forceTargetingArrow가 true이면 조건 불문 무조건 조준선 활성화
+            bool shouldActivateTargeting = forceTargetingArrow || temp_CardIsTargeted || requiresTargeting || isMinion || isMember;
+
+            if (shouldActivateTargeting)
+            {
+                _isTargetingMode = true;
+
+                if (hideCardInTargetingMode && _currentCard != null)
                 {
-                    // [비타겟팅 카드 진입 시 단 1번]
-                    if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-                    if (TargetingReticle.Instance != null)
+                    _currentCard.SetActive(false);
+                }
+
+                if (TargetingReticle.Instance != null)
+                {
+                    Transform source = GetTargetingSource();
+                    if (source != null)
                     {
-                        TargetingReticle.Instance.StopTargeting();
+                        TargetingReticle.Instance.StartTargeting(source);
                     }
                 }
             }
         }
     }
 
+    /// <summary>
+    /// 조준선(TargetingReticle)이 시작될 최적의 3D 월드 트랜스폼을 반환합니다 (아군 리더 우선).
+    /// </summary>
+    public Transform GetTargetingSource()
+    {
+        if (targetingSourceTransform != null) return targetingSourceTransform;
+
+        if (GameEntityManager.Instance != null && GameEntityManager.Instance.myLeader != null)
+        {
+            return GameEntityManager.Instance.myLeader.transform;
+        }
+
+        GameObject leaderObj = GameObject.Find("Reader_Frame");
+        if (leaderObj != null) return leaderObj.transform;
+
+        if (handManager != null && handManager.handAnchor != null)
+        {
+            return handManager.handAnchor;
+        }
+
+        return transform;
+    }
+
     // ==========================================================
-    // 4. 드래그 종료 (하이브리드 충돌 판정)
+    // 4. 드래그 종료 (슬롯 검사 및 카드 플레이)
     // ==========================================================
+
+    /// <summary>
+    /// GameInputManager에서 마우스 좌클릭을 놓았을 때(Mouse Up) 호출되는 드래그 종료 함수
+    /// </summary>
     public void EndDrag()
     {
         if (_currentCard == null) return;
-        if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
 
-        handManager.RemovePhantomCard(_currentCard);
+        if (TargetingReticle.Instance != null)
+        {
+            TargetingReticle.Instance.StopTargeting();
+        }
+
+        if (handManager != null)
+        {
+            handManager.RemovePhantomCard(_currentCard);
+        }
 
         GameCardDisplay cardDisplay = _currentCard.GetComponent<GameCardDisplay>();
-        bool isMinion = cardDisplay._cardData.cardType == CardType.하수인;
-        bool requiresTargeting = cardDisplay._cardData.targeting;
+        bool isMinion = (cardDisplay != null && cardDisplay._cardData != null && cardDisplay._cardData.cardType == CardType.하수인);
+        bool isMember = (cardDisplay != null && cardDisplay._cardData != null && cardDisplay._cardData.cardType == CardType.멤버);
+        bool requiresTargeting = (cardDisplay != null && cardDisplay._cardData != null && cardDisplay._cardData.targeting);
 
         bool requestSent = false;
 
-        // 1. 하수인 카드인 경우
+        // 1. 하수인 카드의 경우: 3D 필드 슬롯에 놓았는지 검사
         if (isMinion)
         {
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
             {
                 FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
-                if (slot != null && !slot.IsOccupied)
+                bool isMySlot = GameEntityManager.Instance != null &&
+                                GameEntityManager.Instance.myFieldSlots != null &&
+                                System.Array.IndexOf(GameEntityManager.Instance.myFieldSlots, slot) >= 0;
+
+                if (slot != null && !slot.IsOccupied && isMySlot)
                 {
                     LastPlayedSlotIndex = slot.slotIndex;
                     SendPlayRequestToClient(_currentCard, slot.slotIndex);
                     requestSent = true;
-                }
-            }
-        }
-        // 2. 주문 카드인 경우
-        else
-        {
-            if (!IsMouseInHandZone())
-            {
-                if (requiresTargeting)
-                {
-                    Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-                    if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
-                    {
-                        GameCardDisplay targetCard = hit.collider.GetComponentInParent<GameCardDisplay>();
-                        if (targetCard != null)
-                        {
-                            Debug.Log($"주문으로 타겟팅한 카드 : {targetCard.EntityId}");
-                        }
 
-                        // 이제 서버 목록이 살아있으므로 정상 통과합니다!
-                        if (targetCard != null && BattleManager.Instance != null && BattleManager.Instance.IsServerValidTarget(targetCard.EntityId))
+                    // 오프라인 / 테스트 모드일 때 자체 소환 처리
+                    if (GameClient.Instance == null || !GameClient.Instance.IsConnected)
+                    {
+                        Debug.Log($"[CardDragManager] (오프라인 테스트) 슬롯 {slot.slotIndex}에 하수인 카드 배치 완료");
+                        if (handManager != null)
                         {
-                            GameClient.Instance.SendPlayCardRequest(cardDisplay.InstanceId, -1, targetCard.EntityId);
-                            requestSent = true;
+                            handManager.RemoveCardFromHand(_currentCard);
                         }
                     }
                 }
-                else
+                else if (slot != null && !isMySlot)
+                {
+                    Debug.LogWarning("[CardDragManager] 🚫 상대방 필드 슬롯에는 하수인을 배치할 수 없습니다.");
+                }
+            }
+        }
+        // 2. 멤버 카드의 경우: 3D 멤버 슬롯 또는 필드에 놓았을 때 0번 슬롯으로 소환
+        else if (isMember)
+        {
+            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
+            {
+                FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
+                int targetSlot = (slot != null) ? slot.slotIndex : 0;
+                LastPlayedSlotIndex = targetSlot;
+                SendPlayRequestToClient(_currentCard, targetSlot);
+                requestSent = true;
+
+                if (GameClient.Instance == null || !GameClient.Instance.IsConnected)
+                {
+                    Debug.Log($"[CardDragManager] (오프라인 테스트) 멤버 슬롯 {targetSlot}에 멤버 카드 배치 완료");
+                    if (handManager != null)
+                    {
+                        handManager.RemoveCardFromHand(_currentCard);
+                    }
+                }
+            }
+            else if (!IsMouseInHandZone())
+            {
+                // 손패 영역 밖 필드 아무 곳에나 드롭해도 멤버존(0번 슬롯)으로 소환
+                LastPlayedSlotIndex = 0;
+                SendPlayRequestToClient(_currentCard, 0);
+                requestSent = true;
+
+                if (GameClient.Instance == null || !GameClient.Instance.IsConnected)
+                {
+                    Debug.Log($"[CardDragManager] (오프라인 테스트) 멤버 슬롯 0에 멤버 카드 배치 완료");
+                    if (handManager != null)
+                    {
+                        handManager.RemoveCardFromHand(_currentCard);
+                    }
+                }
+            }
+        }
+        // 3. 주문 카드인 경우
+        else if (cardDisplay != null && cardDisplay._cardData != null)
+        {
+            if (requiresTargeting)
+            {
+                Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
+                {
+                    GameCardDisplay targetCard = hit.collider.GetComponentInParent<GameCardDisplay>();
+                    if (targetCard != null && (BattleManager.Instance == null || BattleManager.Instance.IsServerValidTarget(targetCard.EntityId)))
+                    {
+                        if (GameClient.Instance != null)
+                        {
+                            GameClient.Instance.SendPlayCardRequest(cardDisplay.InstanceId, -1, targetCard.EntityId);
+                        }
+                        requestSent = true;
+                    }
+                }
+            }
+            else
+            {
+                // 비타겟팅 주문: 손패 영역 밖(필드 영역)에 놓았을 때 시전
+                if (!IsMouseInHandZone())
                 {
                     SendPlayRequestToClient(_currentCard, -1);
                     requestSent = true;
@@ -320,44 +453,106 @@ public class CardDragManager : MonoBehaviour
             }
         }
 
-        // 검증과 요청이 모두 끝난 뒤 하이라이트 정리
-        if (BattleManager.Instance != null) BattleManager.Instance.ResetHighlights();
+        if (BattleManager.Instance != null)
+        {
+            BattleManager.Instance.ResetHighlights();
+        }
 
         if (requestSent)
         {
             _waitingCard = _currentCard;
             _currentCard.SetActive(false);
+            if (handManager != null)
+            {
+                handManager.SetDraggedCard(null);
+                if (handManager.isFolded) handManager.SpreadHand();
+                handManager.AlignHand();
+            }
         }
         else
         {
-            if (!_currentCard.activeSelf) _currentCard.SetActive(true);
-            handManager.SetDraggedCard(null);
-            handManager.AlignHand();
+            // 유효하지 않은 곳에 놓았으므로 드래그 취소 (손패로 복귀)
+            CancelDrag();
+            return;
         }
 
         _currentCard = null;
         _isDragging = false;
+        _isTargetingMode = false;
     }
 
-    //  타겟팅 클릭 대기 로직 ---
+    // ==========================================================
+    // 5. 드래그 취소 (우클릭 또는 손패 복귀)
+    // ==========================================================
+
+    /// <summary>
+    /// 마우스 우클릭 또는 유효하지 않은 드롭 시 드래그를 취소하고 카드를 손패로 복귀시킵니다.
+    /// </summary>
+    public void CancelDrag()
+    {
+        if (!_isDragging && !IsWaitingForTarget) return;
+
+        if (TargetingReticle.Instance != null)
+        {
+            TargetingReticle.Instance.StopTargeting();
+        }
+
+        if (BattleManager.Instance != null)
+        {
+            BattleManager.Instance.ResetHighlights();
+        }
+
+        if (_currentCard != null)
+        {
+            if (!_currentCard.activeSelf)
+            {
+                // 커서 위치에서부터 복귀 애니메이션이 시작되도록 위치 동기화
+                float baseY = (handManager != null && handManager.handAnchor != null) ? handManager.handAnchor.position.y : 0f;
+                Plane dragPlane = new Plane(Vector3.up, new Vector3(0f, baseY + dragElevationY, 0f));
+                Ray ray = mainCamera != null ? mainCamera.ScreenPointToRay(Input.mousePosition) : new Ray();
+                if (dragPlane.Raycast(ray, out float enter))
+                {
+                    _currentCard.transform.position = ray.GetPoint(enter);
+                }
+                _currentCard.SetActive(true);
+            }
+
+            if (handManager != null)
+            {
+                handManager.RemovePhantomCard(_currentCard);
+                handManager.SetDraggedCard(null);
+                if (handManager.isFolded || _isTargetingMode)
+                {
+                    handManager.SpreadHand();
+                }
+                handManager.AlignHand(); // 원래 손패 슬롯 위치로 부드럽게 복귀
+            }
+        }
+
+        _currentCard = null;
+        _isDragging = false;
+        _wasInHandZone = true;
+        _isTargetingMode = false;
+        IsWaitingForTarget = false;
+    }
+
+    // ==========================================================
+    // 6. 전투의 함성 타겟팅 대기 로직
+    // ==========================================================
     private void HandleTargetingPhase()
     {
         // 좌클릭: 대상 확정
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-
-            // 하수인/영웅(Entity)이 맞았는지 확인
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, entityLayer))
             {
-                // 서버에 타겟팅한 대상 전송해야함
+                // 타겟팅 완료
             }
-
-            // 대상이 유효하지 않거나 허공을 클릭하면 취소
             CancelCardPlay();
             ResetTargetingState();
         }
-        // 우클릭: 사용 자체를 취소
+        // 우클릭: 사용 자체 취소
         else if (Input.GetMouseButtonDown(1))
         {
             CancelCardPlay();
@@ -367,15 +562,9 @@ public class CardDragManager : MonoBehaviour
 
     private void CancelCardPlay()
     {
-        if (TargetingReticle.Instance != null) TargetingReticle.Instance.StopTargeting();
-        if (_currentCard != null && !_currentCard.activeSelf) _currentCard.SetActive(true);
-
-        handManager.SetDraggedCard(null);
-        handManager.AlignHand();
+        CancelDrag();
     }
 
-
-    // 타겟팅종료 함수를 코루틴으로 만들어 필드 클릭시 손패가 접히는걸 방지
     private void ResetTargetingState()
     {
         StartCoroutine(ResetTargetingCoroutine());
@@ -384,17 +573,9 @@ public class CardDragManager : MonoBehaviour
     private IEnumerator ResetTargetingCoroutine()
     {
         yield return null;
-
         IsWaitingForTarget = false;
-        _pendingSlotIndex = -1;
         _currentCard = null;
         _isDragging = false;
-
-        if (_previewMinion != null)
-        {
-            Destroy(_previewMinion);
-            _previewMinion = null;
-        }
     }
 
     private void SendPlayRequestToClient(GameObject cardObj, int slotIndex)
@@ -410,6 +591,40 @@ public class CardDragManager : MonoBehaviour
     {
         return (Input.mousePosition.y / Screen.height) <= handZoneHeightRatio;
     }
+
+    // ==========================================================
+    // 서버 응답 핸들러
+    // ==========================================================
+    private void OnServerSuccessResponse(string instanceId)
+    {
+        if (_waitingCard != null)
+        {
+            var display = _waitingCard.GetComponent<GameCardDisplay>();
+            if (display != null && display.InstanceId == instanceId)
+            {
+                if (handManager != null)
+                {
+                    handManager.SetDraggedCard(null);
+                    handManager.RemoveCardFromHand(_waitingCard);
+                    handManager.AlignHand();
+                }
+                _waitingCard = null;
+            }
+        }
+    }
+
+    private void OnServerFailResponse(string reason)
+    {
+        if (_waitingCard != null)
+        {
+            Debug.LogWarning($"[CardDragManager] 카드 사용 실패 ({reason}). 손패로 복귀.");
+            _waitingCard.SetActive(true);
+            if (handManager != null)
+            {
+                handManager.SetDraggedCard(null);
+                handManager.AlignHand();
+            }
+            _waitingCard = null;
+        }
+    }
 }
-
-

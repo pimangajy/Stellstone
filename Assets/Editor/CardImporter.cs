@@ -1,12 +1,14 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Linq;
+using Newtonsoft.Json;
 
 public class CardImporter : EditorWindow
 {
-    private string csvFolderPath = "Assets/Resources/CSV";
+    private string csvFolderPath = "Assets/Resources/CSV/CardData";
     private string cardAssetPath = "Assets/Resources/CardData";
 
     // 유니티 에디터 상단 툴바에 메뉴 추가
@@ -67,6 +69,40 @@ public class CardImporter : EditorWindow
         string[] lines = File.ReadAllLines(filePath);
         if (lines.Length <= 1) return 0; // 헤더만 있는 경우 제외
 
+        // 헤더 인덱스 매핑 (대소문자 무시)
+        string[] headers = Regex.Split(lines[0], ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)")
+            .Select(h => h.Replace("\"", "").Trim())
+            .ToArray();
+
+        Dictionary<string, int> col = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
+        for (int c = 0; c < headers.Length; c++)
+        {
+            if (!col.ContainsKey(headers[c])) col[headers[c]] = c;
+        }
+
+        string GetCol(string[] row, string colName, string defVal = "")
+        {
+            if (col.TryGetValue(colName, out int idx) && idx < row.Length)
+            {
+                return row[idx].Replace("\"", "").Trim();
+            }
+            return defVal;
+        }
+
+        string GetRawCol(string[] row, string colName, string defVal = "")
+        {
+            if (col.TryGetValue(colName, out int idx) && idx < row.Length)
+            {
+                string raw = row[idx].Trim();
+                if (raw.StartsWith("\"") && raw.EndsWith("\"") && raw.Length >= 2)
+                {
+                    raw = raw.Substring(1, raw.Length - 2);
+                }
+                return raw.Replace("\"\"", "\"").Trim();
+            }
+            return defVal;
+        }
+
         int count = 0;
 
         // 0번 줄은 헤더이므로 1번 줄부터 시작
@@ -75,14 +111,12 @@ public class CardImporter : EditorWindow
             string line = lines[i];
             if (string.IsNullOrWhiteSpace(line)) continue;
 
-            // 정규식을 사용하여 따옴표("") 안의 쉼표는 분리하지 않도록 처리
             string[] values = Regex.Split(line, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
-            // 데이터 유효성 검사 (CardID가 비어있으면 스킵)
-            if (values.Length < 11 || string.IsNullOrEmpty(values[0])) continue;
+            string id = GetCol(values, "CardID");
+            if (string.IsNullOrEmpty(id)) continue;
 
-            string id = values[0].Replace("\"", "").Trim();
-            string cardClass = values[1].Replace("\"", "").Trim();
+            string cardClass = GetCol(values, "Class");
             CardClass memberType = ParseMemberType(cardClass);
 
             // 클래스별로 폴더를 나누어 저장
@@ -105,61 +139,77 @@ public class CardImporter : EditorWindow
             }
 
             // --- 데이터 매핑 ---
-            // CSV 헤더 기준: CardID(0), Class(1), Name(2), Cost(3), Attack(4), Health(5), 
-            // Rarity(6), Type(7), Expansion(8), Tribe(9), Description(10), Targeting(11), Effects(12), Keywords(13)
-
             card.cardID = id;
             card.cardClass = memberType;
-            card.cardName = values[2].Replace("\"", "").Trim();
+            card.cardName = GetCol(values, "Name");
 
-            card.manaCost = ParseInt(values[3]);
-            card.attack = ParseInt(values[4]);
-            card.health = ParseInt(values[5]);
+            card.manaCost = ParseInt(GetCol(values, "Cost"));
+            card.attack = ParseInt(GetCol(values, "Attack"));
+            card.health = ParseInt(GetCol(values, "Health"));
 
-            card.rarity = ParseEnum<CardRarity>(values[6], CardRarity.common);
-            card.cardType = ParseCardType(values[7]);
-            card.expansion = ParseEnum<Expansion>(values[8], Expansion.기본);
-            card.minionTribe = ParseEnum<CardTribe>(values[9], CardTribe.무소속);
+            card.rarity = ParseEnum<CardRarity>(GetCol(values, "Rarity"), CardRarity.common);
+            card.cardType = ParseCardType(GetCol(values, "Type"));
+            card.expansion = ParseEnum<Expansion>(GetCol(values, "Expansion"), Expansion.기본);
+            card.minionTribe = ParseEnum<CardTribe>(GetCol(values, "Tribe"), CardTribe.무소속);
 
-            // Description은 따옴표 제거 후 매핑
-            card.description = values[10].Replace("\"", "").Trim();
+            // Description 매핑
+            card.description = GetCol(values, "Description");
 
-            if (values.Length > 11 && !string.IsNullOrWhiteSpace(values[11]))
+            string rawTargeting = GetCol(values, "Targeting").ToLower();
+            card.targeting = (rawTargeting == "true" || rawTargeting == "1");
+
+            // IsToken 매핑 (CSV 마지막 또는 지정된 위치의 IsToken/Token 헤더 파싱)
+            string rawIsToken = GetCol(values, "IsToken");
+            if (string.IsNullOrEmpty(rawIsToken)) rawIsToken = GetCol(values, "Token");
+            rawIsToken = rawIsToken.ToLower();
+            card.isToken = (rawIsToken == "true" || rawIsToken == "1");
+
+            // 특수 오라 스탯 5종 매핑
+            card.spellAmp = ParseInt(GetCol(values, "SpellAmp"));
+            card.spellWeakness = ParseInt(GetCol(values, "SpellWeakness"));
+            card.buffAmpAttack = ParseInt(GetCol(values, "BuffAmpAttack"));
+            card.buffAmpHealth = ParseInt(GetCol(values, "BuffAmpHealth"));
+            string rawDrawSeal = GetCol(values, "DrawSeal").ToLower();
+            card.drawSeal = (rawDrawSeal == "true" || rawDrawSeal == "1");
+
+            // Keywords 매핑
+            string rawKeywords = GetCol(values, "Keywords").Replace("[", "").Replace("]", "").Replace("\"", "");
+            card.keywords = new List<CardKeywords>();
+
+            if (!string.IsNullOrWhiteSpace(rawKeywords))
             {
-                string rawValue = values[11].Replace("\"", "").Trim().ToLower();
-                card.targeting = (rawValue == "true" || rawValue == "1");
-            }
+                string[] keywordStrings = rawKeywords.Split(',');
 
-            // Effects(인덱스 12)는 무시합니다.
-
-            // Keywords(인덱스 13)가 존재할 경우 매핑
-            if (values.Length > 13 && !string.IsNullOrWhiteSpace(values[13]))
-            {
-                // 1. 괄호 및 따옴표 제거
-                string rawKeywords = values[13].Replace("[", "").Replace("]", "").Replace("\"", "");
-
-                // 2. Enum 리스트 초기화
-                card.keyward = new List<CardKeywords>();
-
-                // 3. 내용이 비어있지 않은 경우에만 분리 및 변환
-                if (!string.IsNullOrWhiteSpace(rawKeywords))
+                foreach (string kw in keywordStrings)
                 {
-                    string[] keywordStrings = rawKeywords.Split(',');
-
-                    foreach (string kw in keywordStrings)
+                    if (System.Enum.TryParse(kw.Trim(), true, out CardKeywords parsedKeyword))
                     {
-                        // 4. 문자열을 CardKeywords Enum으로 변환 (대소문자 무시: true)
-                        if (System.Enum.TryParse(kw.Trim(), true, out CardKeywords parsedKeyword))
-                        {
-                            card.keyward.Add(parsedKeyword);
-                        }
-                        else
-                        {
-                            // Enum에 정의되지 않은 키워드가 들어올 경우를 대비한 예외 처리
-                            Debug.LogWarning($"알 수 없는 키워드입니다: {kw.Trim()} (CardID: {id})");
-                        }
+                        card.keyward.Add(parsedKeyword);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"알 수 없는 키워드입니다: {kw.Trim()} (CardID: {id})");
                     }
                 }
+            }
+
+            // MemberSkills 파싱
+            string rawMemberSkills = GetRawCol(values, "MemberSkills");
+            if (!string.IsNullOrWhiteSpace(rawMemberSkills) && rawMemberSkills != "[]")
+            {
+                try
+                {
+                    card.memberSkills = JsonConvert.DeserializeObject<List<MemberSkillData>>(rawMemberSkills) ?? new List<MemberSkillData>();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[CardImporter] MemberSkills 파싱 실패: {id} - {ex.Message}");
+                    card.memberSkills = new List<MemberSkillData>();
+                }
+            }
+            else
+            {
+                card.memberSkills = new List<MemberSkillData>();
             }
 
             // 스크립터블 오브젝트 변경사항 저장 예약

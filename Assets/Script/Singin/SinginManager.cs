@@ -7,18 +7,52 @@ using UnityEngine.SceneManagement; // 씬 전환을 위해 추가
 using Firebase;
 using Firebase.Auth;
 using Firebase.Extensions; // ContinueWithOnMainThread 사용
+using Newtonsoft.Json;
 
 // 서버로 보낼/받을 데이터 구조를 정의하는 클래스들
 [System.Serializable]
 public class SignupRequestData { public string email; public string password; public string username; }
 [System.Serializable]
-public class VerifyTokenRequestData { public string token; }
+public class LoginRequestData { public string email; public string password; }
 [System.Serializable]
-public class AuthApiResponse { public string status; public string message; public string user_id; }
+public class VerifyTokenRequestData { public string token; }
+
+[System.Serializable]
+public class UserData
+{
+    public string username;
+    public int level;
+    public int exp;
+    public int score;
+    public int winCount;
+    public int lossCount;
+    public string selectDeck;
+    public int gold;
+    public int stardust;
+    public int stellastone;
+    public List<string> ownedSkins = new List<string>();
+    public List<string> ownedEmotes = new List<string>();
+    public Dictionary<string, int> ownedCards = new Dictionary<string, int>();
+    public Dictionary<string, int> ownedPrismCards = new Dictionary<string, int>();
+    public Dictionary<string, int> ownedPacks = new Dictionary<string, int>();
+}
+
+[System.Serializable]
+public class AuthApiResponse 
+{ 
+    public string status; 
+    public string message; 
+    public string user_id; 
+    public string customToken;
+    public string idToken;
+    public UserData userData;
+}
 
 
 public class SinginManager : MonoBehaviour
 {
+    // 로그인된 유저의 최신 계정 데이터 (어디서든 SinginManager.CurrentUserData 로 접근 가능)
+    public static UserData CurrentUserData { get; set; }
     // --- UI 참조 변수들 ---
     [Header("Signup UI")]
     public TMP_InputField emailInputField;
@@ -35,6 +69,9 @@ public class SinginManager : MonoBehaviour
     public string signupApiUrl => (GameClient.Instance != null)
         ? GameClient.Instance.GetApiUrl("auth/signup")
         : "http://175.125.250.226:5123/api/auth/signup";
+    public string loginApiUrl => (GameClient.Instance != null)
+        ? GameClient.Instance.GetApiUrl("auth/login")
+        : "http://175.125.250.226:5123/api/auth/login";
     public string verifyTokenApiUrl => (GameClient.Instance != null)
         ? GameClient.Instance.GetApiUrl("auth/verify-token")
         : "http://175.125.250.226:5123/api/auth/verify-token";
@@ -44,9 +81,45 @@ public class SinginManager : MonoBehaviour
     private bool isFirebaseReady = false;
 
 
+    public static SinginManager Instance { get; private set; }
+    private void Awake()
+    {
+        if(Instance == null && Instance != this)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject); // 중복 방지
+        }
+    }
+
+
     // Start()는 로그인 씬이 로드될 때마다 실행
     void Start()
     {
+        // Enter입력시 회원가입, 로그인 실행
+        if (emailInputField_login != null)
+        {
+            emailInputField_login.onSubmit.AddListener(_ =>
+            {
+                if (passwordInputField_login != null) passwordInputField_login.Select();
+            });
+        }
+        if (passwordInputField_login != null)
+        {
+            passwordInputField_login.onSubmit.AddListener(_ => OnLoginButtonClicked());
+        }
+
+        // 회원가입 UI 엔터 처리
+        if (usernameInputField != null)
+        {
+            usernameInputField.onSubmit.AddListener(_ => OnSignupButtonClicked());
+        }
+
+        // LogText 오브젝트 자동 참조 보강 (인스펙터 연결이 누락되어도 100% 안전하게 동작)
+        EnsureLogTextReferences();
+
         // 씬이 로드될 때마다 UI 메시지 초기화
         DisplayUIMessage(messageText, "", Color.black);
         DisplayUIMessage(messageTextLogin, "", Color.black);
@@ -70,6 +143,42 @@ public class SinginManager : MonoBehaviour
                 Debug.LogError($"Could not resolve all Firebase dependencies: {dependencyStatus}");
             }
         });
+    }
+
+    /// <summary>
+    /// 로그인 및 회원가입 패널의 LogText 오브젝트를 자동 탐색하여 바인딩
+    /// </summary>
+    private void EnsureLogTextReferences()
+    {
+        if (messageText == null)
+        {
+            GameObject go = GameObject.Find("/Canvas/Singup/Main/LogText");
+            if (go != null) messageText = go.GetComponent<TextMeshProUGUI>();
+        }
+
+        if (messageTextLogin == null)
+        {
+            GameObject go = GameObject.Find("/Canvas/Login/Main/LogText");
+            if (go != null) messageTextLogin = go.GetComponent<TextMeshProUGUI>();
+        }
+    }
+
+    /// <summary>
+    /// 이메일(아이디) 형식 유효성 검사
+    /// </summary>
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        try
+        {
+            return System.Text.RegularExpressions.Regex.IsMatch(email,
+                @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+        catch
+        {
+            return email.Contains("@") && email.Contains(".");
+        }
     }
 
     /// <summary>
@@ -116,17 +225,44 @@ public class SinginManager : MonoBehaviour
     /// </summary>
     public void OnSignupButtonClicked()
     {
-        string email = emailInputField.text;
-        string password = passwordInputField.text;
-        string username = usernameInputField.text;
+        EnsureLogTextReferences();
 
-        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        string email = emailInputField != null ? emailInputField.text.Trim() : "";
+        string password = passwordInputField != null ? passwordInputField.text : "";
+        string username = usernameInputField != null ? usernameInputField.text.Trim() : "";
+
+        // 1. 아이디(이메일) 검증
+        if (string.IsNullOrWhiteSpace(email))
         {
-            DisplayUIMessage(messageText, "이메일과 비밀번호를 입력해주세요.", Color.red);
+            DisplayUIMessage(messageText, "아이디(이메일)를 입력해주세요.", Color.red);
+            return;
+        }
+        if (!IsValidEmail(email))
+        {
+            DisplayUIMessage(messageText, "아이디가 잘못되었습니다.", Color.red);
             return;
         }
 
-        DisplayUIMessage(messageText, "회원가입 요청중...", Color.yellow);
+        // 2. 비밀번호 검증
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            DisplayUIMessage(messageText, "비밀번호를 입력해주세요.", Color.red);
+            return;
+        }
+        if (password.Length < 6)
+        {
+            DisplayUIMessage(messageText, "비밀번호는 6자리 이상이어야 합니다.", Color.red);
+            return;
+        }
+
+        // 3. 닉네임 검증
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            DisplayUIMessage(messageText, "닉네임을 입력해주세요.", Color.red);
+            return;
+        }
+
+        DisplayUIMessage(messageText, "회원가입 요청 중...", Color.yellow);
         SignupRequestData requestData = new SignupRequestData { email = email, password = password, username = username };
         string jsonRequestBody = JsonUtility.ToJson(requestData);
         StartCoroutine(SendSignupRequest(jsonRequestBody));
@@ -137,55 +273,121 @@ public class SinginManager : MonoBehaviour
     /// </summary>
     public void OnLoginButtonClicked()
     {
-        if (!isFirebaseReady)
+        EnsureLogTextReferences();
+
+        string email = emailInputField_login != null ? emailInputField_login.text.Trim() : "";
+        string password = passwordInputField_login != null ? passwordInputField_login.text : "";
+
+        // 1. 아이디(이메일) 검증
+        if (string.IsNullOrWhiteSpace(email))
         {
-            DisplayUIMessage(messageTextLogin, "Firebase가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.", Color.red);
+            DisplayUIMessage(messageTextLogin, "아이디(이메일)를 입력해주세요.", Color.red);
+            return;
+        }
+        if (!IsValidEmail(email))
+        {
+            DisplayUIMessage(messageTextLogin, "아이디가 잘못되었습니다.", Color.red);
             return;
         }
 
-        string email = emailInputField_login.text;
-        string password = passwordInputField_login.text;
-
-        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        // 2. 비밀번호 검증
+        if (string.IsNullOrWhiteSpace(password))
         {
-            DisplayUIMessage(messageTextLogin, "이메일과 비밀번호를 입력해주세요.", Color.red);
+            DisplayUIMessage(messageTextLogin, "비밀번호를 입력해주세요.", Color.red);
+            return;
+        }
+        if (password.Length < 6)
+        {
+            DisplayUIMessage(messageTextLogin, "비밀번호는 6자리 이상이어야 합니다.", Color.red);
             return;
         }
 
-        DisplayUIMessage(messageTextLogin, "로그인 중...", Color.yellow);
+        DisplayUIMessage(messageTextLogin, "서버 로그인 요청 중...", Color.yellow);
 
-        auth.SignInWithEmailAndPasswordAsync(email, password).ContinueWithOnMainThread(task =>
+        LoginRequestData requestData = new LoginRequestData { email = email, password = password };
+        string jsonRequestBody = JsonUtility.ToJson(requestData);
+        StartCoroutine(SendLoginRequest(jsonRequestBody));
+    }
+
+    /// <summary>
+    /// 서버 로그인 API 호출 코루틴 (POST /api/auth/login)
+    /// 서버에서 비밀번호를 검증하고 Custom Token 및 유저 데이터를 받아옵니다.
+    /// </summary>
+    private IEnumerator SendLoginRequest(string jsonRequestBody)
+    {
+        using (UnityWebRequest webRequest = new UnityWebRequest(loginApiUrl, "POST"))
         {
-            if (task.IsCompleted && !task.IsFaulted && !task.IsCanceled)
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonRequestBody);
+            webRequest.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            webRequest.downloadHandler = new DownloadHandlerBuffer();
+            webRequest.SetRequestHeader("Content-Type", "application/json");
+
+            yield return webRequest.SendWebRequest();
+
+            if (webRequest.result == UnityWebRequest.Result.Success)
             {
-                AuthResult authResult = task.Result;
-                FirebaseUser user = authResult.User;
-                Debug.Log($"Firebase 로그인 성공: {user.UserId}");
-
-                user.TokenAsync(true).ContinueWithOnMainThread(tokenTask =>
+                AuthApiResponse response = JsonConvert.DeserializeObject<AuthApiResponse>(webRequest.downloadHandler.text);
+                if (response != null && response.status == "success")
                 {
-                    if (tokenTask.IsCompleted && !tokenTask.IsFaulted && !tokenTask.IsCanceled)
+                    CurrentUserData = response.userData;
+                    if (GameClient.Instance != null)
                     {
-                        string idToken = tokenTask.Result;
-                        Debug.Log($"Firebase ID Token acquired.");
+                        GameClient.Instance.UserUid = response.user_id;
+                        if (response.userData != null)
+                        {
+                            GameClient.Instance.SetUserData(response.userData);
+                        }
+                    }
+                    PlayerPrefs.SetString("CurrentUserId", response.user_id);
+                    PlayerPrefs.Save();
 
-                        VerifyTokenRequestData requestData = new VerifyTokenRequestData { token = idToken };
-                        string jsonRequestBody = JsonUtility.ToJson(requestData);
-                        StartCoroutine(SendVerifyTokenRequest(jsonRequestBody));
+                    // 서버가 발급해 준 Custom Token으로 클라이언트 Firebase SDK 세션 동기화 (Firestore 리스너 등 지원)
+                    if (auth != null && !string.IsNullOrEmpty(response.customToken))
+                    {
+                        auth.SignInWithCustomTokenAsync(response.customToken).ContinueWithOnMainThread(task =>
+                        {
+                            if (task.IsFaulted)
+                            {
+                                Debug.LogWarning($"Firebase 세션 동기화 경고: {task.Exception?.GetBaseException()?.Message}");
+                            }
+                            DisplayUIMessage(messageTextLogin, $"로그인 성공! 환영합니다.", Color.green);
+                            SceneManager.LoadScene("MainScene");
+                        });
                     }
                     else
                     {
-                        Debug.LogError($"Firebase 토큰 발급 오류: {tokenTask.Exception?.GetBaseException()?.Message}");
-                        DisplayUIMessage(messageTextLogin, $"로그인 실패: {tokenTask.Exception?.GetBaseException()?.Message}", Color.red);
+                        DisplayUIMessage(messageTextLogin, $"로그인 성공! 환영합니다.", Color.green);
+                        SceneManager.LoadScene("MainScene");
                     }
-                });
+                }
+                else
+                {
+                    DisplayUIMessage(messageTextLogin, $"로그인 실패: {response?.message}", Color.red);
+                }
             }
             else
             {
-                Debug.LogError($"Firebase 로그인 오류: {task.Exception?.GetBaseException()?.Message}");
-                DisplayUIMessage(messageTextLogin, $"로그인 실패: {task.Exception?.GetBaseException()?.Message}", Color.red);
+                string serverMsg = "";
+                try
+                {
+                    if (!string.IsNullOrEmpty(webRequest.downloadHandler.text))
+                    {
+                        AuthApiResponse errRes = JsonConvert.DeserializeObject<AuthApiResponse>(webRequest.downloadHandler.text);
+                        serverMsg = errRes?.message ?? "";
+                    }
+                }
+                catch { }
+
+                if (!string.IsNullOrEmpty(serverMsg))
+                {
+                    DisplayUIMessage(messageTextLogin, serverMsg, Color.red);
+                }
+                else
+                {
+                    DisplayUIMessage(messageTextLogin, "서버와의 통신에 실패했습니다. 네트워크를 확인해주세요.", Color.red);
+                }
             }
-        });
+        }
     }
 
     /// <summary>
@@ -233,14 +435,14 @@ public class SinginManager : MonoBehaviour
 
             if (webRequest.result == UnityWebRequest.Result.Success)
             {
-                AuthApiResponse response = JsonUtility.FromJson<AuthApiResponse>(webRequest.downloadHandler.text);
+                AuthApiResponse response = JsonConvert.DeserializeObject<AuthApiResponse>(webRequest.downloadHandler.text);
                 if (response != null && response.status == "success")
                 {
-                    DisplayUIMessage(messageText, $"회원가입 성공! 사용자 ID: {response.user_id}", Color.green);
+                    DisplayUIMessage(messageText, response?.message ?? "회원가입이 완료되었습니다!", Color.green);
                 }
                 else
                 {
-                    DisplayUIMessage(messageText, $"회원가입 실패: {response?.message}", Color.red);
+                    DisplayUIMessage(messageText, response?.message ?? "회원가입에 실패했습니다.", Color.red);
                 }
             }
             else
@@ -250,7 +452,7 @@ public class SinginManager : MonoBehaviour
                 {
                     if (!string.IsNullOrEmpty(webRequest.downloadHandler.text))
                     {
-                        AuthApiResponse errRes = JsonUtility.FromJson<AuthApiResponse>(webRequest.downloadHandler.text);
+                        AuthApiResponse errRes = JsonConvert.DeserializeObject<AuthApiResponse>(webRequest.downloadHandler.text);
                         serverMsg = errRes?.message ?? "";
                     }
                 }
@@ -258,11 +460,11 @@ public class SinginManager : MonoBehaviour
 
                 if (!string.IsNullOrEmpty(serverMsg))
                 {
-                    DisplayUIMessage(messageText, $"회원가입 실패: {serverMsg}", Color.red);
+                    DisplayUIMessage(messageText, serverMsg, Color.red);
                 }
                 else
                 {
-                    DisplayUIMessage(messageText, $"오류: {webRequest.error}", Color.red);
+                    DisplayUIMessage(messageText, "서버와의 통신에 실패했습니다. 네트워크를 확인해주세요.", Color.red);
                 }
             }
         }
@@ -281,28 +483,41 @@ public class SinginManager : MonoBehaviour
 
             if (webRequest.result == UnityWebRequest.Result.Success)
             {
-                AuthApiResponse response = JsonUtility.FromJson<AuthApiResponse>(webRequest.downloadHandler.text);
+                AuthApiResponse response = JsonConvert.DeserializeObject<AuthApiResponse>(webRequest.downloadHandler.text);
                 if (response != null && response.status == "success")
                 {
+                    CurrentUserData = response.userData;
+                    if (GameClient.Instance != null)
+                    {
+                        GameClient.Instance.UserUid = response.user_id;
+                        if (response.userData != null)
+                        {
+                            GameClient.Instance.SetUserData(response.userData);
+                        }
+                    }
                     PlayerPrefs.SetString("CurrentUserId", response.user_id);
                     PlayerPrefs.Save();
                     DisplayUIMessage(messageTextLogin, $"로그인 성공! 사용자 ID: {response.user_id}", Color.green);
-                    // TODO: 로그인 성공 후 메인 게임 씬으로 전환
-                    // SceneManager.LoadScene("MainGameScene");
+                    // 로그인 성공 후 메인 게임 씬으로 전환
+                    SceneManager.LoadScene("MainScene");
                 }
                 else
                 {
-                    DisplayUIMessage(messageTextLogin, $"로그인 실패: {response?.message}", Color.red);
+                    auth?.SignOut();
+                    PlayerPrefs.DeleteKey("CurrentUserId");
+                    DisplayUIMessage(messageTextLogin, $"세션이 만료되었습니다. 다시 로그인해주세요.", Color.red);
                 }
             }
             else
             {
+                auth?.SignOut();
+                PlayerPrefs.DeleteKey("CurrentUserId");
                 string serverMsg = "";
                 try
                 {
                     if (!string.IsNullOrEmpty(webRequest.downloadHandler.text))
                     {
-                        AuthApiResponse errRes = JsonUtility.FromJson<AuthApiResponse>(webRequest.downloadHandler.text);
+                        AuthApiResponse errRes = JsonConvert.DeserializeObject<AuthApiResponse>(webRequest.downloadHandler.text);
                         serverMsg = errRes?.message ?? "";
                     }
                 }
@@ -310,15 +525,15 @@ public class SinginManager : MonoBehaviour
 
                 if (!string.IsNullOrEmpty(serverMsg))
                 {
-                    DisplayUIMessage(messageTextLogin, $"서버 검증 실패: {serverMsg}", Color.red);
+                    DisplayUIMessage(messageTextLogin, $"인증 만료: {serverMsg}", Color.red);
                 }
                 else
                 {
-                    DisplayUIMessage(messageTextLogin, $"서버 검증 오류: {webRequest.error}", Color.red);
+                    DisplayUIMessage(messageTextLogin, $"서버 인증 오류. 다시 로그인해주세요.", Color.red);
                 }
             }
-            }
         }
+    }
 
     /// <summary>
     /// UI에 메시지를 표시하는 통합 함수

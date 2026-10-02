@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
@@ -27,14 +27,95 @@ public class TargetingReticle : MonoBehaviour
     private bool _isTargeting = false;
     private List<GameObject> _pooledPathObjects = new List<GameObject>(); // 오브젝트 풀
 
+    private GameObject _defaultPathObjectPrefab; // 인스펙터에 등록된 기본 도트 프리팹
+    private Transform _defaultArrowHeadTransform; // 인스펙터에 등록된 기본 화살촉 Transform
+    private GameObject _customArrowHeadInstance; // 스킨 전용 동적 화살촉 인스턴스
+
     void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
 
         _mainCamera = Camera.main;
+
+        // 기본 조준선 비주얼 백업
+        _defaultPathObjectPrefab = pathObjectPrefab;
+        _defaultArrowHeadTransform = arrowHead;
+
         CreateObjectPool(); // 풀링 초기화
         gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// 스킨 데이터(SkinData)에 설정된 조준선을 적용합니다.
+    /// 조준선이 비어있거나 스킨이 null이면 기본 조준선을 자동으로 사용합니다.
+    /// </summary>
+    public void ApplySkin(SkinData skinData)
+    {
+        if (skinData != null)
+        {
+            ApplySkinVisual(skinData.targetingPathPrefab, skinData.targetingArrowHeadPrefab);
+        }
+        else
+        {
+            ResetToDefaultVisual();
+        }
+    }
+
+    /// <summary>
+    /// 커스텀 조준선 도트 프리팹 및 화살촉 프리팹을 적용합니다.
+    /// 둘 중 비어있는(null) 항목은 기본 조준선으로 자동 폴백됩니다.
+    /// </summary>
+    public void ApplySkinVisual(GameObject customPathPrefab, GameObject customArrowHeadPrefab)
+    {
+        // 1. 도트 경로 프리팹 결정 (비어있으면 기본 프리팹 사용)
+        GameObject targetPathPrefab = customPathPrefab != null ? customPathPrefab : _defaultPathObjectPrefab;
+        if (targetPathPrefab != null && targetPathPrefab != pathObjectPrefab)
+        {
+            pathObjectPrefab = targetPathPrefab;
+            CreateObjectPool();
+        }
+
+        // 2. 화살촉 프리팹 결정 (비어있으면 기본 화살촉 사용)
+        if (customArrowHeadPrefab != null)
+        {
+            if (_customArrowHeadInstance != null)
+            {
+                Destroy(_customArrowHeadInstance);
+                _customArrowHeadInstance = null;
+            }
+
+            if (_defaultArrowHeadTransform != null && _defaultArrowHeadTransform != transform)
+            {
+                _defaultArrowHeadTransform.gameObject.SetActive(false);
+            }
+
+            _customArrowHeadInstance = Instantiate(customArrowHeadPrefab, transform);
+            _customArrowHeadInstance.SetActive(false);
+            arrowHead = _customArrowHeadInstance.transform;
+        }
+        else
+        {
+            // 기본 화살촉으로 복귀
+            if (_customArrowHeadInstance != null)
+            {
+                Destroy(_customArrowHeadInstance);
+                _customArrowHeadInstance = null;
+            }
+
+            if (_defaultArrowHeadTransform != null)
+            {
+                arrowHead = _defaultArrowHeadTransform;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 조준선을 원래의 기본 비주얼로 복원합니다.
+    /// </summary>
+    public void ResetToDefaultVisual()
+    {
+        ApplySkinVisual(null, null);
     }
 
     // 미리 오브젝트들을 잔뜩 만들어둡니다. (성능 최적화)

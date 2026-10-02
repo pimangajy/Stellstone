@@ -1,351 +1,795 @@
-﻿using UnityEngine;
-using UnityEngine.EventSystems; // 2D UI 클릭/호버 판정을 위해 필수적으로 사용하는 네임스페이스입니다.
 using System.Collections.Generic;
-using DG.Tweening; // 부드러운 UI 이동 및 애니메이션(DOTween)을 위한 라이브러리입니다.
+using UnityEngine;
+using UnityEngine.EventSystems;
+using DG.Tweening;
 
 /// <summary>
-/// 2D UI 캔버스 기반: 손패(Hand)에 있는 카드들을 부채꼴 모양으로 예쁘게 정렬하고,
-/// 마우스를 올렸을 때(Hover) 카드가 위로 튀어나오며 확대되는 효과를 전담하는 매니저입니다.
+/// 3D 손패(Hand) 카드 관리 매니저 - 원 둘레 부채꼴 정렬, F/R 삭제 기능, 손패 접기/펼치기, GameInputManager 연동 고정 Z높이 호버
 /// </summary>
 public class HandCardControllManager : MonoBehaviour
 {
     public static HandCardControllManager instance;
 
-    [Header("UI 씬 연결")]
-    [Tooltip("손패 카드들이 모이는 중심축입니다. (화면 아래 중앙에 위치한 빈 UI 객체여야 합니다)")]
-    public RectTransform handAnchor;
-    public GameMulliganManager mulliganManager;
+    [Header("0. 테스트 모드 제어 (통합 스위치)")]
+    [Tooltip("true이면 D, B, S, F, R, M 등 모든 키보드 테스트 단축키가 활성화됩니다.\nfalse이면 모든 테스트 단축키가 차단되어 실제 게임(서버 패킷 연동)처럼 동작합니다.")]
+    public bool isTestMode = true;
 
-    [Header("상태")]
-    [Tooltip("현재 게임이 첫 패를 교체하는 멀리건 단계인지 확인하는 변수입니다.")]
+    [Header("1. 3D 중심 앵커 (손패 기준점)")]
+    [Tooltip("손패 카드들이 모이는 3D 중심축입니다.")]
+    public Transform handAnchor;
+
+    [Header("2. 원 둘레 부채꼴 레이아웃 (실시간 인스펙터 조절)")]
+    [Tooltip("부채꼴 곡선을 만드는 가상 원의 반지름(미터 단위)입니다. 클수록 완만하고, 작을수록 둥글게 모입니다.")]
+    public float circleRadius = 5.0f;
+
+    [Tooltip("원 둘레를 따라 카드와 카드 사이의 각도 간격(도 단위)입니다.")]
+    public float cardSpacingAngle = 5.0f;
+
+    [Tooltip("카드가 들어오는 순서대로 우측 카드가 위로 올라오는 Y축 계단식 높이 간격입니다.")]
+    public float cardDepthOffset = 0.02f;
+
+    [Tooltip("Z축 아치 곡선의 위/아래 방향을 반전합니다. (중앙이 위, 양옆이 아래로 가도록 설정)")]
+    public bool invertZCurve = false;
+
+    [Tooltip("부채꼴 기울기 회전 방향을 반전합니다.")]
+    public bool invertRotation = false;
+
+    [Tooltip("카드가 카메라를 바라보는 기본 각도입니다 (탑뷰 기본값: X = -90)")]
+    public Vector3 cardBaseRotation = new Vector3(-90f, 0f, 0f);
+
+    [Tooltip("손패에 들고 있을 때 프리팹 원래 크기 대비 배율입니다 (1.0 = 100%)")]
+    public float handScaleMultiplier = 1.0f;
+
+    [Header("3. 손패 접기 / 펼치기 (Fold & Spread)")]
+    [Tooltip("손패 접기/펼치기를 토글할 테스트 단축키입니다 (기본값: Tab).")]
+    public KeyCode foldToggleKey = KeyCode.Tab;
+
+    [Tooltip("손패가 접혔을 때 이동할 기준점 Transform입니다. (미지정 시 현재 자리에서 부채만 접힙니다)")]
+    public Transform foldAnchor;
+
+    [Tooltip("손패가 접혔을 때 카드 크기 배율입니다.")]
+    public float foldScaleMultiplier = 0.8f;
+
+    [Tooltip("손패가 접혔을 때 카드 간격 각도 축소 배율입니다 (카드가 가지런히 겹치도록 축소).")]
+    public float foldAngleMultiplier = 0.2f;
+
+    [Tooltip("손패가 접히거나 펼쳐질 때 걸리는 애니메이션 시간입니다.")]
+    public float foldDuration = 0.35f;
+
+    [Tooltip("현재 손패가 접혀있는 상태인지 여부입니다.")]
+    public bool isFolded = false;
+
+    [Header("4. 호버(Hover) 설정 (실시간 인스펙터 조절)")]
+    [Tooltip("호버가 동작할 수 있는 화면 최대 높이 비율입니다 (기본: 0.35 = 화면 하단 35% 이하에서만 호버 동작).")]
+    public float maxHoverHeightRatio = 0.35f;
+
+    [Tooltip("호버 시 모든 카드가 도달할 고정 Z축 높이입니다. (좌우 카드가 원래 아래에 있더라도 모두 이 동일한 Z 높이까지 올라옵니다)")]
+    public float hoverTargetZ = 1.0f;
+
+    [Tooltip("호버 시 다른 손패 카드들보다 앞(위)으로 올라오도록 추가하는 Y축 높이입니다.")]
+    public float hoverElevationY = 0.05f;
+
+    [Tooltip("호버 시 카드 확대 배율입니다 (1.2 = 120%)")]
+    public float hoverScaleMultiplier = 1.2f;
+
+    [Tooltip("호버 전환 애니메이션 시간(초)입니다.")]
+    public float hoverAnimDuration = 0.2f;
+
+    [Header("5. 기본 애니메이션 설정")]
+    public float moveDuration = 0.3f;
+
+    [Header("6. 현재 손패 목록")]
+    public List<GameObject> handCards = new List<GameObject>();
+
+    // --- 내부 변수 ---
+    private Vector3 _originalCardScale = Vector3.one;
+    private bool _isCardScaleSet = false;
+
+    // 카드별 원래 부채꼴 배치 좌표 (호버 종료 시 복구용)
+    private struct CardRestingTransform
+    {
+        public Vector3 localPosition;
+        public Quaternion localRotation;
+        public Vector3 localScale;
+    }
+    private readonly Dictionary<GameObject, CardRestingTransform> _cardRestingTransforms = new Dictionary<GameObject, CardRestingTransform>();
+
+    // 카드별 레이아웃 기준 기본 스케일 (접힘/펼침/호버 상태에 따라 계산되는 목표 스케일)
+    private readonly Dictionary<GameObject, Vector3> _cardBaseScales = new Dictionary<GameObject, Vector3>();
+
+    // 카드별 버프 펀치 배율 (기본 1.0, 버프 연출 시 1.25 -> 1.0으로 애니메이션)
+    private readonly Dictionary<GameObject, float> _cardBuffMultipliers = new Dictionary<GameObject, float>();
+
+    // 스케일 및 버프 연출 트윈 참조
+    private readonly Dictionary<GameObject, Tween> _cardScaleTweens = new Dictionary<GameObject, Tween>();
+    private readonly Dictionary<GameObject, Tween> _cardBuffTweens = new Dictionary<GameObject, Tween>();
+
+    private GameObject _currentlyHoveredCard = null;
+    private GameObject _currentlyDraggedCard = null;
+
+    // --- 외부 스크립트 호환용 프로퍼티/필드 (컴파일 보장) ---
+    public Vector3 OriginalCardScale => _originalCardScale;
+    public bool IsHandStable => true;
     public bool isMulliganPhase = false;
     public bool isMulligan = false;
 
-    [Header("손패 레이아웃 (2D 부채꼴 연출)")]
-    [Tooltip("부채꼴을 그릴 가상의 원 반지름입니다. 2D 픽셀 해상도에 맞춰 1500~3000 정도로 크게 설정해야 완만한 곡선이 나옵니다.")]
-    public float handArcRadius = 2000f;
-    [Tooltip("카드와 카드 사이의 벌어지는 기본 각도입니다.")]
-    public float baseCardSpacingAngle = 8.0f;
-    [Tooltip("카드가 많아질 때 부채꼴이 너무 넓어지지 않도록 조절하는 계수입니다.")]
-    public float handSpreadMultiplier = 1.0f;
-    [Tooltip("카드가 섞이거나 정렬될 때 걸리는 애니메이션 시간입니다.")]
-    public float shuffleDuration = 0.3f;
-    [Tooltip("새로 뽑은 카드가 손패로 날아올 때 걸리는 시간입니다.")]
-    public float newCardTravelDuration = 0.4f;
-    [Tooltip("새로 뽑은 카드가 손패로 날아올 때 걸리는 시간입니다.")]
-    public float radius = 50f;
-    [Tooltip("새로 뽑은 카드가 손패로 날아올 때 걸리는 시간입니다.")]
-    public float spacingAngle = 1f;
-
-    // 카드가 접혔을 때 각도를 줄이기 위해 원래 각도를 임시 저장하는 변수
-    public float temporaryBaseCardSpacingAngle;
-
-    [Header("손패 상태 위치 설정")]
-    [Tooltip("카드를 접어둘 때(숨길 때) 이동할 우측 하단의 위치/회전 기준점입니다.")]
-    public RectTransform foldAnchor;
-    [Tooltip("카드를 펼칠 때 이동할 화면 중앙 하단의 기준점입니다.")]
-    public RectTransform spreadAnchor;
-    public float foldDuration = 0.5f;
-    public bool isFolded = false;
-    // 현재 접기/펼치기 애니메이션이 진행 중인지 확인하는 변수
-    private bool _isAnimatingFold = false;
-    // 손패가 접혔을 때 카드의 크기 비율 (1.0 = 원래 크기, 0.7 = 70% 크기)
-    public float foldScaleMultiplier = 0.7f;
-
-    [Header("카드 호버(Hover) 효과")]
-    [Tooltip("마우스를 올렸을 때 카드가 튀어 오르는 UI 좌표상의 이동 값입니다. (2D이므로 Z축 대신 Y축 픽셀 값을 100~200 정도로 크게 줍니다)")]
-    public Vector2 hoverOffset = new Vector2(0, 150f);
-    [Tooltip("마우스를 올렸을 때 커지는 배율입니다.")]
-    public float hoverScaleMultiplier = 1.2f;
-    public float hoverAnimDuration = 0.2f;
-
-    [Header("잔상 카드 설정")]
-    [Tooltip("카드를 드래그할 때 손패에 원래 있던 자리를 표시해 주는 반투명 카드 프리팹입니다.")]
-    public GameObject phantomCardPrefab;
-    private GameObject _activePhantomCard;
-
-    // --- 내부 변수들 ---
-    [Tooltip("현재 손패에 쥐고 있는 실제 카드들의 리스트입니다.")]
-    public List<GameObject> handCards = new List<GameObject>();
-
-    // 카드의 목표 위치와 회전값을 기억해 두는 사전(Dictionary)입니다. 
-    // 호버링이 끝났을 때 이 값을 참고하여 원래 자리로 돌아갑니다.
-    private Dictionary<GameObject, (Vector2 position, Quaternion rotation)> _cardLayoutTargets = new Dictionary<GameObject, (Vector2, Quaternion)>();
-
-    private GameObject _currentlyHoveredCard = null; // 현재 마우스가 올라가 있는 카드
-    private GameObject _currentlyDraggedCard = null; // 현재 마우스로 잡고 드래그 중인 카드
-
-    private Vector3 _originalCardScale = Vector3.one; // 처음 생성된 카드의 기본 크기 저장
-    private bool _isCardScaleSet = false;
-    private bool _isHandStable = true; // 현재 손패 정렬 애니메이션이 끝나고 안정된 상태인지 확인
-
-    // 외부 스크립트에서 참조하기 위한 읽기 전용 속성
-    public Vector3 OriginalCardScale => _originalCardScale;
-    public bool IsHandStable => _isHandStable;
+    // --- 최적화: 매 프레임 레이캐스트 GC 할당 방지용 재사용 버퍼 ---
+    private Camera _mainCamera;
+    private readonly List<GameObject> _hoverCandidates = new List<GameObject>(16);
+    private readonly List<RaycastResult> _hoverRaycastResults = new List<RaycastResult>(16);
+    private readonly RaycastHit[] _hoverRaycastHits = new RaycastHit[16];
+    private PointerEventData _hoverPointerData;
 
     private void Awake()
     {
-        // 싱글톤 패턴 적용 (어디서든 접근 가능하도록)
-        if (instance != null && instance != this) Destroy(gameObject);
-        else instance = this;
-    }
-
-    void Start()
-    {
-        if(GameClient.Instance != null)
-            isMulliganPhase = true;
-
-        temporaryBaseCardSpacingAngle = baseCardSpacingAngle; // 시작 시 원래 각도 기억
-    }
-
-    void Update()
-    {
-        // (테스트용) R키를 누르면 손패 맨 끝 카드를 버림 / F키를 누르면 손패를 접음
-        if (Input.GetKeyDown(KeyCode.R) && handCards.Count > 0) RemoveLastCardFromHand();
-        if (Input.GetKeyDown(KeyCode.F)) ToggleHandFold();
-    }
-
-    // ==========================================================
-    // 손패 접기 / 펼치기 기능
-    // ==========================================================
-    public void ToggleHandFold()
-    {
-        if (_isAnimatingFold) return;
-        if (CardDragManager.instance.IsWaitingForTarget) return;
-
-        if (!isFolded)
+        if (instance != null && instance != this)
         {
-            isFolded = true;
-            FoldHand();
-        }
-        else
-        {
-            SpreadHand();
-        }
-    }
-
-    public void FoldHand()
-    {
-        _isAnimatingFold = true;
-
-        temporaryBaseCardSpacingAngle = baseCardSpacingAngle;
-
-        baseCardSpacingAngle = baseCardSpacingAngle / 2; // 카드를 겹치기 위해 간격 축소
-        Sequence spreadSeq = DOTween.Sequence();
-
-        // [수정됨] DOAnchorPos -> DOMove, anchoredPosition -> position 으로 변경
-        // 앵커 기준점이 달라도 정확한 목표 지점의 화면 좌표로 이동합니다.
-        spreadSeq.Append(handAnchor.DOMove(foldAnchor.position, foldDuration).SetEase(Ease.OutQuart));
-        spreadSeq.Join(handAnchor.DORotateQuaternion(foldAnchor.rotation, foldDuration).SetEase(Ease.OutQuart));
-
-        ClearHover();
-        AlignHand();
-
-        spreadSeq.OnComplete(() =>
-        {
-            _isAnimatingFold = false;
-         });
-    }
-
-    private void SpreadHand()
-    {
-        isFolded = false;
-        _isAnimatingFold = true;
-
-        baseCardSpacingAngle = temporaryBaseCardSpacingAngle; // 간격 원래대로 복구
-        Sequence spreadSeq = DOTween.Sequence();
-
-        // [수정됨] 펼칠 때도 월드 좌표(position)와 회전(rotation)을 사용합니다.
-        spreadSeq.Append(handAnchor.DOMove(spreadAnchor.position, foldDuration).SetEase(Ease.OutQuart));
-        spreadSeq.Join(handAnchor.DORotateQuaternion(spreadAnchor.rotation, foldDuration).SetEase(Ease.OutQuart));
-        AlignHand();
-        spreadSeq.OnComplete(() => {
-            _isAnimatingFold = false;
-        });
-    }
-
-    /// <summary>
-    /// [GameInputManager가 호출] 멀리건 단계에서 특정 카드가 클릭되었을 때 실행됩니다.
-    /// </summary>
-    public void OnMulliganCardClicked(GameObject clickedCard)
-    {
-        // 1. 멀리건 페이즈가 아니면 무시
-        if (!isMulliganPhase) return;
-
-        // 2. 내 손패에 있거나, '이미 멀리건 대상으로 선택된' 카드라면 멀리건 매니저에게 알림
-        bool isHandCard = handCards.Contains(clickedCard);
-        bool isSelectedCard = mulliganManager._selectedCards.Contains(clickedCard);
-
-        if (isHandCard || isSelectedCard)
-        {
-            mulliganManager.OnCardClicked(clickedCard);
-        }
-    }
-
-    // ==========================================================
-    // UI 호버링 (마우스 올리기) 처리 
-    // ==========================================================
-    public void ProcessHover(Vector2 mousePosition)
-    {
-        // 멀리건 중이거나 카드를 집어 든 상태, 혹은 애니메이션 중이면 호버 반응을 무시합니다.
-        if (isMulliganPhase || _currentlyDraggedCard != null || !_isHandStable)
-        {
-            ClearHover();
+            Destroy(gameObject);
             return;
         }
+        instance = this;
+        _mainCamera = Camera.main;
+    }
 
-        // 마우스가 화면 높이의 40% 위로 넘어가면(필드 쪽으로 가면) 즉시 호버를 풉니다.
-        float handZoneLimit = 0.4f;
-        if (mousePosition.y / Screen.height > handZoneLimit)
+    private void Update()
+    {
+        // 테스트 모드일 때만 F/R 단축키 동작
+        if (isTestMode)
         {
-            ClearHover();
-            return;
-        }
-
-        // [중요] 2D UI 이벤트 시스템 레이캐스트
-        // 카메라에서 광선을 쏘는 3D Physics.Raycast 대신, 
-        // 캔버스 내 마우스 위치에 존재하는 모든 UI 요소를 찾아내는 EventSystem을 활용합니다.
-        PointerEventData pointerData = new PointerEventData(EventSystem.current) { position = mousePosition };
-        List<RaycastResult> results = new List<RaycastResult>();
-        EventSystem.current.RaycastAll(pointerData, results);
-
-        GameObject hitCard = null;
-        foreach (var hit in results)
-        {
-            // UI에 맞은 요소 중 최상위 카드 스크립트(GameCardDisplay)를 찾습니다.
-            GameCardDisplay cardDisplay = hit.gameObject.GetComponentInParent<GameCardDisplay>();
-
-            // 그 카드가 현재 손패 리스트에 들어있는 카드라면 타겟으로 확정
-            if (cardDisplay != null && handCards.Contains(cardDisplay.gameObject))
+            // F키: 가장 먼저 드로우한 카드(0번 맨 왼쪽) 버리기
+            if (Input.GetKeyDown(KeyCode.F))
             {
-                hitCard = cardDisplay.gameObject;
-                break;
+                RemoveFirstCardFromHand();
+            }
+
+            // R키: 랜덤한 카드 1장 버리기
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                RemoveRandomCardFromHand();
+            }
+
+            // U키: 손패 첫 번째 카드의 비용 1 감소 및 스탯 증가 (UPDATE_HAND_CARDS 버프 테스트)
+            if (Input.GetKeyDown(KeyCode.U))
+            {
+                TestBuffHandCard();
             }
         }
 
-        // 새로운 카드에 마우스가 올라간 경우
+        // 접기/펼치기 단축키 토글 (기본: Tab)
+        if (Input.GetKeyDown(foldToggleKey))
+        {
+            ToggleHandFold();
+        }
+    }
+
+    /// <summary>
+    /// 인스펙터에서 값을 변경할 때마다 인게임에 즉시 반영
+    /// </summary>
+    private void OnValidate()
+    {
+        if (Application.isPlaying && handCards != null && handCards.Count > 0)
+        {
+            UpdateHandLayout(immediate: true);
+        }
+    }
+
+    // ==========================================================
+    // 카드 추가 / 삭제 및 단축키 기능 (F / R)
+    // ==========================================================
+
+    /// <summary>
+    /// F키 동작: 가장 먼저 들어온 카드(0번)를 손패에서 버립니다.
+    /// </summary>
+    public void RemoveFirstCardFromHand()
+    {
+        if (handCards == null || handCards.Count == 0) return;
+        Debug.Log("[HandCardControllManager] F키 입력: 가장 먼저 드로우한 카드 버림");
+        RemoveCardFromHand(handCards[0]);
+    }
+
+    /// <summary>
+    /// R키 동작: 손패 중 무작위 1장을 선택해 버립니다.
+    /// </summary>
+    public void RemoveRandomCardFromHand()
+    {
+        if (handCards == null || handCards.Count == 0) return;
+        int randomIndex = Random.Range(0, handCards.Count);
+        Debug.Log($"[HandCardControllManager] R키 입력: 랜덤 카드 버림 (인덱스 {randomIndex})");
+        RemoveCardFromHand(handCards[randomIndex]);
+    }
+
+    /// <summary>
+    /// 드로우된 새 카드를 손패로 추가하고 정렬합니다.
+    /// </summary>
+    public void AddCardToHand(GameObject newCardObject)
+    {
+        if (newCardObject == null) return;
+
+        if (!_isCardScaleSet)
+        {
+            if (CardDrawManager.Instance != null && CardDrawManager.Instance.cardPrefab != null)
+                _originalCardScale = CardDrawManager.Instance.cardPrefab.transform.localScale;
+            else
+                _originalCardScale = newCardObject.transform.localScale;
+            _isCardScaleSet = true;
+        }
+
+        Transform parentAnchor = handAnchor != null ? handAnchor : transform;
+        newCardObject.transform.SetParent(parentAnchor, true);
+
+        handCards.Add(newCardObject);
+        UpdateHandLayout(immediate: false);
+    }
+
+    public void InsertCardToHand(GameObject cardObject, int index)
+    {
+        if (cardObject == null) return;
+        Transform parentAnchor = handAnchor != null ? handAnchor : transform;
+        cardObject.transform.SetParent(parentAnchor, true);
+
+        int targetIndex = Mathf.Clamp(index, 0, handCards.Count);
+        handCards.Insert(targetIndex, cardObject);
+        UpdateHandLayout(immediate: false);
+    }
+
+    public void RemoveCardFromHand(GameObject card)
+    {
+        if (card == null || !handCards.Contains(card)) return;
+        if (card == _currentlyHoveredCard) _currentlyHoveredCard = null;
+        handCards.Remove(card);
+        _cardRestingTransforms.Remove(card);
+        if (_cardScaleTweens.TryGetValue(card, out var stw) && stw != null) stw.Kill();
+        if (_cardBuffTweens.TryGetValue(card, out var btw) && btw != null) btw.Kill();
+        _cardScaleTweens.Remove(card);
+        _cardBuffTweens.Remove(card);
+        _cardBaseScales.Remove(card);
+        _cardBuffMultipliers.Remove(card);
+        card.transform.DOKill();
+        Destroy(card);
+        UpdateHandLayout(immediate: false);
+    }
+
+    public void RemoveCardFromHandListOnly(GameObject card)
+    {
+        if (!handCards.Contains(card)) return;
+        if (card == _currentlyHoveredCard) _currentlyHoveredCard = null;
+        handCards.Remove(card);
+        _cardRestingTransforms.Remove(card);
+        if (_cardScaleTweens.TryGetValue(card, out var stw) && stw != null) stw.Kill();
+        if (_cardBuffTweens.TryGetValue(card, out var btw) && btw != null) btw.Kill();
+        _cardScaleTweens.Remove(card);
+        _cardBuffTweens.Remove(card);
+        _cardBaseScales.Remove(card);
+        _cardBuffMultipliers.Remove(card);
+        UpdateHandLayout(immediate: false);
+    }
+
+    public void AlignHand() => UpdateHandLayout(immediate: false);
+
+    // ==========================================================
+    // 손패 접기 / 펼치기 (Fold & Spread)
+    // ==========================================================
+
+    /// <summary>
+    /// 손패 접힘/펼침 상태를 토글합니다.
+    /// </summary>
+    public void ToggleHandFold()
+    {
+        if (isFolded) SpreadHand();
+        else FoldHand();
+    }
+
+    /// <summary>
+    /// 손패를 가지런히 접습니다.
+    /// </summary>
+    public void FoldHand()
+    {
+        ClearHover();
+        isFolded = true;
+        UpdateHandLayout(immediate: false, customDuration: foldDuration);
+    }
+
+    /// <summary>
+    /// 손패를 다시 부채꼴로 펼칩니다.
+    /// </summary>
+    public void SpreadHand()
+    {
+        isFolded = false;
+        UpdateHandLayout(immediate: false, customDuration: foldDuration);
+    }
+
+    // ==========================================================
+    // [핵심 1] GameInputManager 연동 호버(Hover) 시스템
+    // ==========================================================
+
+    /// <summary>
+    /// GameInputManager에서 매 프레임 호출되는 마우스 호버 처리 함수
+    /// </summary>
+    public void ProcessHover(Vector2 mousePosition)
+    {
+        // 멀리건 중이거나 드래그 중이거나 손패가 접혀 있으면 호버 해제
+        if (isMulliganPhase || _currentlyDraggedCard != null || isFolded)
+        {
+            ClearHover();
+            return;
+        }
+
+        // 커서가 지정된 높이 비율(기본 화면 하단 35%)을 초과하면 호버 해제 및 신규 호버 차단
+        if ((mousePosition.y / Screen.height) > maxHoverHeightRatio)
+        {
+            ClearHover();
+            return;
+        }
+
+        GameObject hitCard = RaycastForHandCard(mousePosition);
+
+        // 새로운 카드 위로 마우스가 올라간 경우
         if (hitCard != null && hitCard != _currentlyHoveredCard)
         {
-            ClearHover(); // 이전 카드 원상복구
-            AnimateCardHoverEnter(hitCard); // 새 카드 위로 올리기(확대)
+            ClearHover();
             _currentlyHoveredCard = hitCard;
+            AnimateHoverEnter(_currentlyHoveredCard);
         }
-        // 허공으로 마우스가 빠져나간 경우
+        // 마우스가 카드 밖으로 벗어난 경우
         else if (hitCard == null && _currentlyHoveredCard != null)
         {
             ClearHover();
         }
     }
 
-    // 떠오른 카드를 원래 자리로 복구하는 함수
+    /// <summary>
+    /// 마우스 위치에 있는 손패 카드를 uGUI 및 3D Physics Raycast로 감지합니다.
+    /// 카드가 확대되어 여러 장이 마우스 아래에 겹친 경우, 원래 휴식 위치(Resting Position)의 화면 X좌표와 마우스 사이의 거리가 가장 가까운 카드를 선택합니다.
+    /// </summary>
+    private GameObject RaycastForHandCard(Vector2 mousePosition)
+    {
+        _hoverCandidates.Clear();
+
+        // 1. uGUI EventSystem Raycast (캔버스 UI 기반 카드 감지)
+        if (EventSystem.current != null)
+        {
+            if (_hoverPointerData == null)
+            {
+                _hoverPointerData = new PointerEventData(EventSystem.current);
+            }
+            _hoverPointerData.position = mousePosition;
+            _hoverRaycastResults.Clear();
+            EventSystem.current.RaycastAll(_hoverPointerData, _hoverRaycastResults);
+
+            for (int r = 0; r < _hoverRaycastResults.Count; r++)
+            {
+                var hit = _hoverRaycastResults[r];
+                if (hit.gameObject == null) continue;
+                for (int i = 0; i < handCards.Count; i++)
+                {
+                    GameObject card = handCards[i];
+                    if (card != null && (hit.gameObject == card || hit.gameObject.transform.IsChildOf(card.transform)))
+                    {
+                        if (!_hoverCandidates.Contains(card))
+                        {
+                            _hoverCandidates.Add(card);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. 3D Physics Raycast (3D 콜라이더 기반 카드 감지 - NonAlloc 버퍼 재사용)
+        if (_mainCamera == null) _mainCamera = Camera.main;
+        if (_mainCamera != null)
+        {
+            Ray ray = _mainCamera.ScreenPointToRay(mousePosition);
+            int hitCount = Physics.RaycastNonAlloc(ray, _hoverRaycastHits, 100f);
+            for (int h = 0; h < hitCount; h++)
+            {
+                var col = _hoverRaycastHits[h].collider;
+                if (col == null) continue;
+                for (int i = 0; i < handCards.Count; i++)
+                {
+                    GameObject card = handCards[i];
+                    if (card != null && (col.gameObject == card || col.transform.IsChildOf(card.transform)))
+                    {
+                        if (!_hoverCandidates.Contains(card))
+                        {
+                            _hoverCandidates.Add(card);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (_hoverCandidates.Count == 0) return null;
+        if (_hoverCandidates.Count == 1) return _hoverCandidates[0];
+
+        // 3. 카드가 2장 이상 겹친 경우: 원래 휴식 위치의 화면 X 좌표와 마우스 X 사이의 거리가 가장 가까운 카드를 선택
+        GameObject bestCard = _hoverCandidates[0];
+        float minDistance = float.MaxValue;
+        Transform anchor = handAnchor != null ? handAnchor : transform;
+
+        for (int i = 0; i < _hoverCandidates.Count; i++)
+        {
+            GameObject card = _hoverCandidates[i];
+            Vector3 worldPos;
+            if (_cardRestingTransforms.TryGetValue(card, out var resting))
+            {
+                worldPos = anchor.TransformPoint(resting.localPosition);
+            }
+            else
+            {
+                worldPos = card.transform.position;
+            }
+
+            Vector2 screenPos = _mainCamera != null ? (Vector2)_mainCamera.WorldToScreenPoint(worldPos) : (Vector2)worldPos;
+            float distX = Mathf.Abs(mousePosition.x - screenPos.x);
+
+            if (distX < minDistance)
+            {
+                minDistance = distX;
+                bestCard = card;
+            }
+        }
+
+        return bestCard;
+    }
+
+    // ==========================================================
+    // 카드 스케일 및 버프 펀치 애니메이션 통합 관리
+    // ==========================================================
+
+    /// <summary>
+    /// 카드의 최종 로컬 스케일을 (기본 레이아웃 스케일 * 버프 펀치 배율)로 즉시 적용합니다.
+    /// </summary>
+    private void ApplyCardScale(GameObject card)
+    {
+        if (card == null) return;
+
+        if (!_cardBaseScales.TryGetValue(card, out Vector3 baseScale))
+        {
+            baseScale = isFolded ? (_originalCardScale * handScaleMultiplier * foldScaleMultiplier)
+                                 : (_originalCardScale * handScaleMultiplier);
+            _cardBaseScales[card] = baseScale;
+        }
+
+        float buffMult = _cardBuffMultipliers.TryGetValue(card, out float m) ? m : 1f;
+        card.transform.localScale = baseScale * buffMult;
+    }
+
+    /// <summary>
+    /// 카드의 기준 스케일을 즉시 설정합니다.
+    /// </summary>
+    private void SetCardBaseScale(GameObject card, Vector3 targetScale)
+    {
+        if (card == null) return;
+
+        if (_cardScaleTweens.TryGetValue(card, out var tw) && tw != null && tw.IsActive())
+        {
+            tw.Kill();
+        }
+
+        _cardBaseScales[card] = targetScale;
+        ApplyCardScale(card);
+    }
+
+    /// <summary>
+    /// 카드의 기준 스케일을 duration 동안 부드럽게 전환합니다. (버프 연출 배율과 합성되어 실시간 반영)
+    /// </summary>
+    private void TweenCardBaseScale(GameObject card, Vector3 targetScale, float duration)
+    {
+        if (card == null) return;
+
+        if (_cardScaleTweens.TryGetValue(card, out var tw) && tw != null && tw.IsActive())
+        {
+            tw.Kill();
+        }
+
+        if (!_cardBaseScales.TryGetValue(card, out Vector3 startScale))
+        {
+            float m = _cardBuffMultipliers.TryGetValue(card, out float bm) && bm > 0.001f ? bm : 1f;
+            startScale = card.transform.localScale / m;
+            _cardBaseScales[card] = startScale;
+        }
+
+        Vector3 curScale = startScale;
+        _cardScaleTweens[card] = DOTween.To(
+            () => curScale,
+            x => {
+                curScale = x;
+                _cardBaseScales[card] = x;
+                ApplyCardScale(card);
+            },
+            targetScale,
+            duration
+        ).SetEase(Ease.OutQuad).OnComplete(() => {
+            _cardBaseScales[card] = targetScale;
+            ApplyCardScale(card);
+        });
+    }
+
+    /// <summary>
+    /// 카드 버프 시 튀어오르는 펀치 연출을 실행합니다.
+    /// 손패 접기/펼치기/이동 트윈을 방해하지 않고 독립적인 배율 펀치로 합성되어 동작합니다.
+    /// </summary>
+    public void PlayCardBuffPunch(GameObject card)
+    {
+        if (card == null || card == _currentlyDraggedCard) return;
+
+        if (_cardBuffTweens.TryGetValue(card, out var tw) && tw != null && tw.IsActive())
+        {
+            tw.Kill();
+        }
+
+        Vector3 punchVector = Vector3.zero;
+        _cardBuffMultipliers[card] = 1f;
+
+        _cardBuffTweens[card] = DOTween.Punch(
+            () => punchVector,
+            offset => {
+                punchVector = offset;
+                _cardBuffMultipliers[card] = 1f + offset.x;
+                ApplyCardScale(card);
+            },
+            new Vector3(0.26f, 0.26f, 0.26f),
+            0.45f,
+            4,
+            0.5f
+        ).SetEase(Ease.OutQuad).OnComplete(() => {
+            _cardBuffMultipliers[card] = 1f;
+            ApplyCardScale(card);
+        });
+    }
+
+    /// <summary>
+    /// 카드가 호버될 때 애니메이션: 고정 Z 높이로 상승, 똑바로 직립, 확대
+    /// </summary>
+    public void AnimateHoverEnter(GameObject card)
+    {
+        if (card == null) return;
+
+        Vector3 restingPos = card.transform.localPosition;
+        Vector3 restingScale = card.transform.localScale;
+        if (_cardRestingTransforms.TryGetValue(card, out var resting))
+        {
+            restingPos = resting.localPosition;
+            restingScale = resting.localScale;
+        }
+
+        // [핵심] Y축은 다른 모든 손패보다 맨 위로, Z축은 카드의 원래 위치와 상관없이 동일한 고정 hoverTargetZ로 설정
+        float topY = (handCards.Count * cardDepthOffset) + hoverElevationY;
+        Vector3 hoverPos = new Vector3(restingPos.x, topY, hoverTargetZ);
+
+        // 정면 직립 회전 및 확대 배율 적용
+        Quaternion hoverRotation = Quaternion.Euler(cardBaseRotation.x, 0f, cardBaseRotation.z);
+        Vector3 hoverScale = restingScale * hoverScaleMultiplier;
+
+        // UI 캔버스 상 최상위로 올리기
+        card.transform.SetAsLastSibling();
+
+        card.transform.DOKill();
+        card.transform.DOLocalMove(hoverPos, hoverAnimDuration).SetEase(Ease.OutQuad);
+        card.transform.DOLocalRotateQuaternion(hoverRotation, hoverAnimDuration).SetEase(Ease.OutQuad);
+        TweenCardBaseScale(card, hoverScale, hoverAnimDuration);
+    }
+
+    /// <summary>
+    /// 호버 해제 시 애니메이션: 원래 원 둘레 배치, 부채꼴 기울기, 크기로 복구
+    /// </summary>
+    public void AnimateHoverExit(GameObject card)
+    {
+        if (card == null) return;
+
+        if (_cardRestingTransforms.TryGetValue(card, out var resting))
+        {
+            card.transform.DOKill();
+            card.transform.DOLocalMove(resting.localPosition, hoverAnimDuration).SetEase(Ease.OutQuad);
+            card.transform.DOLocalRotateQuaternion(resting.localRotation, hoverAnimDuration).SetEase(Ease.OutQuad);
+            TweenCardBaseScale(card, resting.localScale, hoverAnimDuration);
+        }
+        else
+        {
+            card.transform.DOKill();
+            Vector3 defaultScale = isFolded ? (_originalCardScale * handScaleMultiplier * foldScaleMultiplier)
+                                            : (_originalCardScale * handScaleMultiplier);
+            TweenCardBaseScale(card, defaultScale, hoverAnimDuration);
+        }
+
+        // 원래 손패 순서 계층으로 복귀
+        int originalIndex = handCards.IndexOf(card);
+        if (originalIndex != -1)
+        {
+            card.transform.SetSiblingIndex(originalIndex);
+        }
+    }
+
+    /// <summary>
+    /// 현재 호버된 카드를 원상 복구하고 호버 상태를 해제합니다.
+    /// </summary>
     public void ClearHover()
     {
         if (_currentlyHoveredCard != null)
         {
-            AnimateCardHoverExit(_currentlyHoveredCard);
+            AnimateHoverExit(_currentlyHoveredCard);
             _currentlyHoveredCard = null;
         }
     }
 
     // ==========================================================
-    // 카드 추가 / 삭제 관리
+    // [핵심 2] 원 둘레 기반 손패 정렬 로직 (호버 상태 유지 지원)
     // ==========================================================
-    public void AddCardToHand(GameObject newCardObject)
+    public void UpdateHandLayout(bool immediate = false, float customDuration = -1f)
     {
-        handArcRadius += radius;
-        if(!isMulligan)
+        int cardCount = handCards.Count;
+        if (cardCount == 0) return;
+
+        float centerIndex = (cardCount - 1) / 2.0f;
+        float duration = (customDuration > 0f) ? customDuration : moveDuration;
+
+        // 접힌 상태일 때는 각도와 크기 축소 적용
+        float effectiveSpacing = isFolded ? (cardSpacingAngle * foldAngleMultiplier) : cardSpacingAngle;
+        Vector3 targetScale = isFolded ? (_originalCardScale * handScaleMultiplier * foldScaleMultiplier)
+                                       : (_originalCardScale * handScaleMultiplier);
+
+        Transform anchor = handAnchor != null ? handAnchor : transform;
+        Vector3 foldOffset = Vector3.zero;
+        if (isFolded && foldAnchor != null)
         {
-            if (isFolded)
+            foldOffset = anchor.InverseTransformPoint(foldAnchor.position);
+        }
+
+        _cardRestingTransforms.Clear();
+
+        for (int i = 0; i < cardCount; i++)
+        {
+            GameObject card = handCards[i];
+            if (card == null) continue;
+
+            float u = i - centerIndex;
+            float angle = u * effectiveSpacing;
+            float rad = angle * Mathf.Deg2Rad;
+
+            // X-Z 원 둘레 좌표 계산
+            float xPos = circleRadius * Mathf.Sin(rad);
+            float zOffset = circleRadius * (1f - Mathf.Cos(rad));
+            float zPos = invertZCurve ? -zOffset : zOffset;
+            float yPos = i * cardDepthOffset; // 좌->우 계단식 쌓임
+
+            Vector3 targetLocalPos = new Vector3(xPos, yPos, zPos) + foldOffset;
+
+            // Y축 부채꼴 회전 계산 (좌측 ↖, 중앙 ↑, 우측 ↗)
+            float yAngle = invertRotation ? angle : -angle;
+            Quaternion targetRotation = Quaternion.Euler(cardBaseRotation.x, yAngle, cardBaseRotation.z);
+            if (isFolded && foldAnchor != null)
             {
-                baseCardSpacingAngle -= spacingAngle / 2;
-                temporaryBaseCardSpacingAngle -= spacingAngle;
+                targetRotation = Quaternion.Inverse(anchor.rotation) * foldAnchor.rotation * targetRotation;
+            }
+
+            // 휴식 상태 트랜스폼 캐싱 (호버 종료 시 복구에 사용)
+            _cardRestingTransforms[card] = new CardRestingTransform
+            {
+                localPosition = targetLocalPos,
+                localRotation = targetRotation,
+                localScale = targetScale
+            };
+
+            // 만약 현재 드래그 중인 카드라면, 손패 레이아웃 이동에서 제외 (마우스 추적 방해 방지)
+            if (card == _currentlyDraggedCard)
+            {
+                continue;
+            }
+
+            // 만약 현재 카드가 호버 중인 카드라면, 고정 Z높이 호버 위치를 유지
+            if (card == _currentlyHoveredCard && !isFolded)
+            {
+                float topY = (cardCount * cardDepthOffset) + hoverElevationY;
+                Vector3 hoverPos = new Vector3(targetLocalPos.x, topY, hoverTargetZ);
+                Quaternion hoverRotation = Quaternion.Euler(cardBaseRotation.x, 0f, cardBaseRotation.z);
+                Vector3 hoverScale = targetScale * hoverScaleMultiplier;
+
+                card.transform.DOKill();
+                if (immediate)
+                {
+                    card.transform.localPosition = hoverPos;
+                    card.transform.localRotation = hoverRotation;
+                    SetCardBaseScale(card, hoverScale);
+                }
+                else
+                {
+                    card.transform.DOLocalMove(hoverPos, duration).SetEase(Ease.OutQuad);
+                    card.transform.DOLocalRotateQuaternion(hoverRotation, duration).SetEase(Ease.OutQuad);
+                    TweenCardBaseScale(card, hoverScale, duration);
+                }
+                card.transform.SetAsLastSibling();
             }
             else
-                baseCardSpacingAngle -= spacingAngle;
+            {
+                card.transform.DOKill();
+                if (immediate)
+                {
+                    card.transform.localPosition = targetLocalPos;
+                    card.transform.localRotation = targetRotation;
+                    SetCardBaseScale(card, targetScale);
+                }
+                else
+                {
+                    card.transform.DOLocalMove(targetLocalPos, duration).SetEase(Ease.OutQuad);
+                    card.transform.DOLocalRotateQuaternion(targetRotation, duration).SetEase(Ease.OutQuad);
+                    TweenCardBaseScale(card, targetScale, duration);
+                }
+            }
         }
+    }
 
-        if (!_isCardScaleSet)
+    // ==========================================================
+    // 씬 뷰 기즈모 (원 둘레 곡선 및 카드 방향, 호버 높이 라인 시각화)
+    // ==========================================================
+    private void OnDrawGizmosSelected()
+    {
+        Transform anchor = handAnchor != null ? handAnchor : transform;
+        Gizmos.color = Color.cyan;
+
+        int previewCount = handCards.Count > 0 ? handCards.Count : 5;
+        float centerIndex = (previewCount - 1) / 2.0f;
+
+        Vector3 prevPos = Vector3.zero;
+        for (int i = 0; i < previewCount; i++)
         {
-            _originalCardScale = newCardObject.transform.localScale;
-            _isCardScaleSet = true;
+            float u = i - centerIndex;
+            float angle = u * cardSpacingAngle;
+            float rad = angle * Mathf.Deg2Rad;
+
+            float xPos = circleRadius * Mathf.Sin(rad);
+            float zOffset = circleRadius * (1f - Mathf.Cos(rad));
+            float zPos = invertZCurve ? -zOffset : zOffset;
+            float yPos = i * cardDepthOffset;
+
+            Vector3 localPos = new Vector3(xPos, yPos, zPos);
+            Vector3 worldPos = anchor.TransformPoint(localPos);
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(worldPos, 0.15f);
+
+            // 카드가 바라보는 상단(머리) 방향 레이 (↖ ↑ ↗ 시각화)
+            float yAngle = invertRotation ? angle : -angle;
+            Quaternion rot = anchor.rotation * Quaternion.Euler(cardBaseRotation.x, yAngle, cardBaseRotation.z);
+            Vector3 cardUpDir = rot * Vector3.forward;
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawRay(worldPos, cardUpDir * 0.5f);
+
+            Gizmos.color = Color.cyan;
+            if (i > 0)
+            {
+                Gizmos.DrawLine(prevPos, worldPos);
+            }
+            prevPos = worldPos;
+
+            // 호버 시 도달할 고정 Z 높이 라인 기즈모 (마젠타색 구체)
+            Vector3 hoverLocalPos = new Vector3(xPos, (previewCount * cardDepthOffset) + hoverElevationY, hoverTargetZ);
+            Vector3 hoverWorldPos = anchor.TransformPoint(hoverLocalPos);
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireSphere(hoverWorldPos, 0.08f);
         }
-
-        // 카드를 handAnchor의 자식으로 등록 (UI 레이아웃의 일부로 만들기)
-        newCardObject.transform.SetParent(handAnchor, true);
-        handCards.Add(newCardObject);
-
-        // 카드 추가 후 둥근 부채꼴 모양으로 전체 재정렬
-        UpdateHandLayout(newCardObject, newCardTravelDuration);
     }
 
-    // 특정 위치에 카드 추가
-    public void InsertCardToHand(GameObject cardObject, int index)
-    {
-        if (!_isCardScaleSet)
-        {
-            _originalCardScale = cardObject.transform.localScale;
-            _isCardScaleSet = true;
-        }
-
-        // [수정됨] false -> true 로 변경
-        cardObject.transform.SetParent(handAnchor, true);
-
-        int targetIndex = Mathf.Clamp(index, 0, handCards.Count);
-        handCards.Insert(targetIndex, cardObject);
-        UpdateHandLayout(cardObject, newCardTravelDuration);
-    }
-
-
-    // 리스트에서만 삭제
-    public void RemoveCardFromHandListOnly(GameObject card)
-    {
-        if (!handCards.Contains(card)) return;
-        handCards.Remove(card);
-        if (_currentlyHoveredCard == card) _currentlyHoveredCard = null;
-    }
-
-    public void AlignHand() => UpdateHandLayout(null, shuffleDuration);
-
-
-    // 마지막 카드 제거
-    private void RemoveLastCardFromHand()
-    {
-        if (handCards.Count == 0) return;
-        RemoveCardFromHand(handCards[handCards.Count - 1]);
-    }
-
-
-    // 특정 카드 제거
-    public void RemoveCardFromHand(GameObject cardToRemove)
-    {
-        handArcRadius -= radius;
-        baseCardSpacingAngle += spacingAngle;
-
-        if (cardToRemove == null || !handCards.Contains(cardToRemove)) return;
-        handCards.Remove(cardToRemove);
-        if (cardToRemove == _currentlyHoveredCard) _currentlyHoveredCard = null;
-
-        Destroy(cardToRemove); // 실제 게임오브젝트 파괴
-        UpdateHandLayout();
-    }
-
-    // HandCardControllManager.cs 내부 추가
+    // ==========================================================
+    // 외부 스크립트 호환용 프로퍼티 및 메서드
+    // ==========================================================
     /// <summary>
-    /// 서버로부터 손패 카드 상태 변경 패킷을 받았을 때,
-    /// 일치하는 카드의 스탯(비용, 공격력, 체력 등)을 실시간으로 갱신합니다.
+    /// 서버로부터 손패 카드 상태 변경 패킷(UPDATE_HAND_CARDS)을 받았을 때,
+    /// 일치하는 카드의 스탯(비용, 공격력, 체력 등)을 실시간으로 갱신하고 연출합니다.
     /// </summary>
     public void UpdateHandCards(List<CardInfo> updatedCards)
     {
         if (updatedCards == null || updatedCards.Count == 0) return;
 
-        // 여러 카드가 동시에 갱신될 때를 위해 버프 연출을 재생할 카드들을 모아둡니다.
         List<GameObject> cardsToAnimate = new List<GameObject>();
 
         foreach (var updatedCardInfo in updatedCards)
         {
+            if (updatedCardInfo == null) continue;
+
             // 1. 현재 손패 리스트(handCards)에서 instanceId가 일치하는 카드를 찾습니다.
             GameObject targetCardObj = handCards.Find(card =>
             {
+                if (card == null) return false;
                 var display = card.GetComponent<GameCardDisplay>();
                 return display != null && display.InstanceId == updatedCardInfo.instanceId;
             });
@@ -355,19 +799,30 @@ public class HandCardControllManager : MonoBehaviour
                 var display = targetCardObj.GetComponent<GameCardDisplay>();
                 if (display != null)
                 {
-                    // 이전 비용이나 스탯을 백업하여 "실제 버프"나 변화가 일어났는지 감지할 수 있습니다.
-                    int prevCost = display._cardInfo != null ? display._cardInfo.currentCost : display._cardData.manaCost;
-                    int prevAtk = display._cardInfo != null ? display._cardInfo.currentAttack : display._cardData.attack;
-                    int prevHp = display._cardInfo != null ? display._cardInfo.currentHealth : display._cardData.health;
+                    // 이전 비용이나 스탯을 백업하여 "실제 버프/변화"가 일어났는지 감지
+                    int prevCost = display._cardInfo != null ? display._cardInfo.currentCost : (display._cardData != null ? display._cardData.manaCost : 0);
+                    int prevAtk = display._cardInfo != null ? display._cardInfo.currentAttack : (display._cardData != null ? display._cardData.attack : 0);
+                    int prevHp = display._cardInfo != null ? display._cardInfo.currentHealth : (display._cardData != null ? display._cardData.health : 0);
+                    int prevCustomValue = display._cardInfo != null ? display._cardInfo.customValue : 0;
+                    int prevDynamicDamage = display._cardInfo != null ? display._cardInfo.dynamicDamage : 0;
+                    int prevSpellAmp = display._cardInfo != null ? display._cardInfo.spellAmpBonus : 0;
+                    int prevMinionDmg = display._cardInfo != null ? display._cardInfo.minionDamageBonus : 0;
+                    int prevBuffAtk = display._cardInfo != null ? display._cardInfo.dynamicBuffAttack : 0;
+                    int prevBuffHp = display._cardInfo != null ? display._cardInfo.dynamicBuffHealth : 0;
 
-                    // 2. 최신 스펙 데이터로 UI를 변경합니다 (스탯 색상 변경 포함).
-                    display.Setup(display._cardData, updatedCardInfo);
+                    // 2. 최신 스펙 데이터로 UI를 갱신합니다 (스탯 색상 및 본문 텍스트 포함).
+                    display.UpdateCardStats(updatedCardInfo);
 
-                    // 3. 스탯에 무언가 이로운 변화(비용 감소, 공격력 증가, 체력 증가)가 생겼을 때만 연출 리스트에 담습니다.
-                    // (만약 디버프나 모든 변화에 튀게 하고 싶다면 이 조건문을 없애고 바로 Add 하셔도 됩니다)
+                    // 3. 스탯이나 효과 수치(누적 피해량 등)에 무언가 이로운 변화가 생겼을 때 연출 리스트에 담기
                     bool isBuffed = (updatedCardInfo.currentCost < prevCost) ||
                                    (updatedCardInfo.currentAttack > prevAtk) ||
-                                   (updatedCardInfo.currentHealth > prevHp);
+                                   (updatedCardInfo.currentHealth > prevHp) ||
+                                   (updatedCardInfo.customValue > prevCustomValue) ||
+                                   (updatedCardInfo.dynamicDamage > prevDynamicDamage) ||
+                                   (updatedCardInfo.spellAmpBonus > prevSpellAmp) ||
+                                   (updatedCardInfo.minionDamageBonus > prevMinionDmg) ||
+                                   (updatedCardInfo.dynamicBuffAttack > prevBuffAtk) ||
+                                   (updatedCardInfo.dynamicBuffHealth > prevBuffHp);
 
                     if (isBuffed)
                     {
@@ -377,183 +832,68 @@ public class HandCardControllManager : MonoBehaviour
             }
         }
 
-        // 4. 스탯 변경 사항이 반영되었으므로 먼저 카드를 원래 자리에 맞게 재정렬합니다.
-        AlignHand();
-
-        // 5. 정렬 애니메이션이 실행되는 동시에, 버프 대상 카드들에게 튕김 효과를 적용합니다!
+        // 4. 버프 대상 카드들에게 튀어오르는(PunchScale) 연출 실행 (손패 접기/펼치기 트윈과 합성)
         foreach (var cardObj in cardsToAnimate)
         {
-            // 정렬용 DOScale이 펀치 효과를 삼켜버리지 않도록 0.05초의 미세한 시간차를 두고 쾅 얹어줍니다.
+            if (cardObj == null || cardObj == _currentlyDraggedCard) continue;
+
             DOVirtual.DelayedCall(0.05f, () =>
             {
-                if (cardObj != null)
+                if (cardObj != null && cardObj != _currentlyDraggedCard)
                 {
-                    // DOTween 애니메이션 꼬임 방지
-                    cardObj.transform.DOKill(true); // true 옵션으로 기존 스케일 도달을 끝마치고 시작합니다.
-
-                    // 펀치 애니메이션 가동!
-                    // 펀치력: (X: 1.2배 확대, Y: 1.2배 확대), 시간: 0.5초, 진동수: 1회 (한 번 튕김), 탄성: 0.5
-                    cardObj.transform.DOPunchScale(new Vector3(0.2f, 0.2f, 0), 0.5f, 1, 0.5f)
-                        .SetEase(Ease.OutQuad);
-
-                    Debug.Log($"[UpdateHandCards] {cardObj.name} 카드가 버프를 받아 살짝 통~ 튀었습니다!");
+                    PlayCardBuffPunch(cardObj);
                 }
             });
         }
     }
 
-    // ==========================================================
-    // 호버 애니메이션 연출 (2D 캔버스 맞춤형)
-    // ==========================================================
-    public void AnimateCardHoverEnter(GameObject card)
-    {
-        card.transform.DOKill(); // 진행 중인 애니메이션 즉시 정지
-        RectTransform cardRect = card.GetComponent<RectTransform>();
-
-        // 미리 계산된 원래 부채꼴 좌표(position)에 마우스 오버 픽셀값(hoverOffset)을 더해 위로 띄웁니다.
-        if (_cardLayoutTargets.TryGetValue(card, out var layoutTarget))
-        {
-            Vector2 targetHoverPosition = layoutTarget.position + hoverOffset;
-            cardRect.DOAnchorPos(targetHoverPosition, hoverAnimDuration).SetEase(Ease.OutQuad);
-        }
-
-        // 회전값 0으로 만들기 (기울어진 카드가 똑바로 섭니다)
-        cardRect.DOLocalRotateQuaternion(Quaternion.identity, hoverAnimDuration).SetEase(Ease.OutQuad);
-        cardRect.DOScale(_originalCardScale * hoverScaleMultiplier, hoverAnimDuration).SetEase(Ease.OutQuad);
-
-        // [핵심] Z축(깊이) 대신, UI 계층 구조에서 순서를 맨 끝으로 보내 화면 가장 앞에 보이게 합니다.
-        cardRect.SetAsLastSibling();
-    }
-
-    public void AnimateCardHoverExit(GameObject card)
-    {
-        if (!_cardLayoutTargets.TryGetValue(card, out var layoutTarget))
-        {
-            card.transform.DOScale(_originalCardScale, hoverAnimDuration).SetEase(Ease.OutQuad);
-            return;
-        }
-
-        card.transform.DOKill();
-        RectTransform cardRect = card.GetComponent<RectTransform>();
-
-        // 저장해둔 부채꼴 위치와 회전값으로 복귀
-        cardRect.DOAnchorPos(layoutTarget.position, hoverAnimDuration).SetEase(Ease.OutQuad);
-        cardRect.DOLocalRotateQuaternion(layoutTarget.rotation, hoverAnimDuration).SetEase(Ease.OutQuad);
-        cardRect.DOScale(_originalCardScale, hoverAnimDuration).SetEase(Ease.OutQuad);
-
-        // 손패 내 원래 인덱스를 찾아 겹침 순서(Z-order 역할)를 원상 복구
-        int index = handCards.IndexOf(card);
-        if (index != -1) cardRect.SetSiblingIndex(index);
-    }
-
-    // ==========================================================
-    // [중요] 손패 2D 부채꼴 정렬 수학 로직
-    // ==========================================================
-    private void UpdateHandLayout(GameObject newCard = null, float newCardDuration = 0.3f)
-    {
-        int cardCount = handCards.Count;
-        if (cardCount == 0) return;
-
-        _isHandStable = false;
-        float maxDuration = (newCard != null) ? Mathf.Max(newCardDuration, shuffleDuration) : shuffleDuration;
-        DOVirtual.DelayedCall(maxDuration, () => { _isHandStable = true; });
-
-        for (int i = 0; i < cardCount; i++)
-        {
-            GameObject card = handCards[i];
-
-            // 드래그 중인 카드는 부채꼴 공식에서 제외 (마우스를 따라다녀야 하므로)
-            if (card == _currentlyDraggedCard) continue;
-            // 멀리건으로 선택된 카드라면 손패 정렬(부채꼴) 연산에서 제외!
-            if (mulliganManager != null && mulliganManager._selectedCards.Contains(card))
-                continue;
-
-            Vector3 targetScale = isFolded ? _originalCardScale * foldScaleMultiplier : _originalCardScale;
-
-
-            RectTransform cardRect = card.GetComponent<RectTransform>();
-
-            // 1. Z축 2D 회전 각도 계산
-            // 카드 개수에 따라 전체 부채꼴이 몇 도나 벌어질지 구하고, 왼쪽 카드부터 차례대로 각도를 배정합니다.
-            float totalAngle = (cardCount - 1) * baseCardSpacingAngle * handSpreadMultiplier;
-            float startAngle = totalAngle / 2.0f;
-            float angle = startAngle - (i * baseCardSpacingAngle * handSpreadMultiplier);
-
-            Quaternion targetRotation = Quaternion.Euler(0, 0, angle); // 2D UI 회전은 Z축만 사용
-
-            // 2. 삼각함수(Sin, Cos)를 이용한 2D 곡선 좌표 계산
-            // 예전 3D에서는 Quaternion * Vector3.forward 를 썼지만, UI 캔버스에서는 수학 좌표가 필요합니다.
-            // X값: 각도에 따른 좌우 픽셀 이동 (Sin 사용)
-            float xPos = Mathf.Sin(-angle * Mathf.Deg2Rad) * handArcRadius;
-            // Y값: 원형 곡선의 높이차 (Cos 사용, 1을 빼서 중심축이 맨 아래에 있도록 조절)
-            float yPos = (Mathf.Cos(angle * Mathf.Deg2Rad) - 1f) * handArcRadius;
-
-            Vector2 targetPos = new Vector2(xPos, yPos); // 최종 계산된 UI의 앵커(X, Y) 픽셀 좌표
-
-            // 나중에 호버가 끝났을 때 돌아갈 수 있도록 값 기록
-            _cardLayoutTargets[card] = (targetPos, targetRotation);
-
-            // 왼쪽 카드가 가장 밑에, 오른쪽 카드가 가장 위에 쌓이게 정렬
-            cardRect.SetSiblingIndex(i);
-
-            float duration = (card == newCard) ? newCardDuration : shuffleDuration;
-            Ease easeType = (card == newCard) ? Ease.InOutSine : Ease.OutQuad;
-
-            // 지금 호버 중인 카드라면 원래 자리로 가지 않고, 호버된 위치(위로 튀어나온 상태)를 갱신
-            if (card == _currentlyHoveredCard)
-            {
-                cardRect.DOAnchorPos(targetPos + hoverOffset, duration).SetEase(easeType);
-                cardRect.DOLocalRotateQuaternion(Quaternion.identity, duration).SetEase(easeType);
-                cardRect.DOScale(_originalCardScale * hoverScaleMultiplier, duration).SetEase(easeType);
-                cardRect.SetAsLastSibling();
-                continue;
-            }
-
-            // 일반 카드들은 계산된 부채꼴 곡선 좌표로 부드럽게 이동 (DOMove 대신 2D 전용인 DOAnchorPos 사용)
-            cardRect.DOAnchorPos(targetPos, duration).SetEase(easeType);
-            cardRect.DOLocalRotateQuaternion(targetRotation, duration).SetEase(easeType);
-            cardRect.DOScale(targetScale, duration).SetEase(easeType);
-        }
-    }
-
     /// <summary>
-    /// 드래그 중인 카드를 설정합니다. 드래그 중인 카드는 손패 정렬에서 빠집니다.
+    /// 로컬 테스트용: 손패 첫 번째 카드의 스탯 및 효과 텍스트 수치를 변경하여 UpdateHandCards 동작을 확인합니다.
     /// </summary>
+    private void TestBuffHandCard()
+    {
+        if (handCards == null || handCards.Count == 0) return;
+        for (int i = 0; i < handCards.Count; i++)
+        {
+            var display = handCards[i]?.GetComponent<GameCardDisplay>();
+            if (display != null && display._cardInfo != null)
+            {
+                int nextCustomValue = display._cardInfo.customValue + 1;
+                int nextDynamicDamage = display._cardInfo.dynamicDamage > 0 ? display._cardInfo.dynamicDamage + 1 : nextCustomValue;
+
+                var updated = new CardInfo
+                {
+                    cardId = display._cardInfo.cardId,
+                    instanceId = display._cardInfo.instanceId,
+                    currentCost = Mathf.Max(0, display._cardInfo.currentCost - 1),
+                    currentAttack = display._cardInfo.currentAttack + 1,
+                    currentHealth = display._cardInfo.currentHealth + 1,
+                    customValue = nextCustomValue,
+                    dynamicDamage = nextDynamicDamage
+                };
+                Debug.Log($"[TestBuffHandCard] {display.gameObject.name} 카드 버프 테스트: 비용 {display._cardInfo.currentCost}->{updated.currentCost}, 공격력 {display._cardInfo.currentAttack}->{updated.currentAttack}, 누적효과수치 {display._cardInfo.customValue}->{updated.customValue}");
+                UpdateHandCards(new List<CardInfo> { updated });
+                break;
+            }
+        }
+    }
+    public void OnMulliganCardClicked(GameObject cardRoot)
+    {
+        if (GameMulliganManager.instance != null)
+        {
+            GameMulliganManager.instance.OnCardClicked(cardRoot);
+        }
+    }
     public void SetDraggedCard(GameObject card)
     {
         _currentlyDraggedCard = card;
-        if (card != null) _currentlyHoveredCard = null; // 드래그 시작하면 호버 해제
+        if (card != null)
+        {
+            ClearHover();
+            if (_cardBuffTweens.TryGetValue(card, out var btw) && btw != null) btw.Kill();
+            _cardBuffMultipliers[card] = 1f;
+        }
     }
-
-    // ==========================================================
-    // 잔상 카드 관리 (드래그 할 때 원래 위치 표시)
-    // ==========================================================
-    public void CreatePhantomCard(GameObject originalCard)
-    {
-        if (phantomCardPrefab == null) return;
-        int index = handCards.IndexOf(originalCard);
-        if (index == -1) return;
-
-        // UI 캔버스 기반으로 Instantiate
-        _activePhantomCard = Instantiate(phantomCardPrefab, handAnchor);
-        RectTransform originalRect = originalCard.GetComponent<RectTransform>();
-        RectTransform phantomRect = _activePhantomCard.GetComponent<RectTransform>();
-
-        // 원래 카드의 UI 앵커 좌표와 회전을 그대로 복사
-        phantomRect.anchoredPosition = originalRect.anchoredPosition;
-        phantomRect.localRotation = originalRect.localRotation;
-
-        phantomRect.SetSiblingIndex(index); // 원래 카드가 있던 뎁스(순서) 위치로 삽입
-    }
-
-    public void RemovePhantomCard(GameObject originalCard)
-    {
-        if (_activePhantomCard == null) return;
-        Destroy(_activePhantomCard); // 잔상(Phantom)만 지우고 실제 카드는 파괴하지 않습니다!
-        _activePhantomCard = null;
-
-        // 카드를 파괴하는 대신 투명하게 만들거나, 드래그 상태가 끝났으므로 
-        // 서버 응답 대기 상태(Waiting)를 시각적으로 처리할 수 있도록 둡니다.
-        AlignHand();
-    }
+    public void CreatePhantomCard(GameObject originalCard) {}
+    public void RemovePhantomCard(GameObject originalCard) {}
 }

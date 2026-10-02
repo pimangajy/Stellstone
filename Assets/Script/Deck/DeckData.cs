@@ -3,51 +3,68 @@ using System.Collections.Generic;
 using Firebase.Firestore;
 
 /// <summary>
-/// ÇÏ³ªÀÇ 'µ¦' Á¤º¸¸¦ ´ã´Â °¡¹æ(Data Class)ÀÔ´Ï´Ù.
-/// ÀÌ Å¬·¡½º´Â ÀúÀå(Save)°ú ·Îµå(Load)¸¦ À§ÇØ »ç¿ëµË´Ï´Ù.
+/// í•˜ë‚˜ì˜ 'ë±' ì •ë³´ë¥¼ ë‹´ëŠ” ê°€ë°©(Data Class)ì…ë‹ˆë‹¤.
+/// ì´ í´ë˜ìŠ¤ëŠ” ì €ì¥(Save)ê³¼ ë¡œë“œ(Load)ë¥¼ ìœ„í•´ ì‚¬ìš©ë©ë‹ˆë‹¤.
 /// </summary>
 
-// [System.Serializable]: À¯´ÏÆ¼°¡ ÀÌ Å¬·¡½ºÀÇ ³»¿ëÀ» ÆÄÀÏ·Î ÀúÀåÇÏ°Å³ª(JSON), ÀÎ½ºÆåÅÍ Ã¢¿¡¼­ º¸¿©ÁÙ ¼ö ÀÖ°Ô ÇÕ´Ï´Ù.
+// [System.Serializable]: ìœ ë‹ˆí‹°ê°€ ì´ í´ë˜ìŠ¤ì˜ ë‚´ìš©ì„ íŒŒì¼ë¡œ ì €ì¥í•˜ê±°ë‚˜(JSON), ì¸ìŠ¤í™í„° ì°½ì—ì„œ ë³´ì—¬ì¤„ ìˆ˜ ìˆê²Œ í•©ë‹ˆë‹¤.
 [System.Serializable]
 public class DeckData
 {
-    // µ¦ÀÇ °íÀ¯ ID (ÁÖ¹Îµî·Ï¹øÈ£). Firebase ¹®¼­ ÀÌ¸§À¸·Îµµ ¾²ÀÔ´Ï´Ù.
-    // public ÇÊµå·Î ¼±¾ğÇØ¾ß JsonUtility°¡ µ¥ÀÌÅÍ¸¦ ÀĞ°í ¾µ ¼ö ÀÖ½À´Ï´Ù.
+    // ë±ì˜ ê³ ìœ  ID (ì£¼ë¯¼ë“±ë¡ë²ˆí˜¸). Firebase ë¬¸ì„œ ì´ë¦„ìœ¼ë¡œë„ ì“°ì…ë‹ˆë‹¤.
+    // public í•„ë“œë¡œ ì„ ì–¸í•´ì•¼ JsonUtilityê°€ ë°ì´í„°ë¥¼ ì½ê³  ì“¸ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
     public string deckId;
 
-    // À¯Àú°¡ ÁöÀº µ¦ ÀÌ¸§ (¿¹: "ÃµÇÏ¹«Àû ¸¶¹ı»ç")
+    // ìœ ì €ê°€ ì§€ì€ ë± ì´ë¦„ (ì˜ˆ: "ì²œí•˜ë¬´ì  ë§ˆë²•ì‚¬")
     public string deckName;
 
-    // µ¦ÀÇ Á÷¾÷ (¿¹: "Mage", "Warrior")
+    // ë±ì˜ ì§ì—… (ì˜ˆ: "Mage", "Warrior")
     public string deckClass;
 
-    // µ¦¿¡ Æ÷ÇÔµÈ Ä«µåµéÀÇ ID ¸®½ºÆ® (¿¹: ["card_001", "card_005", ...])
-    // ½ÇÁ¦ Ä«µå °´Ã¼ ÀüÃ¼¸¦ ÀúÀåÇÏ¸é ¿ë·®ÀÌ ³Ê¹« Ä¿Áö¹Ç·Î ID¸¸ ÀúÀåÇÕ´Ï´Ù.
+    // ë±ì— ì¥ì°©ëœ ë¦¬ë” ìŠ¤í‚¨ ID (ProductDataì˜ productId ë˜ëŠ” ê¸°ë³¸ ìŠ¤í‚¨ ID)
+    public string leaderSkinId;
+
+    // ë±ì— í¬í•¨ëœ ì¹´ë“œë“¤ì˜ ID ë¦¬ìŠ¤íŠ¸ (ì˜ˆ: ["card_001", "card_005", ...])
+    // ì‹¤ì œ ì¹´ë“œ ê°ì²´ ì „ì²´ë¥¼ ì €ì¥í•˜ë©´ ìš©ëŸ‰ì´ ë„ˆë¬´ ì»¤ì§€ë¯€ë¡œ IDë§Œ ì €ì¥í•©ë‹ˆë‹¤.
     public List<string> cardIds;
 
-    public List<string> sideDeckCardIds = new List<string>(); // »çÀÌµå µ¦ Ä«µå (5Àå)
-    public List<string> sideDeckFirstTurnCardIds; // ¼±°ø ½Ã »ç¿ëÇÒ »çÀÌµå µ¦ Ä«µå (3Àå)
+    public List<string> sideDeckCardIds = new List<string>(); // ì‚¬ì´ë“œ ë± ì¹´ë“œ (5ì¥)
+    public List<string> sideDeckFirstTurnCardIds; // ì„ ê³µ ì‹œ ì‚¬ìš©í•  ì‚¬ì´ë“œ ë± ì¹´ë“œ (3ì¥)
 
-    // ±âº» »ı¼ºÀÚ: new DeckData() ÇÒ ¶§ È£ÃâµÊ
+    // ê¸°ë³¸ ìƒì„±ì: new DeckData() í•  ë•Œ í˜¸ì¶œë¨
     public DeckData()
     {
-        // º¯¼öµéÀ» ºó °ªÀ¸·Î ÃÊ±âÈ­ÇØÁİ´Ï´Ù. ¾È ±×·¯¸é ¿¡·¯ ³¯ ¼ö ÀÖ¾î¿ä.
+        // ë³€ìˆ˜ë“¤ì„ ë¹ˆ ê°’ìœ¼ë¡œ ì´ˆê¸°í™”í•´ì¤ë‹ˆë‹¤. ì•ˆ ê·¸ëŸ¬ë©´ ì—ëŸ¬ ë‚  ìˆ˜ ìˆì–´ìš”.
         deckId = "";
         deckName = "";
         deckClass = "";
+        leaderSkinId = "";
         cardIds = new List<string>();
         sideDeckCardIds = new List<string>();
         sideDeckFirstTurnCardIds = new List<string>();
     }
 
-    // ÆíÀÇ¿ë »ı¼ºÀÚ: µ¦À» ¸¸µé ¶§ °ªÀ» ¹Ù·Î ³ÖÀ¸¸é¼­ »ı¼ºÇÒ ¼ö ÀÖ°Ô ÇØÁİ´Ï´Ù.
+    // í¸ì˜ìš© ìƒì„±ì: ë±ì„ ë§Œë“¤ ë•Œ ê°’ì„ ë°”ë¡œ ë„£ìœ¼ë©´ì„œ ìƒì„±í•  ìˆ˜ ìˆê²Œ í•´ì¤ë‹ˆë‹¤.
     public DeckData(string id, string name, string className)
     {
         deckId = id;
         deckName = name;
         deckClass = className;
-        cardIds = new List<string>(); // Ä«µå´Â Ã³À½¿¡ ¾øÀ¸´Ï±î ºó ¸®½ºÆ®
+        leaderSkinId = "";
+        cardIds = new List<string>(); // ì¹´ë“œëŠ” ì²˜ìŒì— ì—†ìœ¼ë‹ˆê¹Œ ë¹ˆ ë¦¬ìŠ¤íŠ¸
         sideDeckCardIds = new List<string>();
         sideDeckFirstTurnCardIds = new List<string>();
+    }
+
+    /// <summary>
+    /// ì¥ì°©ëœ ìŠ¤í‚¨ IDë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤. ë¹„ì–´ìˆëŠ” ê²½ìš° ì§ì—…ì˜ ê¸°ë³¸ ìŠ¤í‚¨ IDë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
+    /// </summary>
+    public string GetEquippedSkinId()
+    {
+        if (!string.IsNullOrEmpty(leaderSkinId))
+        {
+            return leaderSkinId;
+        }
+        return !string.IsNullOrEmpty(deckClass) ? $"Skin_{deckClass}_Default" : "Skin_Common_Default";
     }
 }

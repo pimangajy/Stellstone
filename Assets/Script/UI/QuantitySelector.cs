@@ -62,6 +62,43 @@ public class QuantitySelector : MonoBehaviour
     }
 
     /// <summary>
+    /// 서버의 구매 가능 수량과 가격을 기반으로 수량 범위를 설정합니다.
+    /// </summary>
+    /// <param name="remainingLimit">남은 구매 가능 수량 (-1: 무제한, 0: 품절/구매완료, 1 이상: 한정 수량)</param>
+    /// <param name="price">상품 단가</param>
+    public void SetLimits(int remainingLimit, int price)
+    {
+        itemPrice = price;
+
+        if (remainingLimit == 0) // 품절 / 이미 구매 완료
+        {
+            minQuantity = 0;
+            maxQuantity = 0;
+            currentQuantity = 0;
+        }
+        else if (remainingLimit < 0) // 무제한 (-1)
+        {
+            minQuantity = 1;
+            maxQuantity = 99;
+            currentQuantity = 1;
+        }
+        else // 구매 제한 상품 (1 ~ remainingLimit)
+        {
+            minQuantity = 1;
+            maxQuantity = remainingLimit;
+            currentQuantity = 1;
+        }
+
+        // 수량 변경 가능 여부에 따라 버튼 및 인풋 필드 활성/비활성화
+        bool canChangeQty = maxQuantity > minQuantity;
+        if (increaseButton != null) increaseButton.interactable = canChangeQty;
+        if (decreaseButton != null) decreaseButton.interactable = canChangeQty;
+        if (quantityInput != null) quantityInput.interactable = canChangeQty;
+
+        UpdateQuantity(currentQuantity);
+    }
+
+    /// <summary>
     /// 수량을 업데이트하고 유효성을 검사하며 UI를 갱신합니다.
     /// </summary>
     public void UpdateQuantity(int newQuantity)

@@ -4,66 +4,91 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// È­¸é ¿ŞÂÊÀÇ 'ÀúÀåµÈ µ¦ ¸ñ·Ï'À» °ü¸®ÇÏ´Â ¸Å´ÏÀúÀÔ´Ï´Ù.
-/// µ¦ÀÌ Ãß°¡µÇ°Å³ª »èÁ¦µÇ¸é ¸ñ·ÏÀ» »õ·Î°íÄ§ÇØ¼­ º¸¿©Áİ´Ï´Ù.
+/// í™”ë©´ ì™¼ìª½ì˜ 'ì €ì¥ëœ ë± ëª©ë¡'ì„ ê´€ë¦¬í•˜ëŠ” ë§¤ë‹ˆì €ì…ë‹ˆë‹¤.
+/// ë±ì´ ì¶”ê°€ë˜ê±°ë‚˜ ì‚­ì œë˜ë©´ ëª©ë¡ì„ ìƒˆë¡œê³ ì¹¨í•´ì„œ ë³´ì—¬ì¤ë‹ˆë‹¤.
 /// </summary>
 public class DeckListUI : MonoBehaviour
 {
-    [Header("UI ¿¬°á")]
-    [SerializeField] private GameObject deckButtonPrefab; // µ¦ ¹öÆ° ÇÁ¸®ÆÕ (º¹Á¦ÇÒ ¿øº»)
-    [SerializeField] private Transform deckListParent;    // ¹öÆ°µéÀÌ µé¾î°¥ ºÎ¸ğ À§Ä¡
+    [Header("UI ì—°ê²°")]
+    [SerializeField] private GameObject deckButtonPrefab; // ë± ë²„íŠ¼ í”„ë¦¬íŒ¹ (ë³µì œí•  ì›ë³¸)
+    [SerializeField] private Transform deckListParent;    // ë²„íŠ¼ë“¤ì´ ë“¤ì–´ê°ˆ ë¶€ëª¨ ìœ„ì¹˜
 
-    // DeckBuilder ½ºÅ©¸³Æ®¿Í ¿¬°á (µ¦ ¹öÆ°À» ´©¸£¸é DeckBuilder¿¡°Ô ¾Ë·ÁÁà¾ß ÇÏ´Ï±î¿ä)
+    // DeckBuilder ìŠ¤í¬ë¦½íŠ¸ì™€ ì—°ê²° (ë± ë²„íŠ¼ì„ ëˆ„ë¥´ë©´ DeckBuilderì—ê²Œ ì•Œë ¤ì¤˜ì•¼ í•˜ë‹ˆê¹Œìš”)
     [SerializeField] private DeckBuilder deckBuilder;
 
     private void Awake()
     {
-        // "µ¦ Á¤º¸°¡ º¯°æµÆ´Ù"´Â ÀÌº¥Æ®(OnDecksChanged)¿¡ ³» ÇÔ¼ö(UpdateDeckList)¸¦ µî·ÏÇÕ´Ï´Ù.
-        // ÀÌÁ¦ µ¦À» ÀúÀåÇÏ°Å³ª »èÁ¦ÇÏ¸é ÀÚµ¿À¸·Î ¸ñ·ÏÀÌ °»½ÅµË´Ï´Ù.
+        // "ë± ì •ë³´ê°€ ë³€ê²½ëë‹¤"ëŠ” ì´ë²¤íŠ¸(OnDecksChanged)ì— ë‚´ í•¨ìˆ˜(UpdateDeckList)ë¥¼ ë“±ë¡í•©ë‹ˆë‹¤.
+        // ì´ì œ ë±ì„ ì €ì¥í•˜ê±°ë‚˜ ì‚­ì œí•˜ë©´ ìë™ìœ¼ë¡œ ëª©ë¡ì´ ê°±ì‹ ë©ë‹ˆë‹¤.
         DeckSaveManager.OnDecksChanged += UpdateDeckList;
         DeckSaveManager_Firebase.OnDecksChanged += UpdateDeckList;
+        DeckManager.OnDeckNameChanged += HandleDeckNameChanged;
     }
 
     private void OnDisable()
     {
-        // ÀÌº¥Æ® µî·ÏÀ» ÇØÁ¦ÇÕ´Ï´Ù. (¸Å¿ì Áß¿ä: ¾È ÇÏ¸é ¿¡·¯ ¹ß»ı °¡´É)
+        // ì´ë²¤íŠ¸ ë“±ë¡ì„ í•´ì œí•©ë‹ˆë‹¤. (ë§¤ìš° ì¤‘ìš”: ì•ˆ í•˜ë©´ ì—ëŸ¬ ë°œìƒ ê°€ëŠ¥)
         DeckSaveManager.OnDecksChanged -= UpdateDeckList;
         DeckSaveManager_Firebase.OnDecksChanged -= UpdateDeckList;
+        DeckManager.OnDeckNameChanged -= HandleDeckNameChanged;
     }
 
     private void Start()
     {
-        // °ÔÀÓ ½ÃÀÛÇÏÀÚ¸¶ÀÚ µ¦ ¸ñ·ÏÀ» ÇÑ¹ø ±×·ÁÁİ´Ï´Ù.
+        // ê²Œì„ ì‹œì‘í•˜ìë§ˆì ë± ëª©ë¡ì„ í•œë²ˆ ê·¸ë ¤ì¤ë‹ˆë‹¤.
         UpdateDeckList();
     }
 
     /// <summary>
-    /// ÀúÀåµÈ µ¦ ¸®½ºÆ®¸¦ °¡Á®¿Í¼­ UI ¹öÆ°µéÀ» ´Ù½Ã ¸¸µì´Ï´Ù.
+    /// ì €ì¥ëœ ë± ë¦¬ìŠ¤íŠ¸ë¥¼ ê°€ì ¸ì™€ì„œ UI ë²„íŠ¼ë“¤ì„ ë‹¤ì‹œ ë§Œë“­ë‹ˆë‹¤.
     /// </summary>
     private void UpdateDeckList()
     {
-        // 1. Ã»¼Ò: ±âÁ¸¿¡ ÀÖ´ø ¹öÆ°µéÀ» ½Ï Áö¿ó´Ï´Ù.
+        // 1. ì²­ì†Œ: ê¸°ì¡´ì— ìˆë˜ ë²„íŠ¼ë“¤ì„ ì‹¹ ì§€ì›ë‹ˆë‹¤.
         foreach (Transform child in deckListParent)
         {
-            // "DeckPlus"¶ó´Â ÀÌ¸§ÀÇ ¹öÆ°(»õ µ¦ ¸¸µé±â ¹öÆ°)Àº Áö¿ìÁö ¾Ê°í ³²°ÜµÓ´Ï´Ù.
+            // "DeckPlus"ë¼ëŠ” ì´ë¦„ì˜ ë²„íŠ¼(ìƒˆ ë± ë§Œë“¤ê¸° ë²„íŠ¼)ì€ ì§€ìš°ì§€ ì•Šê³  ë‚¨ê²¨ë‘¡ë‹ˆë‹¤.
             if (child.gameObject.name != "DeckPlus")
             {
                 Destroy(child.gameObject);
             }
         }
 
-        // 2. µ¥ÀÌÅÍ °¡Á®¿À±â: ÀúÀå ¸Å´ÏÀú¿¡°Ô "¸ğµç µ¦ ³»³ö"¶ó°í ÇÕ´Ï´Ù.
+        // 2. ë°ì´í„° ê°€ì ¸ì˜¤ê¸°: ì €ì¥ ë§¤ë‹ˆì €ì—ê²Œ "ëª¨ë“  ë± ë‚´ë†”"ë¼ê³  í•©ë‹ˆë‹¤.
         List<DeckData> allDecks = DeckSaveManager_Firebase.instance.GetAllDecks();
 
-        // 3. »ı¼º: µ¦ °³¼ö¸¸Å­ ¹öÆ°À» ¸¸µì´Ï´Ù.
+        // 3. ìƒì„±: ë± ê°œìˆ˜ë§Œí¼ ë²„íŠ¼ì„ ë§Œë“­ë‹ˆë‹¤.
         foreach (DeckData deck in allDecks)
         {
-            // ¹öÆ° ÇÁ¸®ÆÕ º¹Á¦
+            // ë²„íŠ¼ í”„ë¦¬íŒ¹ ë³µì œ
             GameObject buttonGO = Instantiate(deckButtonPrefab, deckListParent);
             DeckButton deckButton = buttonGO.GetComponent<DeckButton>();
 
-            // ¹öÆ° ¼³Á¤: ÀÌ ¹öÆ°Àº ¾î¶² µ¦ÀÌ°í, ´©¸£¸é ¹«½¼ ÇÔ¼ö(LoadDeckForEditing)¸¦ ½ÇÇàÇÒÁö ¾Ë·ÁÁİ´Ï´Ù.
+            // ë²„íŠ¼ ì„¤ì •: ì´ ë²„íŠ¼ì€ ì–´ë–¤ ë±ì´ê³ , ëˆ„ë¥´ë©´ ë¬´ìŠ¨ í•¨ìˆ˜(LoadDeckForEditing)ë¥¼ ì‹¤í–‰í• ì§€ ì•Œë ¤ì¤ë‹ˆë‹¤.
             deckButton.Setup(deck, deckBuilder.LoadDeckForEditing);
+        }
+    }
+
+    /// <summary>
+    /// í˜„ì¬ í¸ì§‘ ì¤‘ì¸ ë±ì˜ ì´ë¦„ì´ ë³€ê²½ë˜ì—ˆì„ ë•Œ, ë± ë¦¬ìŠ¤íŠ¸ ë‚´ì˜ í•´ë‹¹ ë± ë²„íŠ¼ í…ìŠ¤íŠ¸ë¥¼ ì¦‰ì‹œ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// </summary>
+    private void HandleDeckNameChanged(DeckData deck, string newName)
+    {
+        if (deck == null || deckListParent == null) return;
+
+        foreach (Transform child in deckListParent)
+        {
+            DeckButton deckButton = child.GetComponent<DeckButton>();
+            if (deckButton != null && deckButton.deckData != null)
+            {
+                // ë± IDê°€ ì¼ì¹˜í•˜ê±°ë‚˜ ê°™ì€ ë± ì¸ìŠ¤í„´ìŠ¤ì¸ ê²½ìš° ì¦‰ì‹œ ë²„íŠ¼ í…ìŠ¤íŠ¸ ê°±ì‹ 
+                if ((!string.IsNullOrEmpty(deck.deckId) && deckButton.deckData.deckId == deck.deckId) ||
+                    deckButton.deckData == deck)
+                {
+                    deckButton.UpdateDeckName(newName);
+                    break;
+                }
+            }
         }
     }
 }

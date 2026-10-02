@@ -1,32 +1,32 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks; // ºñµ¿±â ÀÛ¾÷(¼­¹ö Åë½Å ´ë±â)À» À§ÇØ ÇÊ¼ö
+using System.Threading.Tasks; // ë¹„ë™ê¸° ì‘ì—…(ì„œë²„ í†µì‹  ëŒ€ê¸°)ì„ ìœ„í•´ í•„ìˆ˜
 using Firebase.Firestore;
 using Firebase.Auth;
 using System.Linq;
-using UnityEngine.Networking; // À¥ ¿äÃ»(API È£Ãâ)À» À§ÇØ ÇÊ¿ä
-using System.Text; // ±ÛÀÚ¸¦ ¹ÙÀÌÆ®·Î º¯È¯(Encoding)ÇÒ ¶§ ÇÊ¿ä
+using UnityEngine.Networking; // ì›¹ ìš”ì²­(API í˜¸ì¶œ)ì„ ìœ„í•´ í•„ìš”
+using System.Text; // ê¸€ìë¥¼ ë°”ì´íŠ¸ë¡œ ë³€í™˜(Encoding)í•  ë•Œ í•„ìš”
 
 /// <summary>
-/// ¼­¹ö(Firebase ¹× REST API)¿Í Åë½ÅÇÏ¿© µ¦À» ÀúÀå, ·Îµå, ¼öÁ¤, »èÁ¦ÇÏ´Â ¸Å´ÏÀúÀÔ´Ï´Ù.
-/// ÀÎÅÍ³İÀ» ÅëÇØ µ¥ÀÌÅÍ¸¦ ÁÖ°í¹ŞÀ¸¹Ç·Î ´ëºÎºĞÀÇ ÇÔ¼ö°¡ ºñµ¿±â(async/await)·Î ÀÛµ¿ÇÕ´Ï´Ù.
+/// ì„œë²„(Firebase ë° REST API)ì™€ í†µì‹ í•˜ì—¬ ë±ì„ ì €ì¥, ë¡œë“œ, ìˆ˜ì •, ì‚­ì œí•˜ëŠ” ë§¤ë‹ˆì €ì…ë‹ˆë‹¤.
+/// ì¸í„°ë„·ì„ í†µí•´ ë°ì´í„°ë¥¼ ì£¼ê³ ë°›ìœ¼ë¯€ë¡œ ëŒ€ë¶€ë¶„ì˜ í•¨ìˆ˜ê°€ ë¹„ë™ê¸°(async/await)ë¡œ ì‘ë™í•©ë‹ˆë‹¤.
 /// </summary>
 public class DeckSaveManager_Firebase : MonoBehaviour
 {
     public static DeckSaveManager_Firebase instance;
 
-    // µ¦ ¸ñ·ÏÀÌ ¹Ù²î¾úÀ» ¶§(·Îµå ¿Ï·á, »èÁ¦ µî) ´Ù¸¥ ½ºÅ©¸³Æ®µé¿¡°Ô ¾Ë¸®´Â ÀÌº¥Æ®
+    // ë± ëª©ë¡ì´ ë°”ë€Œì—ˆì„ ë•Œ(ë¡œë“œ ì™„ë£Œ, ì‚­ì œ ë“±) ë‹¤ë¥¸ ìŠ¤í¬ë¦½íŠ¸ë“¤ì—ê²Œ ì•Œë¦¬ëŠ” ì´ë²¤íŠ¸
     public static event Action OnDecksChanged;
 
-    private FirebaseFirestore db; // µ¥ÀÌÅÍº£ÀÌ½º ¿¬°á
-    private FirebaseAuth auth;    // ·Î±×ÀÎ/È¸¿ø°¡ÀÔ °ü¸®
-    private string currentUserId; // ÇöÀç ·Î±×ÀÎÇÑ À¯Àú ID
+    private FirebaseFirestore db; // ë°ì´í„°ë² ì´ìŠ¤ ì—°ê²°
+    private FirebaseAuth auth;    // ë¡œê·¸ì¸/íšŒì›ê°€ì… ê´€ë¦¬
+    private string currentUserId; // í˜„ì¬ ë¡œê·¸ì¸í•œ ìœ ì € ID
 
-    private List<DeckData> allDecks; // ¹Ş¾Æ¿Â µ¦ ¸®½ºÆ®¸¦ ¸Ş¸ğ¸®¿¡ ÀúÀå(Ä³½Ã)
+    private List<DeckData> allDecks; // ë°›ì•„ì˜¨ ë± ë¦¬ìŠ¤íŠ¸ë¥¼ ë©”ëª¨ë¦¬ì— ì €ì¥(ìºì‹œ)
     private bool isInitialized = false;
 
-    // ¼­¹ö ÁÖ¼Ò (REST API ¿£µåÆ÷ÀÎÆ®)
+    // ì„œë²„ ì£¼ì†Œ (REST API ì—”ë“œí¬ì¸íŠ¸)
     public string deckloadApiUrl => $"{GameClient.Instance.BaseApiUrl}/decks";
     public string deckcreateApiUrl => $"{GameClient.Instance.BaseApiUrl}/decks/create";
     public string deckupdateApiUrl => $"{GameClient.Instance.BaseApiUrl}/decks/update";
@@ -34,7 +34,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
     private void Awake()
     {
-        // --- ½Ì±ÛÅæ ÆĞÅÏ (¼³¸í »ı·«) ---
+        // --- ì‹±ê¸€í†¤ íŒ¨í„´ (ì„¤ëª… ìƒëµ) ---
         if (instance != null && instance != this)
         {
             Destroy(gameObject);
@@ -44,19 +44,19 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             instance = this;
             DontDestroyOnLoad(gameObject);
         }
-        // Firebase µµ±¸ ÁØºñ
+        // Firebase ë„êµ¬ ì¤€ë¹„
         db = FirebaseFirestore.DefaultInstance;
         auth = FirebaseAuth.DefaultInstance;
 
         allDecks = new List<DeckData>();
 
-        // ·Î±×ÀÎ »óÅÂ°¡ ¹Ù²î´ÂÁö °¨½Ã¸¦ ½ÃÀÛÇÕ´Ï´Ù.
+        // ë¡œê·¸ì¸ ìƒíƒœê°€ ë°”ë€ŒëŠ”ì§€ ê°ì‹œë¥¼ ì‹œì‘í•©ë‹ˆë‹¤.
         auth.StateChanged += HandleAuthStateChanged;
     }
 
     private void OnDestroy()
     {
-        // °¨½Ã ÇØÁ¦ (ÇÊ¼ö)
+        // ê°ì‹œ í•´ì œ (í•„ìˆ˜)
         if (auth != null)
         {
             auth.StateChanged -= HandleAuthStateChanged;
@@ -68,7 +68,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     }
 
     /// <summary>
-    /// ·Î±×ÀÎÇÏ°Å³ª ·Î±×¾Æ¿ôÇÒ ¶§ ÀÚµ¿À¸·Î ½ÇÇàµÇ´Â ÇÔ¼öÀÔ´Ï´Ù.
+    /// ë¡œê·¸ì¸í•˜ê±°ë‚˜ ë¡œê·¸ì•„ì›ƒí•  ë•Œ ìë™ìœ¼ë¡œ ì‹¤í–‰ë˜ëŠ” í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
     private async void HandleAuthStateChanged(object sender, EventArgs e)
     {
@@ -76,7 +76,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
         if (currentUser != null)
         {
-            // ·Î±×ÀÎ Çß°í, ¾ÆÁ÷ µ¥ÀÌÅÍ¸¦ ¾È ºÒ·¯¿Ô´Ù¸é -> µ¥ÀÌÅÍ ·Îµå ½ÃÀÛ
+            // ë¡œê·¸ì¸ í–ˆê³ , ì•„ì§ ë°ì´í„°ë¥¼ ì•ˆ ë¶ˆëŸ¬ì™”ë‹¤ë©´ -> ë°ì´í„° ë¡œë“œ ì‹œì‘
             if (currentUser.UserId != currentUserId || !isInitialized)
             {
                 await InitializeAsync(currentUser.UserId);
@@ -84,7 +84,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         }
         else
         {
-            // ·Î±×¾Æ¿ô Çß´Ù¸é -> µ¥ÀÌÅÍ ºñ¿ì±â
+            // ë¡œê·¸ì•„ì›ƒ í–ˆë‹¤ë©´ -> ë°ì´í„° ë¹„ìš°ê¸°
             if (isInitialized || !string.IsNullOrEmpty(currentUserId))
             {
                 ClearDecks();
@@ -93,11 +93,11 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     }
 
     /// <summary>
-    /// µ¦ ·Îµå ÃÊ±âÈ­ °úÁ¤ (±âÁ¸ °Í ºñ¿ì°í -> ¼­¹ö¿¡¼­ »õ·Î ¹Ş±â)
+    /// ë± ë¡œë“œ ì´ˆê¸°í™” ê³¼ì • (ê¸°ì¡´ ê²ƒ ë¹„ìš°ê³  -> ì„œë²„ì—ì„œ ìƒˆë¡œ ë°›ê¸°)
     /// </summary>
     public async Task InitializeAsync(string newUserId)
     {
-        ClearDecks(); // Ã»¼Ò
+        ClearDecks(); // ì²­ì†Œ
 
         currentUserId = newUserId;
         isInitialized = false;
@@ -108,21 +108,21 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             return;
         }
 
-        // ¼­¹ö¿¡¼­ ÁøÂ¥·Î µ¥ÀÌÅÍ ¹Ş¾Æ¿À±â
+        // ì„œë²„ì—ì„œ ì§„ì§œë¡œ ë°ì´í„° ë°›ì•„ì˜¤ê¸°
         await ServerLoadDecks();
 
         isInitialized = true;
     }
 
     /// <summary>
-    /// ¸Ş¸ğ¸®¿¡ ÀÖ´Â µ¦ Á¤º¸¸¦ ½Ï ºñ¿ó´Ï´Ù.
+    /// ë©”ëª¨ë¦¬ì— ìˆëŠ” ë± ì •ë³´ë¥¼ ì‹¹ ë¹„ì›ë‹ˆë‹¤.
     /// </summary>
     public void ClearDecks()
     {
         currentUserId = null;
         allDecks.Clear();
         isInitialized = false;
-        OnDecksChanged?.Invoke(); // UI¿¡°Ô "¸ñ·Ï ºñ¾ú¾î"¶ó°í ¾Ë¸²
+        OnDecksChanged?.Invoke(); // UIì—ê²Œ "ëª©ë¡ ë¹„ì—ˆì–´"ë¼ê³  ì•Œë¦¼
     }
 
 
@@ -132,41 +132,41 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     }
 
     // ==================================================================
-    // [Áß¿ä] µ¦ ·Îµå (API Åë½Å ¹æ½Ä)
+    // [ì¤‘ìš”] ë± ë¡œë“œ (API í†µì‹  ë°©ì‹)
     // ==================================================================
     public async Task ServerLoadDecks()
     {
         if (auth.CurrentUser == null) return;
 
-        // 1. º¸¾È ÅäÅ«(½ÅºĞÁõ)À» ¹ß±Ş¹Ş½À´Ï´Ù.
+        // 1. ë³´ì•ˆ í† í°(ì‹ ë¶„ì¦)ì„ ë°œê¸‰ë°›ìŠµë‹ˆë‹¤.
         string idToken = await auth.CurrentUser.TokenAsync(true);
 
-        // 3. UnityWebRequest: À¯´ÏÆ¼ÀÇ À¥ ºê¶ó¿ìÀú °°Àº ¿ªÇÒ
-        // GET ¹æ½Ä: "µ¥ÀÌÅÍ Á¶È¸" ¿äÃ»
+        // 3. UnityWebRequest: ìœ ë‹ˆí‹°ì˜ ì›¹ ë¸Œë¼ìš°ì € ê°™ì€ ì—­í• 
+        // GET ë°©ì‹: "ë°ì´í„° ì¡°íšŒ" ìš”ì²­
         using (UnityWebRequest request = UnityWebRequest.Get(deckloadApiUrl))
         {
-            // Çì´õ¿¡ ½ÅºĞÁõ Ã·ºÎ
+            // í—¤ë”ì— ì‹ ë¶„ì¦ ì²¨ë¶€
             request.SetRequestHeader("Authorization", "Bearer " + idToken);
 
-            // 4. Àü¼ÛÇÏ°í ±â´Ù¸² (isDoneÀÌ µÉ ¶§±îÁö)
+            // 4. ì „ì†¡í•˜ê³  ê¸°ë‹¤ë¦¼ (isDoneì´ ë  ë•Œê¹Œì§€)
             var operation = request.SendWebRequest();
             while (!operation.isDone)
             {
-                await Task.Yield(); // ´ÙÀ½ ÇÁ·¹ÀÓ±îÁö ´ë±â
+                await Task.Yield(); // ë‹¤ìŒ í”„ë ˆì„ê¹Œì§€ ëŒ€ê¸°
             }
 
-            // 5. °á°ú È®ÀÎ
+            // 5. ê²°ê³¼ í™•ì¸
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"½ÇÆĞ: {request.error}");
+                Debug.LogError($"ì‹¤íŒ¨: {request.error}");
                 allDecks = new List<DeckData>();
             }
             else
             {
-                // 6. ¼º°ø ½Ã JSON(ÅØ½ºÆ®)À» ¹Ş¾Æ¼­ C# °´Ã¼·Î º¯È¯
+                // 6. ì„±ê³µ ì‹œ JSON(í…ìŠ¤íŠ¸)ì„ ë°›ì•„ì„œ C# ê°ì²´ë¡œ ë³€í™˜
                 string jsonResponse = request.downloadHandler.text;
 
-                // JsonUtility ¹ö±× ¿ìÈ¸: ¸®½ºÆ®¸¦ ¹Ù·Î º¯È¯ ¸øÇÏ¹Ç·Î Wrapper Å¬·¡½º »ç¿ë
+                // JsonUtility ë²„ê·¸ ìš°íšŒ: ë¦¬ìŠ¤íŠ¸ë¥¼ ë°”ë¡œ ë³€í™˜ ëª»í•˜ë¯€ë¡œ Wrapper í´ë˜ìŠ¤ ì‚¬ìš©
                 UnityDeckListWrapper wrapper = JsonUtility.FromJson<UnityDeckListWrapper>(jsonResponse);
 
                 if (wrapper != null && wrapper.decks != null)
@@ -176,11 +176,11 @@ public class DeckSaveManager_Firebase : MonoBehaviour
             }
         }
 
-        // UI °»½Å ¾Ë¸²
+        // UI ê°±ì‹  ì•Œë¦¼
         OnDecksChanged?.Invoke();
     }
 
-    // JSON ¸®½ºÆ® ÆÄ½ÌÀ» À§ÇÑ Æ÷ÀåÁö Å¬·¡½º
+    // JSON ë¦¬ìŠ¤íŠ¸ íŒŒì‹±ì„ ìœ„í•œ í¬ì¥ì§€ í´ë˜ìŠ¤
     [System.Serializable]
     private class UnityDeckListWrapper
     {
@@ -188,7 +188,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     }
 
     // ==================================================================
-    // µ¦ »ı¼º (API Åë½Å ¹æ½Ä)
+    // ë± ìƒì„± (API í†µì‹  ë°©ì‹)
     // ==================================================================
     public async Task<DeckData> ServerCreateNewDeck(string className)
     {
@@ -196,31 +196,31 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
         string idToken = await auth.CurrentUser.TokenAsync(true);
 
-        // º¸³¾ µ¥ÀÌÅÍ ÁØºñ (Á÷¾÷ ÀÌ¸§)
+        // ë³´ë‚¼ ë°ì´í„° ì¤€ë¹„ (ì§ì—… ì´ë¦„)
         UnityCreateDeckRequest requestBody = new UnityCreateDeckRequest { className = className };
         string jsonBody = JsonUtility.ToJson(requestBody);
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
 
-        // POST ¹æ½Ä: "µ¥ÀÌÅÍ »ı¼º" ¿äÃ»
+        // POST ë°©ì‹: "ë°ì´í„° ìƒì„±" ìš”ì²­
         using (UnityWebRequest request = new UnityWebRequest(deckcreateApiUrl, "POST"))
         {
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw); // º¸³¾ µ¥ÀÌÅÍ
-            request.downloadHandler = new DownloadHandlerBuffer(); // ¹ŞÀ» ÁØºñ
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw); // ë³´ë‚¼ ë°ì´í„°
+            request.downloadHandler = new DownloadHandlerBuffer(); // ë°›ì„ ì¤€ë¹„
 
-            request.SetRequestHeader("Content-Type", "application/json"); // "³ª JSON º¸³½´Ù"
-            request.SetRequestHeader("Authorization", "Bearer " + idToken); // "³ª ´©±¸´Ù"
+            request.SetRequestHeader("Content-Type", "application/json"); // "ë‚˜ JSON ë³´ë‚¸ë‹¤"
+            request.SetRequestHeader("Authorization", "Bearer " + idToken); // "ë‚˜ ëˆ„êµ¬ë‹¤"
 
-            // Àü¼Û ¹× ´ë±â
+            // ì „ì†¡ ë° ëŒ€ê¸°
             var operation = request.SendWebRequest();
             while (!operation.isDone) await Task.Yield();
 
             if (request.result == UnityWebRequest.Result.Success)
             {
-                // ¼º°øÇÏ¸é ¼­¹ö°¡ ¸¸µé¾îÁø µ¦ Á¤º¸¸¦ º¸³»ÁÜ
+                // ì„±ê³µí•˜ë©´ ì„œë²„ê°€ ë§Œë“¤ì–´ì§„ ë± ì •ë³´ë¥¼ ë³´ë‚´ì¤Œ
                 string jsonResponse = request.downloadHandler.text;
                 DeckData newDeck = JsonUtility.FromJson<DeckData>(jsonResponse);
 
-                // ³» ¸ñ·Ï¿¡ Ãß°¡ÇÏ°í ¾Ë¸²
+                // ë‚´ ëª©ë¡ì— ì¶”ê°€í•˜ê³  ì•Œë¦¼
                 allDecks.Add(newDeck);
                 OnDecksChanged?.Invoke();
                 return newDeck;
@@ -229,7 +229,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         return null;
     }
 
-    // ¼­¹ö·Î º¸³¾ ¶§ »ç¿ëÇÒ ÀÛÀº µ¥ÀÌÅÍ Å¬·¡½º (DTO)
+    // ì„œë²„ë¡œ ë³´ë‚¼ ë•Œ ì‚¬ìš©í•  ì‘ì€ ë°ì´í„° í´ë˜ìŠ¤ (DTO)
     [System.Serializable]
     private class UnityCreateDeckRequest
     {
@@ -237,7 +237,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
     }
 
     // ==================================================================
-    // µ¦ ¾÷µ¥ÀÌÆ® (ÀúÀå)
+    // ë± ì—…ë°ì´íŠ¸ (ì €ì¥)
     // ==================================================================
     public async Task ServerUpdateDeck(DeckData updatedDeck)
     {
@@ -246,12 +246,13 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         string idToken = await auth.CurrentUser.TokenAsync(true);
         string apiUrl = $"{deckupdateApiUrl}/{updatedDeck.deckId}";
 
-        // ¾÷µ¥ÀÌÆ®ÇÒ ³»¿ë Æ÷Àå (UnityUpdateDeckRequest »ç¿ë)
+        // ì—…ë°ì´íŠ¸í•  ë‚´ìš© í¬ì¥ (UnityUpdateDeckRequest ì‚¬ìš©)
         UnityUpdateDeckRequest requestBody = new UnityUpdateDeckRequest
         {
             deckId = updatedDeck.deckId,
             deckName = updatedDeck.deckName,
             deckClass = updatedDeck.deckClass,
+            leaderSkinId = updatedDeck.leaderSkinId,
             cardIds = updatedDeck.cardIds,
             sideDeckCardIds = updatedDeck.sideDeckCardIds,
             sideDeckFirstTurnCardIds = updatedDeck.sideDeckFirstTurnCardIds,
@@ -260,7 +261,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         string jsonBody = JsonUtility.ToJson(requestBody);
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
 
-        // PUT ¹æ½Ä: "µ¥ÀÌÅÍ ¼öÁ¤/µ¤¾î¾²±â" ¿äÃ»
+        // PUT ë°©ì‹: "ë°ì´í„° ìˆ˜ì •/ë®ì–´ì“°ê¸°" ìš”ì²­
         using (UnityWebRequest request = new UnityWebRequest(apiUrl, "PUT"))
         {
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
@@ -274,12 +275,16 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
             if (request.result == UnityWebRequest.Result.Success)
             {
-                // ¼º°ø ½Ã ·ÎÄÃ ¸ñ·Ïµµ ÃÖ½Å Á¤º¸·Î °»½Å
+                // ì„±ê³µ ì‹œ ë¡œì»¬ ëª©ë¡ë„ ìµœì‹  ì •ë³´ë¡œ ê°±ì‹ 
                 int index = allDecks.FindIndex(d => d.deckId == updatedDeck.deckId);
                 if (index != -1) allDecks[index] = updatedDeck;
                 else allDecks.Add(updatedDeck);
 
                 OnDecksChanged?.Invoke();
+            }
+            else
+            {
+                Debug.LogError($"[DeckSaveManager] ì„œë²„ ë± ì—…ë°ì´íŠ¸ ì‹¤íŒ¨: {request.error} (ì‘ë‹µ: {request.downloadHandler?.text})");
             }
         }
     }
@@ -290,13 +295,14 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         public string deckId;
         public string deckName;
         public string deckClass;
+        public string leaderSkinId;
         public List<string> cardIds;
         public List<string> sideDeckCardIds;
         public List<string> sideDeckFirstTurnCardIds;
     }
 
     // ==================================================================
-    // µ¦ »èÁ¦
+    // ë± ì‚­ì œ
     // ==================================================================
     public async Task ServerDeleteDeck(string deckId)
     {
@@ -305,7 +311,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
         string idToken = await auth.CurrentUser.TokenAsync(true);
         string apiUrl = $"{deckdeleteApiUrl}/{deckId}";
 
-        // DELETE ¹æ½Ä: "»èÁ¦" ¿äÃ»
+        // DELETE ë°©ì‹: "ì‚­ì œ" ìš”ì²­
         using (UnityWebRequest request = UnityWebRequest.Delete(apiUrl))
         {
             request.downloadHandler = new DownloadHandlerBuffer();
@@ -316,7 +322,7 @@ public class DeckSaveManager_Firebase : MonoBehaviour
 
             if (request.result == UnityWebRequest.Result.Success)
             {
-                // ·ÎÄÃ ¸ñ·Ï¿¡¼­µµ »èÁ¦
+                // ë¡œì»¬ ëª©ë¡ì—ì„œë„ ì‚­ì œ
                 allDecks.RemoveAll(d => d.deckId == deckId);
                 OnDecksChanged?.Invoke();
             }

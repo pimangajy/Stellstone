@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07278043672281d41a899fd0bfa041bb, type: 3}
+  m_Name: DefeatMotion_Heavy
+  m_EditorClassIdentifier: Assembly-CSharp::LeaderDefeatData
+  defeatTypeKey: Heavy
+  description: "\uAC15\uD55C \uD0C0\uACA9 \uBD95\uAD34 \uBAA8\uC158 (\uD68C\uC804
+    \uBD95\uAD34 \uBC0F \uAC15\uD55C \uCE74\uBA54\uB77C \uD754\uB4E4\uB9BC)"
+  resultPanelDelay: 1.5
+  motionDuration: 1
+  motionType: 1
+  shakeStrength: {x: 0.4, y: 0.2, z: 0.4}
+  motionOffset: {x: 0, y: -1.2, z: 0}
+  rotationOffset: {x: -25, y: 0, z: 0}
+  vfxPrefab: {fileID: 0}
+  vfxOffset: {x: 0, y: 0, z: 0}
+  vfxDestroyTime: 3
+  enableCameraShake: 1
+  cameraShakeForce: 3
+  defeatSound: {fileID: 0}
+  soundVolume: 1

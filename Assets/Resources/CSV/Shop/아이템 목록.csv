@@ -1,0 +1,12 @@
+category_Id,productId,productName,description,image_url,price,currency,isActive,isVisibleInShop,sale_Start_Date,sale_End_Date,targetExpansion,targetClasses,fixedCardIds,randomPickPoolIds,randomPickCount,customCardPoolIds,cardsPerPack,guaranteedLegendaryCount,guaranteedEpicCount,guaranteedRareCount,purchaseLimit
+8,CardPack_0001,기본 카드팩,기본 확장팩의 랜덤한 카드 5장이 들어있습니다.,Items/Cardpack/NormalPack.png,100,0,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,기본,"[""Gangzi"",""Yuni"",""Huya""]",[],[],1,[],5,0,0,1,0
+8,CardPack_yuni_0001,유니 기본 카드 확장팩,기본 확장팩의 랜덤한 유니카드 5장이 들어있습니다.,Items/CardPack/Yuni_CardPack_001.png,100,0,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,기본,"[""Yuni""]",[],[],1,[],5,0,0,1,0
+8,Cardpack_Huya_0001,후야 기본 카드팩,후야카드가 들어있는 기본카드팩입니다.,Items/CardPack/Huya_CardPack_001.png,100,0,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,기본,"[""Gangzi"",""Huya""]",[],[],1,[],5,0,0,1,0
+8,SpecialCardPack_0001,출시 기념 카드팩,기본 확장팩의 전설1장 에픽 2장 이상이 들어있는 카드팩입니다.,Items/CardPack/CardPack_nomal.png,200,0,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,기본,"[""Gangzi"",""Yuni"",""Huya""]",[],[],1,[],5,1,2,0,1
+8,SpecialCardPack_0002,강지 전설 카드팩,강지 직업 전설(사쵸)이 들어있는 기본 확장팩,Items/CardPack/Gangzi_CardPack_001.png,150,0,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,기본,"[""Gangzi"",""Yuni"",""Huya""]","[""cards-gangzi-020""]",[],1,[],5,0,0,1,2
+0,Skin_Yuni_0002,유니 바지냥이 버전,바지냥이버전의 유니스킨입니다.,Items/Skins/Yuni_Skin_0002.png,500,1,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,,"[""Yuni""]",[],[],1,[],5,0,0,0,1
+0,Skin_Yuni_0003,유나 수영복 스킨,유니의 수영복 스킨입니다.,Items/Skins/Yuni_Skin_0003.png,500,1,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,,"[""Yuni""]",[],[],1,[],5,0,0,0,1
+4,PrismCard_Gangzi_0001,강도단 프리즘카드,강도단의 프리즘 카드입니다.,Items/Prism/gangdodan.png,300,2,true,true,2026-01-01 00:00:00,2099-12-31 23:59:59,,"[""Gangzi""]","[""cards-gangzi-001""]",[],1,[],5,0,0,0,1
+0,Skin_Gangzi_0001,강지 기본 스킨,강지의 기본 스킨입니다.,Items/Skins/Gangzi_Skin_0001.png,0,0,false,false,2026-01-01 00:00:00,2099-12-31 23:59:59,,"[""Gangzi"",""Yuni"",""Huya""]",[],[],1,[],5,0,0,0,0
+0,Skin_Yuni_0001,유니 기본 스킨,유니의 기본 스킨입니다.,Items/Skins/Yuni_Skin_0001,0,0,false,false,2026-01-01 00:00:00,2099-12-31 23:59:59,,"[""Yuni""]",[],[],1,[],5,0,0,0,0
+0,Skin_Huya_0001,후야 기본 스킨,후야의 기본 스킨,Items/Skins/Huya_Skin_0001.png,0,0,false,false,2026-01-01 00:00:00,2099-12-31 23:59:59,,"[""Huya""]",[],[],1,[],5,0,0,0,0

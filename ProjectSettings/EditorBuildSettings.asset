@@ -26,5 +26,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ShopScene.unity
     guid: dc40e5c733687d543bc8855e1cb5e7a1
+  - enabled: 1
+    path: Assets/Scenes/Storage.unity
+    guid: 802c448656fed134d902a4d420ba029a
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

@@ -13,25 +13,31 @@ MonoBehaviour:
   m_Name: cards-gangzi-005
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-005
-  cardName: "\uAC00\uC544\uC559\uB3C4\uB2E8"
+  cardName: "\uC74C\uCE68\uD55C \uAC15\uB3C4\uB2E8"
+  isToken: 0
   cardClass: 0
   cardType: 1
   rarity: 0
   expansion: 0
   manaCost: 2
-  attack: 1
+  attack: 2
   health: 1
   minionTribe: 1
-  description: "\uB4F1\uC7A5: \uCE74\uB4DC\uB97C 1\uC7A5 \uBF51\uC2B5\uB2C8\uB2E4"
+  description: '[Stealth]'
   additionalExplanation: 
-  keyward: 
+  keywords: 06000000
   targeting: 0
-  triggerVFXList: []
+  memberSkills: []
+  spellAmp: 0
+  spellWeakness: 0
+  drawSeal: 0
+  buffAmpAttack: 0
+  buffAmpHealth: 0
+  triggerVFXList:
+  - {fileID: 11400000, guid: c8b4b1322a0df514b8f337bc0222282b, type: 2}
   animationFrames:
   - {fileID: 21300000, guid: 945333ea6d4e2bc4caaec4b2555ba4a6, type: 3}
-  cardDissolveEffect: {fileID: 0}
-  spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
+  spawnEffectData: {fileID: 11400000, guid: e468f40264b1f55478c81e7b98256996, type: 2}
   memberIcon: {fileID: 0}
-  spawnEffect: {fileID: 0}
-  attackSound: {fileID: 0}
-  projectilePrefab: {fileID: 3300439051078825739, guid: 7128603d714ada24090d8c6a938a8ebd, type: 3}
+  projectilePrefab: {fileID: 2635855287139922103, guid: ce76e7b2425b6b14e8c8b8b165298906, type: 3}
+  heavyProjectilePrefab: {fileID: 2635855287139922103, guid: 33dd5864187e13f48b90c8c095daa64e, type: 3}

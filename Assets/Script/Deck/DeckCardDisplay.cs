@@ -1,101 +1,202 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using AYellowpaper.SerializedCollections;
 
-// ÀÌ ½ºÅ©¸³Æ®´Â Ä«µå ÇÁ¸®ÆÕ(UI)¿¡ ºÙ¾î¼­, ½ÇÁ¦ µ¥ÀÌÅÍ¸¦ È­¸é¿¡ º¸¿©ÁÖ´Â ¿ªÇÒÀ» ÇÕ´Ï´Ù.
+/// <summary>
+/// ë± í¸ì„±(í¸ì§‘) í™”ë©´ ë° ë¯¸ë¦¬ë³´ê¸°ì—ì„œ ì¹´ë“œì˜ ì™¸í˜•ê³¼ ì •ë³´ë¥¼ í™”ë©´ì— í‘œì‹œí•˜ëŠ” ì»´í¬ë„ŒíŠ¸ì…ë‹ˆë‹¤.
+/// </summary>
 public class DeckCardDisplay : MonoBehaviour, ICardDataHolder
 {
     [Header("UI Elements")]
-    // À¯´ÏÆ¼ ¿¡µğÅÍ¿¡¼­ ¿¬°áÇÒ ÅØ½ºÆ® UIµé
-    public TextMeshProUGUI nameText;       // ÀÌ¸§
-    public TextMeshProUGUI costText;       // ¸¶³ª ÄÚ½ºÆ®
-    public TextMeshProUGUI attackText;     // °ø°İ·Â
-    public TextMeshProUGUI healthText;     // Ã¼·Â
-    public TextMeshProUGUI descriptionText; // È¿°ú ¼³¸í
-    public TextMeshProUGUI tribeText;      // Á¾Á· °ª
+    public TextMeshProUGUI nameText;        // ì´ë¦„
+    public TextMeshProUGUI costText;        // ë§ˆë‚˜ ì½”ìŠ¤íŠ¸
+    public TextMeshProUGUI attackText;      // ê³µê²©ë ¥
+    public TextMeshProUGUI healthText;      // ì²´ë ¥
+    public TextMeshProUGUI descriptionText; // íš¨ê³¼ ì„¤ëª…
+    public TextMeshProUGUI tribeText;       // ì¢…ì¡± ëª…
+    public TextMeshProUGUI countText;       // ì¹´ë“œ ìˆ˜ëŸ‰ (ì˜ˆ: X 2)
 
-    // ÀÌ¹ÌÁö UIµé
-    public Image artworkImage;    // Ä«µå ±×¸²
-    public Image rarityGemImage;  // Èñ±Íµµ º¸¼® (°¡¿îµ¥ ÀÛÀº º¸¼®)
+    [Header("ì‚¬ìš© ë¶ˆê°€ / í‘ë°± ëŒ€ì²´ ë°˜íˆ¬ëª… íŒ¨ë„")]
+    [Tooltip("ìˆ˜ëŸ‰ì´ 0ì´ê±°ë‚˜ ë¯¸ë³´ìœ  ì¹´ë“œì¼ ë•Œ í™œì„±í™”í•  ë°˜íˆ¬ëª… ì˜¤ë²„ë ˆì´ íŒ¨ë„")]
+    public GameObject disabledOverlayPanel;
 
-    // ÇÏ¼öÀÎÀÌ ¾Æ´Ï¸é °ø°İ·Â/Ã¼·Â Ç¥½Ã¸¦ ¼û±â±â À§ÇØ ºÎ¸ğ ¿ÀºêÁ§Æ®¸¦ ¿¬°á
+    [Header("ì´ë¯¸ì§€ UI")]
+    public Image artworkImage;              // ì¹´ë“œ ì¼ëŸ¬ìŠ¤íŠ¸
+    public Image rarityGemImage;           // ë ˆì–´ë„ ë³´ì„ (ê°€ìš´ë° ì‘ì€ ë³´ì„ ë“±)
+
+    [Header("ë ˆì–´ë„ë³„ ì¹´ë“œ í”„ë ˆì„/í…Œë‘ë¦¬ (Border)")]
+    [Tooltip("ì¹´ë“œ í…Œë‘ë¦¬/í”„ë ˆì„ Image ì»´í¬ë„ŒíŠ¸")]
+    public Image frameImage;
+
+    [Tooltip("ë ˆì–´ë„ë³„ í”„ë ˆì„ ìŠ¤í”„ë¼ì´íŠ¸ ë§¤í•‘ (Common, Rare, Epic, Legendary)")]
+    [SerializedDictionary("ë ˆì–´ë„", "í”„ë ˆì„ ìŠ¤í”„ë¼ì´íŠ¸")]
+    public SerializedDictionary<CardRarity, Sprite> rarityFrames = new SerializedDictionary<CardRarity, Sprite>();
+
+    [Header("í•˜ìˆ˜ì¸ ì „ìš© UI ë¶€ëª¨ ì˜¤ë¸Œì íŠ¸")]
     public GameObject attackObject;
     public GameObject healthObject;
 
-    // ÇöÀç ÀÌ UI°¡ º¸¿©ÁÖ°í ÀÖ´Â ½ÇÁ¦ µ¥ÀÌÅÍ
     private CardData cardData;
 
-    // ¿ÜºÎ¿¡¼­ µ¥ÀÌÅÍ¸¦ ¹Ş¾Æ¼­ È­¸éÀ» °»½ÅÇÏ´Â ÇÔ¼ö
-    public void Setup(CardData data)
+    /// <summary>
+    /// ì¹´ë“œ ë°ì´í„°ë¥¼ ë°›ì•„ UI, ì¼ëŸ¬ìŠ¤íŠ¸, ë ˆì–´ë„ í”„ë ˆì„ì„ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// countê°€ -1ì´ë©´ ê¸°ë³¸ ê·œì¹™(ì „ì„¤: 1ì¥, ê·¸ ì™¸: 2ì¥)ì´ ì ìš©ë©ë‹ˆë‹¤.
+    /// </summary>
+    public void Setup(CardData data, int count = -1)
     {
         this.cardData = data;
+        if (cardData == null) return;
 
-        // ÅØ½ºÆ® ³»¿ë Ã¤¿ì±â
-        nameText.text = cardData.cardName;
-        costText.text = cardData.manaCost.ToString(); // ¼ıÀÚ´Â ¹®ÀÚ¿­·Î º¯È¯(.ToString())ÇØ¾ß ÇÔ
-        descriptionText.text = cardData.description;
-
-        // Á¾Á· °ªÀÌ ÀÖÀ¸¸é º¸¿©ÁÖ°í, ¾øÀ¸¸é ¼û±é´Ï´Ù.
-        if (cardData.minionTribe != CardTribe.¹«¼Ò¼Ó)
+        // 1. í…ìŠ¤íŠ¸ ì •ë³´ ì±„ìš°ê¸°
+        if (nameText != null)
         {
-            tribeText.gameObject.SetActive(true);
-            tribeText.text = cardData.minionTribe.ToString();
+            CardTextFormatter.EnsureTextAutoFit(nameText, minSize: 10f, maxSize: 22f, wordWrap: false, overflowMode: TextOverflowModes.Ellipsis);
+            nameText.text = cardData.cardName;
+        }
+        if (costText != null) costText.text = cardData.manaCost.ToString();
+        if (descriptionText != null)
+        {
+            CardTextFormatter.EnsureTextAutoFit(descriptionText, minSize: 9f, maxSize: 20f, wordWrap: true, overflowMode: TextOverflowModes.Ellipsis);
+            CardTextFormatter.FormatAndBind(descriptionText, cardData.description, cardData);
+        }
+
+        // ìˆ˜ëŸ‰ í…ìŠ¤íŠ¸ ì„¤ì •
+        if (count < 0)
+        {
+            count = 2;
+        }
+        SetCount(count);
+
+        // 2. ì¢…ì¡± ì •ë³´ ì„¤ì •
+        if (tribeText != null)
+        {
+            if (cardData.minionTribe != CardTribe.ë¬´ì†Œì†)
+            {
+                tribeText.gameObject.SetActive(true);
+                tribeText.text = cardData.minionTribe.ToString();
+            }
+            else
+            {
+                tribeText.gameObject.SetActive(false);
+            }
+        }
+
+        // 3. ì¹´ë“œ íƒ€ì…ì´ 'í•˜ìˆ˜ì¸'ì¼ ë•Œë§Œ ê³µê²©ë ¥/ì²´ë ¥ í™œì„±í™”
+        if (cardData.cardType == CardType.í•˜ìˆ˜ì¸)
+        {
+            if (attackObject != null) attackObject.SetActive(true);
+            if (healthObject != null) healthObject.SetActive(true);
+            if (attackText != null) attackText.text = cardData.attack.ToString();
+            if (healthText != null) healthText.text = cardData.health.ToString();
         }
         else
         {
-            tribeText.gameObject.SetActive(false);
+            if (attackObject != null) attackObject.SetActive(false);
+            if (healthObject != null) healthObject.SetActive(false);
         }
 
-        // Ä«µå Å¸ÀÔÀÌ 'ÇÏ¼öÀÎ'ÀÏ ¶§¸¸ °ø°İ·Â/Ã¼·ÂÀ» º¸¿©Áİ´Ï´Ù. (ÁÖ¹®Àº °ø°İ·ÂÀÌ ¾øÀ¸´Ï±î¿ä)
-        if (cardData.cardType == CardType.ÇÏ¼öÀÎ)
-        {
-            attackObject.SetActive(true);
-            healthObject.SetActive(true);
-            attackText.text = cardData.attack.ToString();
-            healthText.text = cardData.health.ToString();
-        }
-        else
-        {
-            attackObject.SetActive(false);
-            healthObject.SetActive(false);
-        }
-
-        // ½æ³×ÀÏ(±×¸²)ÀÌ ÀÖÀ¸¸é ¼³Á¤
-        if (cardData.thumbnail != null)
+        // 4. ì¸ë„¤ì¼(ì¼ëŸ¬ìŠ¤íŠ¸) ì´ë¯¸ì§€ ì ìš©
+        if (artworkImage != null && cardData.thumbnail != null)
         {
             artworkImage.sprite = cardData.thumbnail;
         }
 
-        // Èñ±Íµµ(ÀÏ¹İ/ÆÄ¶û/º¸¶ó/Àü¼³)¿¡ µû¶ó º¸¼® »ö±òÀ» ¹Ù²ß´Ï´Ù.
+        // 5. ë ˆì–´ë„ë³„ í”„ë ˆì„(í…Œë‘ë¦¬) ì ìš©
+        SetRarityFrame(cardData.rarity);
+
+        // 6. ë ˆì–´ë„ë³„ ë³´ì„ ë¹„ì£¼ì–¼ ì„¤ì • (ê¸°ì¡´ í˜¸í™˜ì„± ìœ ì§€)
         SetRarityVisuals(cardData.rarity);
     }
 
-    // ÀÎÅÍÆäÀÌ½º ±¸Çö: ¿ÜºÎ¿¡¼­ "Áö±İ ¹«½¼ Ä«µå Á¤º¸ °¡Áö°í ÀÖ¾î?"¶ó°í ¹°À¸¸é ´ë´äÇØÁİ´Ï´Ù.
     public CardData GetCardData()
     {
         return cardData;
     }
 
-    // Èñ±Íµµ¿¡ µû¶ó º¸¼® »ö»óÀ» ¹Ù²ãÁÖ´Â ³»ºÎ ÇÔ¼ö
+    /// <summary>
+    /// ì¹´ë“œì˜ ë ˆì–´ë„ì— ë§ì¶° í…Œë‘ë¦¬/í”„ë ˆì„ ìŠ¤í”„ë¼ì´íŠ¸ë¥¼ êµì²´í•©ë‹ˆë‹¤.
+    /// </summary>
+    public void SetRarityFrame(CardRarity rarity)
+    {
+        if (frameImage == null) return;
+
+        if (rarityFrames != null && rarityFrames.TryGetValue(rarity, out Sprite frameSprite) && frameSprite != null)
+        {
+            frameImage.sprite = frameSprite;
+            frameImage.gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// ë ˆì–´ë„ì— ë”°ë¼ ë³´ì„ì˜ ìƒ‰ìƒì„ ë³€ê²½í•©ë‹ˆë‹¤.
+    /// </summary>
     private void SetRarityVisuals(CardRarity rarity)
     {
+        if (rarityGemImage == null) return;
+
         switch (rarity)
         {
             case CardRarity.common:
-                rarityGemImage.color = Color.white; // Èò»ö
+                rarityGemImage.color = Color.white; // ì¼ë°˜
                 break;
             case CardRarity.rare:
-                rarityGemImage.color = Color.blue; // ÆÄ¶õ»ö
+                rarityGemImage.color = Color.blue;  // í¬ê·€ (íŒŒë‘)
                 break;
             case CardRarity.epic:
-                rarityGemImage.color = new Color(0.5f, 0, 1); // º¸¶ó»ö (RGB È¥ÇÕ)
+                rarityGemImage.color = new Color(0.5f, 0f, 1f); // íŠ¹ê¸‰ (ë³´ë¼)
                 break;
             case CardRarity.legendary:
-                rarityGemImage.color = Color.yellow; // ³ë¶õ»ö(È²±İ»ö)
+                rarityGemImage.color = Color.yellow; // ì „ì„¤ (í™©ê¸ˆ)
                 break;
             default:
-                rarityGemImage.color = Color.gray; // ±âº» È¸»ö
+                rarityGemImage.color = Color.gray;
                 break;
+        }
+    }
+
+    /// <summary>
+    /// ì¹´ë“œ ìˆ˜ëŸ‰ í…ìŠ¤íŠ¸('X 2')ë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// ìˆ˜ëŸ‰ì´ 0 ì´í•˜ë©´ ë°˜íˆ¬ëª… ë¹„í™œì„±í™” íŒ¨ë„ì„ ì¼­ë‹ˆë‹¤.
+    /// </summary>
+    public void SetCount(int count)
+    {
+        SetRemainingState(count, count);
+    }
+
+    /// <summary>
+    /// ì‹¤ì œ ë³´ìœ ëŸ‰(ownedCount)ê³¼ ì”ì—¬ ìˆ˜ëŸ‰(remaining)ì„ ë°›ì•„ í…ìŠ¤íŠ¸ ë° ë°˜íˆ¬ëª… íŒ¨ë„ì„ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// </summary>
+    /// <param name="remaining">í˜„ì¬ ë±ì— ì¶”ê°€ ê°€ëŠ¥í•œ ë‚¨ì€ ì¥ìˆ˜</param>
+    /// <param name="ownedCount">ìœ ì €ê°€ ì‹¤ì œë¡œ ê³„ì •ì— ì†Œìœ í•œ ì´ ì¥ìˆ˜</param>
+    public void SetRemainingState(int remaining, int ownedCount)
+    {
+        if (countText != null)
+        {
+            countText.text = $"X {Mathf.Max(0, remaining)}";
+            countText.gameObject.SetActive(true);
+        }
+
+        // ìœ ì €í•œí…Œ ì•„ì˜ˆ ì—†ëŠ” ì¹´ë“œ(ownedCount <= 0)ì´ê±°ë‚˜, ë±ì— ëª¨ë‘ ë„£ì–´ ë” ë„£ì„ ìˆ˜ ì—†ëŠ” ì¹´ë“œ(remaining <= 0)ë©´ íŒ¨ë„ í™œì„±í™”
+        bool isUnavailable = (ownedCount <= 0) || (remaining <= 0);
+        if (disabledOverlayPanel != null)
+        {
+            disabledOverlayPanel.SetActive(isUnavailable);
+        }
+    }
+
+    /// <summary>
+    /// ìˆ˜ëŸ‰ í‘œì‹œ ë° ë¹„í™œì„±í™” íŒ¨ë„ì„ ìˆ¨ê¹ë‹ˆë‹¤ (ë¯¸ë¦¬ë³´ê¸° UI ë“±).
+    /// </summary>
+    public void HideCount()
+    {
+        if (countText != null)
+        {
+            countText.gameObject.SetActive(false);
+        }
+        if (disabledOverlayPanel != null)
+        {
+            disabledOverlayPanel.SetActive(false);
         }
     }
 }

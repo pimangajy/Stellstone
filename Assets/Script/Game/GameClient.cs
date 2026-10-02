@@ -39,8 +39,26 @@ public class GameClient : MonoBehaviour
     public event Action<string> OnErrorEvent;                                            // 에러 패킷
     public event Action<string> OnPlayCardFailedEvent;                                   // 카드 사용 실패 패킷
     public event Action<S_GameOver> OnGameOverEvent;                                     // 게임 종료 패킷 (승자/패배/항복)
+    public event Action<S_ValidMemberSkillTargetsResponse> OnValidMemberSkillTargetsResponseEvent; // 멤버 스킬 조준 대상 목록 패킷
+    public event Action<S_UseMemberSkillSuccess> OnUseMemberSkillSuccessEvent;                     // 멤버 스킬 사용 성공 패킷
+    public event Action<S_UseMemberSkillFail> OnUseMemberSkillFailEvent;                           // 멤버 스킬 사용 실패 패킷
+    public event Action<S_GetCardFromSideDeckSuccess> OnGetCardFromSideDeckSuccessEvent;           // 사이드덱 카드 가져오기 성공 패킷
+    public event Action<S_GetCardFromSideDeckFail> OnGetCardFromSideDeckFailEvent;                 // 사이드덱 카드 가져오기 실패 패킷
+    public event Action<S_CardCreated> OnCardCreatedEvent;                                         // 카드 생성(손패 획득) 알림 패킷
+    public event Action<S_ReceiveEmote> OnReceiveEmoteEvent;                                       // 감정표현 수신 패킷
+    public event Action<S_NewLogEvent> OnNewLogEvent;                                             // 실시간 행동 로그 수신 패킷
+
+    // --- 유저 계정 및 아이템 데이터 관리 ---
+    public UserData CurrentUser { get; private set; }
+    public event Action<UserData> OnUserDataUpdated;
+    public List<ProductData> AllLeaderSkins { get; private set; } = new List<ProductData>();
+
+    // --- 유저 닉네임 및 상대방 닉네임 관리 ---
+    public string MyUsername => !string.IsNullOrEmpty(CurrentUser?.username) ? CurrentUser.username : (!string.IsNullOrEmpty(SinginManager.CurrentUserData?.username) ? SinginManager.CurrentUserData.username : "나");
+    public string OpponentUsername { get; set; } = "상대방";
 
     private ClientWebSocket _webSocket;
+    public bool IsConnected => _webSocket != null && _webSocket.State == System.Net.WebSockets.WebSocketState.Open;
     private CancellationTokenSource _cts;
 
     // Firebase 인증 정보
@@ -51,6 +69,10 @@ public class GameClient : MonoBehaviour
     private ConcurrentQueue<BaseGameAction> _receivedActions = new ConcurrentQueue<BaseGameAction>();
     // [디버그]
     private ConcurrentQueue<BaseDebugAction> _debugdActions = new ConcurrentQueue<BaseDebugAction>();
+
+    [Header("테스트 및 디버그 설정")]
+    [Tooltip("true일 경우 직업 제한 및 보유 여부와 관계없이 모든 이모션이 감정표현 창에 표시되며 장착 가능합니다.")]
+    public bool unlockAllEmotesForTest = true;
 
     [Header("서버 주소")]
     [SerializeField] private string serverIp = "175.125.250.226";
@@ -214,11 +236,13 @@ public class GameClient : MonoBehaviour
 
         try
         {
-            while (_webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
+            // 수신 패킷 조립용 메모리 스트림 (매 패킷마다 재할당하지 않고 재사용)
+            using (var ms = new System.IO.MemoryStream())
             {
-                // 동적 메모리 스트림을 생성하여 조각난 패킷들을 한데 모읍니다.
-                using (var ms = new System.IO.MemoryStream())
+                while (_webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
                 {
+                    ms.SetLength(0);
+
                     WebSocketReceiveResult result;
                     do
                     {
@@ -236,8 +260,8 @@ public class GameClient : MonoBehaviour
 
                     if (result.MessageType == WebSocketMessageType.Close) break;
 
-                    // 모인 전체 바이트 배열을 하나의 완벽한 JSON 문자열로 변환합니다.
-                    string receivedJson = Encoding.UTF8.GetString(ms.ToArray());
+                    // 모인 전체 바이트 데이터를 하나의 완벽한 JSON 문자열로 변환 (ms.ToArray()의 불필요한 바이트 배열 복사/할당 제거)
+                    string receivedJson = Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length);
 
                     // 이제 잘림 없이 온전하게 합쳐진 JSON 전체 데이터가 확보되었습니다!
                     try
@@ -278,7 +302,10 @@ public class GameClient : MonoBehaviour
                                 case GameActionType.OPPONENT_MULLIGAN_STATUS: parsedAction = JsonConvert.DeserializeObject<S_OpponentMulliganStatus>(receivedJson); break;
                                 case GameActionType.GAME_READY: parsedAction = JsonConvert.DeserializeObject<S_GameReady>(receivedJson); break;
                                 case GameActionType.PHASE_START: parsedAction = JsonConvert.DeserializeObject<S_PhaseStart>(receivedJson); break;
-                                case GameActionType.DRAW_CARD: parsedAction = JsonConvert.DeserializeObject<S_DrawCard>(receivedJson); break;
+                                case GameActionType.DRAW_CARD: 
+                                    Debug.Log($"<color=cyan>[GameClient] 📥 DRAW_CARD 패킷 수신 (Raw JSON):</color> {receivedJson}");
+                                    parsedAction = JsonConvert.DeserializeObject<S_DrawCard>(receivedJson); 
+                                    break;
                                 case GameActionType.UPDATE_HAND_CARDS: parsedAction = JsonConvert.DeserializeObject<S_UpdateHandCards>(receivedJson); break;
                                 case GameActionType.UPDATE_MANA: parsedAction = JsonConvert.DeserializeObject<S_UpdateMana>(receivedJson); break;
                                 case GameActionType.UPDATE_ENTITIES: parsedAction = JsonConvert.DeserializeObject<S_UpdateEntities>(receivedJson); break;
@@ -288,8 +315,16 @@ public class GameClient : MonoBehaviour
                                 case GameActionType.VALID_ATTACK_TARGETS_RESPONSE: parsedAction = JsonConvert.DeserializeObject<S_ValidAttackTargetsResponse>(receivedJson); break;
                                 case GameActionType.PLAY_CARD_SUCCESS: parsedAction = JsonConvert.DeserializeObject<S_PlayCardSuccess>(receivedJson); break;
                                 case GameActionType.PLAY_CARD_FAIL: parsedAction = JsonConvert.DeserializeObject<S_PlayCardFail>(receivedJson); break;
+                                case GameActionType.VALID_MEMBER_SKILL_TARGETS_RESPONSE: parsedAction = JsonConvert.DeserializeObject<S_ValidMemberSkillTargetsResponse>(receivedJson); break;
+                                case GameActionType.USE_MEMBER_SKILL_SUCCESS: parsedAction = JsonConvert.DeserializeObject<S_UseMemberSkillSuccess>(receivedJson); break;
+                                case GameActionType.USE_MEMBER_SKILL_FAIL: parsedAction = JsonConvert.DeserializeObject<S_UseMemberSkillFail>(receivedJson); break;
                                 case GameActionType.GAME_OVER: parsedAction = JsonConvert.DeserializeObject<S_GameOver>(receivedJson); break;
                                 case GameActionType.ERROR: parsedAction = JsonConvert.DeserializeObject<S_Error>(receivedJson); break;
+                                case GameActionType.GET_CARD_FROM_SIDE_DECK_SUCCESS: parsedAction = JsonConvert.DeserializeObject<S_GetCardFromSideDeckSuccess>(receivedJson); break;
+                                case GameActionType.GET_CARD_FROM_SIDE_DECK_FAIL: parsedAction = JsonConvert.DeserializeObject<S_GetCardFromSideDeckFail>(receivedJson); break;
+                                case GameActionType.CARD_CREATED: parsedAction = JsonConvert.DeserializeObject<S_CardCreated>(receivedJson); break;
+                                case GameActionType.RECEIVE_EMOTE: parsedAction = JsonConvert.DeserializeObject<S_ReceiveEmote>(receivedJson); break;
+                                case GameActionType.NEW_LOG_EVENT: parsedAction = JsonConvert.DeserializeObject<S_NewLogEvent>(receivedJson); break;
                             }
 
                             if (parsedAction != null)
@@ -351,6 +386,15 @@ public class GameClient : MonoBehaviour
         SendMessageAsync(action);
     }
 
+    /// <summary>
+    /// 멤버 카드 사용(소환) 요청을 서버에 전송합니다.
+    /// 멤버 카드는 항상 MemberZone[0] 슬롯에 배치되므로 position은 0으로 고정됩니다.
+    /// </summary>
+    public void SendPlayMemberCardRequest(string cardInstanceId, int targetEntityId = 0)
+    {
+        SendPlayCardRequest(cardInstanceId, 0, targetEntityId);
+    }
+
     // 타겟 목록 요청
     public void SendValidTargetResponse(string cardInstanceId)
     {
@@ -365,8 +409,6 @@ public class GameClient : MonoBehaviour
     // 추가 타겟 요청
     public void SendTargetReauest(string cardInstanceId, int targetEntityid)
     {
-        Debug.Log($"{cardInstanceId}카드 사용을 위해 {targetEntityid}을 대상으로 고름");
-
         C_SelectTargetForPlay action = new C_SelectTargetForPlay
         {
             action = GameActionType.SELECT_TARGET_FOR_PLAY,
@@ -380,7 +422,6 @@ public class GameClient : MonoBehaviour
     // 공격 전송
     public void SendAttackRequest(int attackerId, int defenderId)
     {
-        Debug.Log($"{attackerId}이가 {defenderId}을 공격함");
         C_Attack action = new C_Attack
         {
             action = GameActionType.ATTACK,
@@ -393,7 +434,6 @@ public class GameClient : MonoBehaviour
     // 공격가능한 대상 요청
     public void SendValidAttackTargetsRequest(int attackerId)
     {
-        Debug.Log("공격 가능한 대상 요청");
         C_ValidAttackTargetsRequest action = new C_ValidAttackTargetsRequest
         {
             action = GameActionType.VALID_ATTACK_TARGETS_REQUEST,
@@ -423,6 +463,56 @@ public class GameClient : MonoBehaviour
             action = GameActionType.CONCEDE
         };
         SendMessageAsync(action);
+    }
+
+    /// <summary>
+    /// 멤버 스킬의 유효 타겟 목록을 서버에 요청합니다.
+    /// </summary>
+    public void SendValidMemberSkillTargetsRequest(int entityId, int skillId)
+    {
+        var action = new C_ValidMemberSkillTargetsRequest
+        {
+            entityId = entityId,
+            skillId = skillId
+        };
+        SendMessageAsync(action);
+    }
+
+    /// <summary>
+    /// 멤버 스킬 시전을 서버에 요청합니다.
+    /// </summary>
+    public void SendUseMemberSkill(int entityId, int skillId, int targetEntityId = 0)
+    {
+        var action = new C_UseMemberSkill
+        {
+            entityId = entityId,
+            skillId = skillId,
+            targetEntityId = targetEntityId
+        };
+        SendMessageAsync(action);
+    }
+
+    /// <summary>
+    /// 사이드덱에서 원하는 카드를 손패로 가져오도록 서버에 요청합니다.
+    /// </summary>
+    public void SendGetCardFromSideDeck(string cardInstanceId)
+    {
+        var action = new C_GetCardFromSideDeck
+        {
+            action = GameActionType.GET_CARD_FROM_SIDE_DECK,
+            cardInstanceId = cardInstanceId
+        };
+        SendMessageAsync(action);
+    }
+
+    /// <summary>
+    /// 감정표현(Emote)을 서버로 전송합니다.
+    /// </summary>
+    public void SendEmote(string emoteId, string message = "")
+    {
+        var action = new C_SendEmote(emoteId, message);
+        SendMessageAsync(action);
+        Debug.Log($"[GameClient] 💬 감정표현 전송: EmoteId='{emoteId}', Message='{message}'");
     }
 
     // 서버에 메세지를 보내는 함수
@@ -557,6 +647,22 @@ public class GameClient : MonoBehaviour
                 OnPlayCardFail(playCardFailInfo);
                 break;
 
+            case GameActionType.VALID_MEMBER_SKILL_TARGETS_RESPONSE:
+                var memberTargetList = (S_ValidMemberSkillTargetsResponse)action;
+                OnValidMemberSkillTargetsResponseEvent?.Invoke(memberTargetList);
+                break;
+
+            case GameActionType.USE_MEMBER_SKILL_SUCCESS:
+                var memberSkillSuccess = (S_UseMemberSkillSuccess)action;
+                OnUseMemberSkillSuccessEvent?.Invoke(memberSkillSuccess);
+                break;
+
+            case GameActionType.USE_MEMBER_SKILL_FAIL:
+                var memberSkillFail = (S_UseMemberSkillFail)action;
+                OnUseMemberSkillFailEvent?.Invoke(memberSkillFail);
+                Debug.LogWarning($"[GameClient] 멤버 스킬 실패: {memberSkillFail.reason}");
+                break;
+
             case GameActionType.GAME_OVER:
                 OnGameOver((S_GameOver)action);
                 break;
@@ -566,6 +672,35 @@ public class GameClient : MonoBehaviour
                 var errorInfo = (S_Error)action;
                 OnErrorEvent?.Invoke(errorInfo.message);
                 Debug.LogError($"[GameClient] 서버 오류: {errorInfo.message}");
+                break;
+
+            case GameActionType.GET_CARD_FROM_SIDE_DECK_SUCCESS:
+                var sideDeckSuccess = (S_GetCardFromSideDeckSuccess)action;
+                OnGetCardFromSideDeckSuccessEvent?.Invoke(sideDeckSuccess);
+                Debug.Log($"[GameClient] 📥 사이드덱 카드 획득 성공 (소모 마나: {sideDeckSuccess.consumedCost}, 잔여 사이드덱: {sideDeckSuccess.remainingSideDeckCount})");
+                break;
+
+            case GameActionType.GET_CARD_FROM_SIDE_DECK_FAIL:
+                var sideDeckFail = (S_GetCardFromSideDeckFail)action;
+                OnGetCardFromSideDeckFailEvent?.Invoke(sideDeckFail);
+                Debug.LogWarning($"[GameClient] ❌ 사이드덱 카드 가져오기 실패: {sideDeckFail.reason}");
+                break;
+
+            case GameActionType.CARD_CREATED:
+                var cardCreated = (S_CardCreated)action;
+                OnCardCreatedEvent?.Invoke(cardCreated);
+                OnCardCreated(cardCreated);
+                break;
+
+            case GameActionType.RECEIVE_EMOTE:
+                var emoteReceived = (S_ReceiveEmote)action;
+                OnReceiveEmoteEvent?.Invoke(emoteReceived);
+                Debug.Log($"[GameClient] 💬 감정표현 수신: Sender='{emoteReceived.senderUid}', EmoteId='{emoteReceived.emoteId}', Message='{emoteReceived.message}'");
+                break;
+
+            case GameActionType.NEW_LOG_EVENT:
+                var newLog = (S_NewLogEvent)action;
+                OnNewLogEvent?.Invoke(newLog);
                 break;
         }
     }
@@ -579,7 +714,7 @@ public class GameClient : MonoBehaviour
         {
             case DebugAction.ResponseDeckInfo:
                 var gameReadyInfo = (S_DebugResponseDeckInfo)action;
-                ClientDebugAction.Instance.DebugDeckinfo(gameReadyInfo.deckCards);
+                ClientDebugAction.Instance.DebugDeckinfo(gameReadyInfo.deckCards, gameReadyInfo.isOpponent);
                 break;
 
             case DebugAction.SpecificCardDraw:
@@ -597,18 +732,29 @@ public class GameClient : MonoBehaviour
     private void OnMulliganInfoReceived(S_MulliganInfo info)
     {
         if (GameMulliganManager.instance != null)
-            GameMulliganManager.instance.mulliganImg.SetActive(true);
-
-        if (CardDrawManager.Instance != null)
+        {
+            GameMulliganManager.instance.StartMulliganPhase(info.cardsToMulligan);
+        }
+        else if (CardDrawManager.Instance != null)
+        {
             CardDrawManager.Instance.PerformBatchDraw(info.cardsToMulligan);
+        }
+
         if (OpponentHandVisualizer.Instance != null)
             OpponentHandVisualizer.Instance.PerformBatchDraw(info.cardsToMulligan.Count);
+
+        // 멀리건 시작 시점에 양쪽 리더 설정
+        if (GameEntityManager.Instance != null)
+            GameEntityManager.Instance.SetReader(info);
     }
 
     private void OnGameReady(S_GameReady info)
     {
+        if (info != null && !string.IsNullOrEmpty(info.opponentName))
+        {
+            OpponentUsername = info.opponentName;
+        }
         StartCoroutine(SyncHandWithServer(info.finalHand));
-        GameEntityManager.Instance.SetReader(info);
     }
 
     // 멀리건 받은 카드를 뽑는 함수
@@ -634,13 +780,26 @@ public class GameClient : MonoBehaviour
             {
                 if (CardDrawManager.Instance != null)
                     CardDrawManager.Instance.PerformDrawAnimation(serverCard);
-                yield return new WaitForSeconds(0.3f);
+                yield return YieldInstructionCache.WaitForSeconds(0.3f);
             }
         }
 
-        // 멀리건 카드를 전부 뽑은 후 isMulliganPhase를 변경하여 손패각도 정상화
-        HandCardControllManager.instance.isMulliganPhase = false;
-        HandCardControllManager.instance.isMulligan = false;
+        // 멀리건 카드를 전부 뽑은 후 isMulliganPhase를 변경하여 손패각도 정상화 및 멀리건 UI 비활성화
+        if (HandCardControllManager.instance != null)
+        {
+            HandCardControllManager.instance.isMulliganPhase = false;
+            HandCardControllManager.instance.isMulligan = false;
+            HandCardControllManager.instance.AlignHand();
+        }
+
+        if (GameMulliganManager.instance != null)
+        {
+            if (GameMulliganManager.instance.mulliganImg != null)
+            {
+                GameMulliganManager.instance.mulliganImg.SetActive(false);
+            }
+            GameMulliganManager.instance.EndMulliganPhase();
+        }
     }
 
     // 상대 멀리건 돌아가는 함수 수정
@@ -649,17 +808,19 @@ public class GameClient : MonoBehaviour
         Debug.Log($"enamy mulligan : {info.replacedCount}");
         int m = 0;
 
-        // 교체할 인덱스 목록을 큰 숫자부터 역순(내림차순)으로 정렬합니다!
-        var sortedIndices = info.replacedIndices.OrderByDescending(x => x).ToList();
-
-        foreach (var mulligan in sortedIndices)
+        // 교체할 인덱스 목록을 큰 숫자부터 역순(내림차순)으로 정렬 (인플레이스 정렬로 LINQ 힙 할당 제거)
+        if (info.replacedIndices != null)
         {
-            OpponentHandVisualizer.Instance.ReturnCardToDeck(mulligan);
-            m++;
-            yield return new WaitForSeconds(0.1f);
+            info.replacedIndices.Sort((a, b) => b.CompareTo(a));
+            foreach (var mulligan in info.replacedIndices)
+            {
+                OpponentHandVisualizer.Instance.ReturnCardToDeck(mulligan);
+                m++;
+                yield return YieldInstructionCache.WaitForSeconds(0.1f);
+            }
         }
 
-        yield return new WaitForSeconds(1.5f);
+        yield return YieldInstructionCache.WaitForSeconds(1.5f);
 
         OpponentHandVisualizer.Instance.PerformBatchDraw(info.replacedCount);
         Debug.Log($"mulligan Count : {m} info.replacedCount : {info.replacedCount}");
@@ -671,13 +832,15 @@ public class GameClient : MonoBehaviour
         for(int i = 0; i < count; i++) 
         {
             OpponentHandVisualizer.Instance.DrawCard();
-            yield return new WaitForSeconds(0.2f);
+            yield return YieldInstructionCache.WaitForSeconds(0.2f);
         }
     }
 
     private void OnPhaseStart(S_PhaseStart info)
     {
-
+        if (info == null) return;
+        // BattleManager가 OnPhaseStartEvent를 구독하여 턴 시작 드로우(PerformDrawAnimation)를 단독 전담하므로,
+        // 여기서 중복으로 SendDrawCard를 호출하지 않습니다 (중복 드로우 버그 방지).
     }
 
     private void OnActionResolution(S_ActionResolution info)
@@ -704,7 +867,7 @@ public class GameClient : MonoBehaviour
                         break;
                     }
                     CardActionQueueManager.Instance.ResolvePlay(log.entityData);
-                    HandInteractionManager.instance.AlignHand();
+                    HandCardControllManager.instance.AlignHand();
                     break;
 
                 case GameEventType.ATTACK:
@@ -714,7 +877,7 @@ public class GameClient : MonoBehaviour
             }
 
         }
-        yield return new WaitForSeconds(1.0f);
+        yield return YieldInstructionCache.WaitForSeconds(1.0f);
     }
 
     public void OnReqeustChoice(S_RequestChoice info)
@@ -747,12 +910,72 @@ public class GameClient : MonoBehaviour
     /// </summary>
     public void SendDrawCard(S_DrawCard draw_Card)
     {
-        if(draw_Card.playerUid == UserUid)
+        if (draw_Card == null)
         {
-            CardDrawManager.Instance.PerformDrawAnimation(draw_Card.drawnCard);
-        }else
+            Debug.LogWarning("[GameClient:SendDrawCard] draw_Card 객체가 null입니다.");
+            return;
+        }
+
+        string cardDesc = draw_Card.drawnCard != null 
+            ? $"'{draw_Card.drawnCard.cardId}' (instanceId: {draw_Card.drawnCard.instanceId}, origin: {draw_Card.drawnCard.origin} [{(int)draw_Card.drawnCard.origin}])" 
+            : "null";
+
+        if (draw_Card.playerUid == UserUid)
         {
-            OpponentHandVisualizer.Instance.DrawCard();
+            if (draw_Card.drawnCard != null && CardDrawManager.Instance != null)
+            {
+                bool isGenerate = (draw_Card.drawnCard.origin == CardOrigin.Created || draw_Card.drawnCard.origin == CardOrigin.SideDeck);
+
+                if (isGenerate)
+                {
+                    CardDrawManager.Instance.PerformGenerateAnimation(draw_Card.drawnCard);
+                }
+                else
+                {
+                    CardDrawManager.Instance.PerformDrawAnimation(draw_Card.drawnCard);
+                }
+            }
+            else
+            {
+                Debug.Log($"[GameClient:SendDrawCard] 드로우된 카드 데이터가 없거나 CardDrawManager가 없음 (drawnCard: {draw_Card.drawnCard != null}, CardDrawManager: {CardDrawManager.Instance != null})");
+            }
+        }
+        else
+        {
+            Debug.Log($"[GameClient:SendDrawCard] 상대방 카드 드로우 처리 (playerUid: '{draw_Card.playerUid}')");
+            if (OpponentHandVisualizer.Instance != null)
+            {
+                OpponentHandVisualizer.Instance.DrawCard();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 카드 생성(S_CardCreated) 패킷을 처리합니다.
+    /// 본인이면 CardDrawManager에서 생성 연출을, 상대방이면 OpponentHandVisualizer에서 뒷면 생성 연출을 실행합니다.
+    /// </summary>
+    private void OnCardCreated(S_CardCreated info)
+    {
+        if (info == null) return;
+
+        if (info.playerUid == UserUid)
+        {
+            CardInfo cardInfo = info.card ?? info.createdCard;
+            if (cardInfo != null && CardDrawManager.Instance != null)
+            {
+                CardDrawManager.Instance.PerformGenerateAnimation(cardInfo);
+            }
+            else
+            {
+                Debug.Log($"[GameClient:OnCardCreated] 본인 카드 정보가 없거나 CardDrawManager가 없습니다.");
+            }
+        }
+        else
+        {
+            if (OpponentHandVisualizer.Instance != null)
+            {
+                OpponentHandVisualizer.Instance.GenerateCard();
+            }
         }
     }
 
@@ -774,7 +997,218 @@ public class GameClient : MonoBehaviour
     private void OnGameOver(S_GameOver info)
     {
         Debug.Log($"[GameClient] 🏆 게임 종료 수신! 승자: {info.winnerUid} (종료 사유: {info.reason})");
+        OpponentUsername = "상대방";
         OnGameOverEvent?.Invoke(info);
         _cts?.Cancel();
+    }
+
+    // ==================================================================
+    // 유저 계정 및 보유 아이템 관리 기능
+    // ==================================================================
+
+    /// <summary>
+    /// 로그인 시 또는 서버 동기화 시 유저 데이터 설정
+    /// (0001 기본 스킨이 누락되어 있다면 자동으로 보유 목록에 추가)
+    /// </summary>
+    public void SetUserData(UserData data)
+    {
+        CurrentUser = data;
+        if (data != null)
+        {
+            if (CurrentUser.ownedSkins == null)
+            {
+                CurrentUser.ownedSkins = new List<string>();
+            }
+
+            // 기본 0001 스킨 자동 보장 (아이템 목록.csv 기준 표준 규격)
+            string[] default0001Skins = new string[] { "Skin_Gangzi_0001", "Skin_Yuni_0001", "Skin_Huya_0001" };
+            foreach (var skinId in default0001Skins)
+            {
+                if (!CurrentUser.ownedSkins.Contains(skinId))
+                {
+                    CurrentUser.ownedSkins.Add(skinId);
+                }
+            }
+
+            Debug.Log($"[GameClient] ✅ 유저 데이터 갱신 완료: {data.username} (Level: {data.level}, Gold: {data.gold}, Skins: {data.ownedSkins.Count}개)");
+        }
+        OnUserDataUpdated?.Invoke(CurrentUser);
+    }
+
+    /// <summary>
+    /// 상점 구매 결과(재화 잔액 및 획득 아이템)를 즉시 로컬 CurrentUser에 반영
+    /// </summary>
+    public void ApplyPurchaseResult(PurchaseResponse purchase)
+    {
+        if (CurrentUser == null || purchase == null) return;
+
+        CurrentUser.gold = purchase.remainingGold;
+        CurrentUser.stellastone = purchase.remainingStellastone;
+        CurrentUser.stardust = purchase.remainingStardust;
+
+        if (CurrentUser.ownedPacks == null) CurrentUser.ownedPacks = new Dictionary<string, int>();
+        if (CurrentUser.ownedSkins == null) CurrentUser.ownedSkins = new List<string>();
+
+        // 카드팩 구매인 경우 OwnedPacks 반영
+        if (purchase.remainingPacks > 0)
+        {
+            CurrentUser.ownedPacks[purchase.productId] = purchase.remainingPacks;
+            Debug.Log($"[GameClient] 🎁 보유 카드팩 갱신: {purchase.productId} (총 {purchase.remainingPacks}개)");
+        }
+        else if (!string.IsNullOrEmpty(purchase.obtainedItemId))
+        {
+            if (!CurrentUser.ownedSkins.Contains(purchase.obtainedItemId))
+            {
+                CurrentUser.ownedSkins.Add(purchase.obtainedItemId);
+                Debug.Log($"[GameClient] 🎁 신규 스킨/아이템 획득 로컬 반영: {purchase.obtainedItemId}");
+            }
+        }
+
+        // SinginManager의 전역 UserData도 함께 실시간 동기화
+        if (SinginManager.CurrentUserData != null)
+        {
+            SinginManager.CurrentUserData.gold = purchase.remainingGold;
+            SinginManager.CurrentUserData.stellastone = purchase.remainingStellastone;
+            SinginManager.CurrentUserData.stardust = purchase.remainingStardust;
+            SinginManager.CurrentUserData.ownedPacks = CurrentUser.ownedPacks;
+            SinginManager.CurrentUserData.ownedSkins = CurrentUser.ownedSkins;
+            SinginManager.CurrentUserData.ownedCards = CurrentUser.ownedCards;
+        }
+
+        Debug.Log($"[GameClient] 🛒 상점 구매 로컬 반영 완료: 남은 골드={CurrentUser.gold}, 남은 성석={CurrentUser.stellastone}, 보유 스킨 수={CurrentUser.ownedSkins?.Count ?? 0}, 보유 팩 종류={CurrentUser.ownedPacks?.Count ?? 0}");
+        OnUserDataUpdated?.Invoke(CurrentUser);
+    }
+
+    /// <summary>
+    /// 서버(GET /api/users/me)로부터 최신 유저 정보를 다시 불러와 동기화하는 코루틴
+    /// </summary>
+    public IEnumerator RefreshUserDataAsync(Action<bool> onComplete = null)
+    {
+        FirebaseUser user = FirebaseAuth.DefaultInstance.CurrentUser;
+        if (user == null)
+        {
+            Debug.LogWarning("[GameClient] 로그인된 사용자가 없어 유저 정보를 갱신할 수 없습니다.");
+            onComplete?.Invoke(false);
+            yield break;
+        }
+
+        var tokenTask = user.TokenAsync(false);
+        yield return new WaitUntil(() => tokenTask.IsCompleted);
+
+        if (tokenTask.IsFaulted || tokenTask.IsCanceled)
+        {
+            Debug.LogError("[GameClient] 인증 토큰을 가져오지 못했습니다.");
+            onComplete?.Invoke(false);
+            yield break;
+        }
+
+        string idToken = tokenTask.Result;
+        string requestUrl = $"{BaseApiUrl}/users/me";
+
+        using (UnityEngine.Networking.UnityWebRequest webRequest = UnityEngine.Networking.UnityWebRequest.Get(requestUrl))
+        {
+            webRequest.SetRequestHeader("Authorization", "Bearer " + idToken);
+            yield return webRequest.SendWebRequest();
+
+            if (webRequest.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+            {
+                try
+                {
+                    AuthApiResponse response = JsonConvert.DeserializeObject<AuthApiResponse>(webRequest.downloadHandler.text);
+                    if (response != null && response.userData != null)
+                    {
+                        SetUserData(response.userData);
+                        onComplete?.Invoke(true);
+                        yield break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[GameClient] 유저 데이터 파싱 오류: {ex.Message}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[GameClient] 유저 데이터 갱신 실패: {webRequest.error}");
+            }
+        }
+
+        onComplete?.Invoke(false);
+    }
+
+    /// <summary>
+    /// 서버(/api/shop/products?category_id=0)로부터 리더 스킨 목록을 불러와 캐싱합니다.
+    /// (이미 캐시된 데이터가 있고 forceReload가 false면 즉시 반환)
+    /// </summary>
+    public IEnumerator GetLeaderSkinsAsync(Action<List<ProductData>> onComplete = null, bool forceReload = false)
+    {
+        if (!forceReload && AllLeaderSkins != null && AllLeaderSkins.Count > 0)
+        {
+            onComplete?.Invoke(AllLeaderSkins);
+            yield break;
+        }
+
+        FirebaseUser user = FirebaseAuth.DefaultInstance.CurrentUser;
+        string idToken = null;
+        if (user != null)
+        {
+            var tokenTask = user.TokenAsync(false);
+            yield return new WaitUntil(() => tokenTask.IsCompleted);
+            if (!tokenTask.IsFaulted && !tokenTask.IsCanceled)
+            {
+                idToken = tokenTask.Result;
+            }
+        }
+
+        string requestUrl = $"{BaseApiUrl}/shop/products?category_id=0";
+
+        using (UnityEngine.Networking.UnityWebRequest webRequest = UnityEngine.Networking.UnityWebRequest.Get(requestUrl))
+        {
+            if (!string.IsNullOrEmpty(idToken))
+            {
+                webRequest.SetRequestHeader("Authorization", "Bearer " + idToken);
+            }
+
+            yield return webRequest.SendWebRequest();
+
+            if (webRequest.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+            {
+                try
+                {
+                    ProductsApiResponse res = JsonUtility.FromJson<ProductsApiResponse>(webRequest.downloadHandler.text);
+                    if (res != null && res.status == "success" && res.data != null)
+                    {
+                        AllLeaderSkins = res.data;
+                        Debug.Log($"[GameClient] 🎨 리더 스킨 목록 캐시 완료: {AllLeaderSkins.Count}개 로드됨");
+
+                        // 0001로 끝나는 기본 스킨들을 CurrentUser.ownedSkins에 자동 보유 등록
+                        if (CurrentUser != null && CurrentUser.ownedSkins != null)
+                        {
+                            foreach (var skin in AllLeaderSkins)
+                            {
+                                if (skin != null && !string.IsNullOrEmpty(skin.productId) && skin.productId.EndsWith("0001"))
+                                {
+                                    if (!CurrentUser.ownedSkins.Contains(skin.productId))
+                                    {
+                                        CurrentUser.ownedSkins.Add(skin.productId);
+                                        Debug.Log($"[GameClient] 🎁 0001 기본 스킨 자동 보유 등록: {skin.productId}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[GameClient] 스킨 목록 파싱 오류: {ex.Message}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[GameClient] 스킨 목록 로드 실패: {webRequest.error}");
+            }
+        }
+
+        onComplete?.Invoke(AllLeaderSkins);
     }
 }

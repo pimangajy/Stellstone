@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
@@ -57,12 +57,22 @@ public class CardActionQueueManager : MonoBehaviour
     /// </summary>
     public void PreparePlay(GameObject cardObj, bool isOpponent)
     {
+        bool isSpell = false;
+        if (cardObj != null)
+        {
+            var display = cardObj.GetComponent<GameCardDisplay>();
+            if (display != null && display._cardData != null && display._cardData.cardType == CardType.주문)
+            {
+                isSpell = true;
+            }
+        }
+
         CardActionRequest newRequest = new CardActionRequest
         {
             cardObject = cardObj,
             isOpponent = isOpponent,
-            entityData = null, // 버퍼 로직 삭제로 무조건 null 할당 후 대기
-            state = ActionState.WaitingForData
+            entityData = null, // 주문은 필드 소환(EntityData)이 없으므로 즉시 Ready
+            state = isSpell ? ActionState.Ready : ActionState.WaitingForData
         };
 
         _internalList.Add(newRequest);
@@ -96,29 +106,27 @@ public class CardActionQueueManager : MonoBehaviour
         {
             CardActionRequest current = _internalList[0];
 
-            // 데이터가 올 때까지 대기
-            if (current.state == ActionState.WaitingForData)
+            // 데이터가 올 때까지 대기 (최대 2초 대기 후 타임아웃으로 데드락 방지)
+            float waitTimer = 0f;
+            while (current.state == ActionState.WaitingForData && waitTimer < 2.0f)
             {
-                yield return new WaitForSeconds(0.05f);
-                continue;
+                waitTimer += 0.05f;
+                yield return YieldInstructionCache.WaitForSeconds(0.05f);
             }
 
             GameObject currentCard = current.cardObject;
             EntityData currentData = current.entityData;
 
             // ==========================================================
-            // 1. 내 카드 처리 (연출 생략, 즉시 소환)
+            // 1. 내 카드 처리 (연출 생략, 손패 UI 정리)
             // ==========================================================
             if (!current.isOpponent)
             {
-                // UI에서 보여줄 필요 없이 바로 필드 스폰 실행
-                if (GameEntityManager.Instance != null)
-                {
-                    GameEntityManager.Instance.SpawnCard(currentData);
-                }
-
                 // 내 카드는 드래그하던 손패 UI 오브젝트이므로 역할이 끝났으니 파괴
-                if (currentCard != null) HandCardControllManager.instance.RemoveCardFromHand(currentCard);
+                if (currentCard != null && HandCardControllManager.instance != null)
+                {
+                    HandCardControllManager.instance.RemoveCardFromHand(currentCard);
+                }
             }
             // ==========================================================
             // 2. 상대방 카드 처리 (중앙 단일 슬롯 연출)
@@ -147,15 +155,6 @@ public class CardActionQueueManager : MonoBehaviour
                 // 상대로부터 날아온 느낌을 주기 위해 살짝 큼직하게 띄움
                 cardRect.DOScale(Vector3.one * 1.3f, moveDuration).SetEase(Ease.OutQuad);
 
-                // 유저가 카드를 확인할 시간을 줌
-                // yield return new WaitForSeconds(stayDuration);
-
-                // 실제 필드에 하수인 스폰
-                if (GameEntityManager.Instance != null)
-                {
-                    GameEntityManager.Instance.SpawnCard(currentData);
-                }
-
                 // 일정 시간이 지나면 보여줬던 카드를 자연스럽게 치우기 (도중에 새 카드가 오면 위에서 강제 파괴됨)
                 _hideCardCoroutine = StartCoroutine(HideShownCardRoutine(_currentShownCard));
             }
@@ -164,7 +163,7 @@ public class CardActionQueueManager : MonoBehaviour
             _internalList.RemoveAt(0);
 
             // 대기열 연출이 없으므로 사이 간격을 매우 짧게 줍니다.
-            yield return new WaitForSeconds(0.1f);
+            yield return YieldInstructionCache.WaitForSeconds(0.1f);
         }
 
         _isProcessing = false;
@@ -176,7 +175,7 @@ public class CardActionQueueManager : MonoBehaviour
     private IEnumerator HideShownCardRoutine(GameObject targetCard)
     {
         // 소환 완료 후 0.5초 정도 더 보여주다가 사라짐
-        yield return new WaitForSeconds(1.0f);
+        yield return YieldInstructionCache.WaitForSeconds(1.0f);
 
         if (targetCard != null)
         {

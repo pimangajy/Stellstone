@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -25,10 +25,22 @@ public class ClientDebugAction : MonoBehaviour
 
     public void DeckInfoRequest()
     {
-        // BaseDebugAction 대신 명시적인 요청 클래스 사용
+        // 내 덱 정보 요청
         C_DebugRequestDeckInfo action = new C_DebugRequestDeckInfo
         {
             debugAction = DebugAction.RequestDeckInfo, 
+            isOpponent = false
+        };
+        GameClient.Instance.SendDebugMessageAsync(action);
+    }
+
+    public void OpponentDeckInfoRequest()
+    {
+        // 상대방 덱 정보 요청
+        C_DebugRequestDeckInfo action = new C_DebugRequestDeckInfo
+        {
+            debugAction = DebugAction.RequestDeckInfo, 
+            isOpponent = true
         };
         GameClient.Instance.SendDebugMessageAsync(action);
     }
@@ -50,7 +62,7 @@ public class ClientDebugAction : MonoBehaviour
     }
 
     // 서버에서 덱의 정보를 받아 리스트 생성
-    public void DebugDeckinfo(List<CardInfo> infoList)
+    public void DebugDeckinfo(List<CardInfo> infoList, bool isOpponentDeck = false)
     {
         deckList = infoList;
 
@@ -62,7 +74,7 @@ public class ClientDebugAction : MonoBehaviour
         foreach (CardInfo info in infoList)
         {
             GameObject newObj = Instantiate(infoPanel, deckInfoList);
-            newObj.GetComponent<SpecificCardDraw>().DeckInfo(info);
+            newObj.GetComponent<SpecificCardDraw>().DeckInfo(info, isOpponentDeck);
         }
     }
 }

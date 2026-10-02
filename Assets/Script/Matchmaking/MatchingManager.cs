@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using System.Collections;
 
 /// <summary>
 /// 메인 로비/매치메이킹 씬의 UI와 상태를 관리합니다.
@@ -17,6 +18,8 @@ using Unity.VisualScripting;
 /// </summary>
 public class MatchingManager : MonoBehaviour
 {
+    public static MatchingManager Instance { get; private set; }
+
     [System.Serializable]
     private class SelectDeckResponse
     {
@@ -27,10 +30,12 @@ public class MatchingManager : MonoBehaviour
     [Header("UI 연결 (로비 화면)")]
     [SerializeField] private Button openDeckSelectButton; // '덱 선택' 텍스트/버튼
     [SerializeField] private TextMeshProUGUI selectedDeckNameText; // '덱 선택' 버튼 안의 텍스트
-    [SerializeField] private Image selectedLeaderImage; // '리더 변경' 버튼 안의 이미지
+    [SerializeField] private Image selectedLeaderImage; // '스킨 변경' 버튼 안의 이미지
+    [SerializeField] private Button openSkinSelectButton; // '스킨 선택' 텍스트/버튼
 
     [Header("팝업 참조")]
     [SerializeField] private DeckSelectPopup deckSelectPopup; // 씬에 있는 DeckSelectPopup 스크립트
+    [SerializeField] private SkinSelectPopup skinSelectPopup; // 씬에 있는 SkinSelectPopup 스크립트
 
     // (추가) 로비의 덱 카드 목록 UI
     [Header("덱 카드 목록 UI (로비)")]
@@ -58,6 +63,14 @@ public class MatchingManager : MonoBehaviour
     [Tooltip("기본 로비 화면 (대전 찾기 버튼이 있는)")]
     [SerializeField] private GameObject lobbyPanel;
 
+    [Header("매칭 에러 안내 UI")]
+    [Tooltip("매칭 덱 구성 에러 팝업 패널 (machingError)")]
+    [SerializeField] private GameObject machingErrorPanel;
+    [Tooltip("매칭 에러 메시지 텍스트 (machingError 하위 본문 TextMeshProUGUI)")]
+    [SerializeField] private TextMeshProUGUI machingErrorText;
+    [Tooltip("에러 팝업 닫기/확인 버튼 (있을 경우)")]
+    [SerializeField] private Button machingErrorCloseButton;
+
     //  DeckSaveManager에서 서버 주소 복사
 
     private string ApiBaseUrl = GameClient.Instance.BaseUrl;
@@ -79,6 +92,8 @@ public class MatchingManager : MonoBehaviour
 
     void Awake()
     {
+        Instance = this;
+
         // DeckSelectPopup이 보낼 '덱 확정' 이벤트를 구독(Subscribe)합니다.
         DeckSelectPopup.OnDeckConfirmed += HandlePopupDeckConfirmed;
 
@@ -86,6 +101,11 @@ public class MatchingManager : MonoBehaviour
         if (openDeckSelectButton != null)
         {
             openDeckSelectButton.onClick.AddListener(OnOpenDeckPopup);
+        }
+
+        if (openSkinSelectButton != null)
+        {
+            openSkinSelectButton.onClick.AddListener(OnOpenSkinPopup);
         }
 
         // Firestore 및 Auth 초기화
@@ -113,12 +133,41 @@ public class MatchingManager : MonoBehaviour
             matchmakingService.OnMatchmakingStarted += HandleMatchmakingStarted;
             matchmakingService.OnMatchmakingCancelled += HandleMatchmakingCancelled;
             matchmakingService.OnMatchmakingFailed += HandleMatchmakingFailed;
+            matchmakingService.OnMatchDeckError += HandleMatchDeckError;
             matchmakingService.OnMatchFound += HandleMatchFound;
         }
 
         // 시작 시 UI 상태 초기화
         searchingPanel.SetActive(false);
         // lobbyPanel.SetActive(true);
+
+        InitMatchingErrorUI();
+        if (machingErrorPanel != null)
+        {
+            machingErrorPanel.SetActive(false);
+        }
+    }
+
+    private async void Start()
+    {
+        // 씬 진입 시 이미 로그인이 되어 있다면 마지막 선택 덱 및 스킨 로드
+        if (auth != null && auth.CurrentUser != null)
+        {
+            currentUserId = auth.CurrentUser.UserId;
+            await LoadLastSelectedDeck(currentUserId);
+        }
+        else if (GameClient.Instance != null && GameClient.Instance.CurrentUser != null)
+        {
+            string selectDeckId = GameClient.Instance.CurrentUser.selectDeck;
+            if (!string.IsNullOrEmpty(selectDeckId) && DeckSaveManager_Firebase.instance != null)
+            {
+                var myDeck = DeckSaveManager_Firebase.instance.GetAllDecks()?.FirstOrDefault(d => d.deckId == selectDeckId);
+                if (myDeck != null)
+                {
+                    HandleDeckConfirmed(myDeck, false);
+                }
+            }
+        }
     }
 
     void OnDestroy()
@@ -134,6 +183,7 @@ public class MatchingManager : MonoBehaviour
             matchmakingService.OnMatchmakingStarted -= HandleMatchmakingStarted;
             matchmakingService.OnMatchmakingCancelled -= HandleMatchmakingCancelled;
             matchmakingService.OnMatchmakingFailed -= HandleMatchmakingFailed;
+            matchmakingService.OnMatchDeckError -= HandleMatchDeckError;
             matchmakingService.OnMatchFound -= HandleMatchFound;
         }
     }
@@ -147,6 +197,107 @@ public class MatchingManager : MonoBehaviour
         {
             // (수정) 팝업을 열 때 '현재 선택된 덱' 정보를 전달합니다.
             deckSelectPopup.OpenPopup(currentSelectedDeck);
+        }
+    }
+
+    /// <summary>
+    /// '스킨 변경' 버튼을 눌러 스킨 선택 팝업을엽니다.
+    /// </summary>
+    private void OnOpenSkinPopup()
+    {
+        if (currentSelectedDeck == null)
+        {
+            Debug.LogWarning("[MatchingManager] 스킨을 변경할 덱이 선택되지 않았습니다. 먼저 덱을 선택해주세요.");
+            return;
+        }
+
+        if (skinSelectPopup != null)
+        {
+            skinSelectPopup.gameObject.SetActive(true);
+            skinSelectPopup.OpenPopup(currentSelectedDeck, OnLeaderSkinChanged);
+        }
+        else
+        {
+            Debug.LogWarning("[MatchingManager] SkinSelectPopup 참조가 설정되지 않았습니다.");
+        }
+    }
+
+    /// <summary>
+    /// 스킨 선택 팝업에서 스킨을 선택/확정했을 때 호출됩니다.
+    /// </summary>
+    private async void OnLeaderSkinChanged(string newSkinId)
+    {
+        if (currentSelectedDeck == null) return;
+
+        currentSelectedDeck.leaderSkinId = newSkinId;
+        Debug.Log($"[MatchingManager] 덱 '{currentSelectedDeck.deckName}' 리더 스킨 변경: {newSkinId}");
+
+        // 1. 로비의 리더 스킨 이미지 즉시 갱신
+        UpdateLeaderSkinImage(newSkinId, currentSelectedDeck.deckClass);
+
+        // 2. 변경된 스킨 정보를 서버 DB에 비동기 저장
+        if (DeckSaveManager_Firebase.instance != null)
+        {
+            await DeckSaveManager_Firebase.instance.ServerUpdateDeck(currentSelectedDeck);
+            Debug.Log($"[MatchingManager] 서버에 스킨 변경 사항 저장 완료: {newSkinId}");
+        }
+    }
+
+    /// <summary>
+    /// 로비 화면의 리더 스킨 이미지를 갱신합니다.
+    /// </summary>
+    private void UpdateLeaderSkinImage(string skinId, string deckClass)
+    {
+        if (selectedLeaderImage == null) return;
+
+        // 1. [최우선] 로컬 Resources/Skins 에셋에서 즉시(0초) 로드하여 지연 없이 반영
+        var masterSkin = LeaderCardDisplay.LoadSkinData(skinId, deckClass);
+        if (masterSkin != null && masterSkin.skinSprite != null)
+        {
+            selectedLeaderImage.sprite = masterSkin.skinSprite;
+            return;
+        }
+
+        // 2. 로컬 에셋에 없는 경우 비동기 네트워크 이미지 로드
+        StartCoroutine(UpdateLeaderSkinImageCoroutine(skinId, deckClass));
+    }
+
+    private IEnumerator UpdateLeaderSkinImageCoroutine(string skinId, string deckClass)
+    {
+        // 1. 스킨 도감 데이터가 비어있다면 로드 대기
+        if (GameClient.Instance != null && (GameClient.Instance.AllLeaderSkins == null || GameClient.Instance.AllLeaderSkins.Count == 0))
+        {
+            yield return GameClient.Instance.GetLeaderSkinsAsync(null);
+        }
+
+        // 2. GameClient에서 해당 스킨의 image_url 찾기
+        string imageUrl = null;
+        if (GameClient.Instance != null && GameClient.Instance.AllLeaderSkins != null && !string.IsNullOrEmpty(skinId))
+        {
+            var skinData = GameClient.Instance.AllLeaderSkins.FirstOrDefault(s => s.productId == skinId);
+            if (skinData != null && !string.IsNullOrEmpty(skinData.image_url))
+            {
+                imageUrl = skinData.image_url;
+            }
+        }
+
+        // 3. 못 찾은 경우 기본 경로 fallback
+        if (string.IsNullOrEmpty(imageUrl))
+        {
+            string fallbackClass = !string.IsNullOrEmpty(deckClass) ? deckClass : "Gangzi";
+            if (!string.IsNullOrEmpty(skinId))
+            {
+                if (skinId.IndexOf("Yuni", StringComparison.OrdinalIgnoreCase) >= 0) fallbackClass = "Yuni";
+                else if (skinId.IndexOf("Huya", StringComparison.OrdinalIgnoreCase) >= 0) fallbackClass = "Huya";
+                else if (skinId.IndexOf("Gangzi", StringComparison.OrdinalIgnoreCase) >= 0) fallbackClass = "Gangzi";
+            }
+            imageUrl = $"Items/Skins/{fallbackClass}_Skin_0001.png";
+        }
+
+        // 4. 로비 Image에 로드
+        if (selectedLeaderImage != null)
+        {
+            ShopManager.LoadProductImage(imageUrl, selectedLeaderImage);
         }
     }
 
@@ -240,7 +391,10 @@ public class MatchingManager : MonoBehaviour
         currentSelectedDeck = selectedDeck;
         selectedDeckNameText.text = selectedDeck.deckName;
 
-        // (수정) 이제 비동기(Async)가 아니어도 되지만, 구조 유지를 위해 호출만 깔끔하게 변경
+        // 로비의 리더 스킨 이미지 갱신
+        UpdateLeaderSkinImage(selectedDeck.GetEquippedSkinId(), selectedDeck.deckClass);
+
+        // 덱 카드 목록 갱신
         UpdateDeckCardList(selectedDeck);
 
         if (saveToServer)
@@ -474,6 +628,133 @@ public class MatchingManager : MonoBehaviour
         {
             uIPanelToggler.HidePanel();
         }
+
+        // machingError 패널이 아직 안 떴다면 기본 실패 메시지 표시
+        if (machingErrorPanel == null || !machingErrorPanel.activeSelf)
+        {
+            ShowMatchingError(errorMessage);
+        }
+    }
+
+    /// <summary>
+    /// 덱 구성 검증 실패 전용 에러 패킷(MatchDeckErrorResponse)을 수신했을 때 호출됩니다.
+    /// </summary>
+    private void HandleMatchDeckError(MatchmakingService.MatchDeckErrorResponse error)
+    {
+        if (error == null) return;
+
+        Debug.LogWarning($"[MatchingManager] ⚠️ 덱 구성 검증 실패 수신: {error.errorCode} - {error.message}");
+        StopMatchingTimer();
+
+        if (searchingPanel != null)
+        {
+            UIPanelToggler uIPanelToggler = searchingPanel.GetComponent<UIPanelToggler>();
+            if (uIPanelToggler != null) uIPanelToggler.HidePanel();
+            else searchingPanel.SetActive(false);
+        }
+
+        ShowMatchingError(error.message);
+    }
+
+    /// <summary>
+    /// 매칭 에러 안내 팝업(machingError)을 띄우고 오류 메시지를 표시합니다.
+    /// </summary>
+    public void ShowMatchingError(string message)
+    {
+        InitMatchingErrorUI();
+
+        if (machingErrorText != null)
+        {
+            machingErrorText.text = !string.IsNullOrEmpty(message) ? message : "매칭 중 오류가 발생했습니다.";
+        }
+
+        if (machingErrorPanel != null)
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.OpenPopup(machingErrorPanel);
+            }
+            else
+            {
+                machingErrorPanel.SetActive(true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 매칭 에러 안내 팝업을 닫습니다.
+    /// </summary>
+    public void CloseMatchingError()
+    {
+        if (machingErrorPanel != null)
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.CloseSpecificPopup(machingErrorPanel);
+            }
+            else
+            {
+                machingErrorPanel.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// machingError 오브젝트 및 하위 본문 텍스트 컴포넌트를 초기화하고 클릭 닫기 이벤트를 연결합니다.
+    /// </summary>
+    private void InitMatchingErrorUI()
+    {
+        if (machingErrorPanel == null)
+        {
+            var go = GameObject.Find("machingError");
+            if (go != null)
+            {
+                machingErrorPanel = go;
+            }
+            else
+            {
+                var bg = GameObject.Find("BackGround");
+                if (bg != null)
+                {
+                    var child = bg.transform.Find("machingError");
+                    if (child != null) machingErrorPanel = child.gameObject;
+                }
+            }
+        }
+
+        if (machingErrorPanel != null)
+        {
+            if (machingErrorText == null)
+            {
+                var texts = machingErrorPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                // 첫 번째는 제목("경고"), 두 번째가 본문 내용 텍스트
+                if (texts != null && texts.Length > 1)
+                {
+                    machingErrorText = texts[1];
+                }
+                else if (texts != null && texts.Length > 0)
+                {
+                    machingErrorText = texts[0];
+                }
+            }
+
+            // 닫기 버튼이 명시되지 않았으면 패널 자체를 클릭하여 닫을 수 있도록 Button 부착
+            if (machingErrorCloseButton != null)
+            {
+                machingErrorCloseButton.onClick.RemoveListener(CloseMatchingError);
+                machingErrorCloseButton.onClick.AddListener(CloseMatchingError);
+            }
+            else
+            {
+                Button panelBtn = machingErrorPanel.GetComponent<Button>();
+                if (panelBtn == null)
+                {
+                    panelBtn = machingErrorPanel.AddComponent<Button>();
+                }
+                panelBtn.onClick.RemoveListener(CloseMatchingError);
+                panelBtn.onClick.AddListener(CloseMatchingError);
+            }
+        }
     }
 
     /// <summary>
@@ -528,7 +809,7 @@ public class MatchingManager : MonoBehaviour
 
         while (true)
         {
-            yield return new WaitForSeconds(1f);
+            yield return YieldInstructionCache.WaitForSeconds(1f);
             totalSeconds++;
 
             int minutes = totalSeconds / 60;

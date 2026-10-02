@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9865b3663d5750419b8b0870b20d99b, type: 3}
+  m_Name: VFX_Attack_ThunderBall
+  m_EditorClassIdentifier: Assembly-CSharp::CardVFXData
+  triggerType: 6
+  playType: 0
+  vfxPrefab: {fileID: 3300439051078825739, guid: 0b66d64236854824eb746250b9775c18, type: 3}
+  soundEffect: {fileID: 0}
+  heavyVfxPrefab: {fileID: 3300439051078825739, guid: 4fb96922fd6eba74e9d761c52347cb03, type: 3}
+  heavyDamageThreshold: 6
+  heavySoundEffect: {fileID: 0}
+  damageDelay: 0.35
+  vfxDestroyTime: 3
+  projectileInterval: 0
+  leaderDefeatMotion: {fileID: 0}

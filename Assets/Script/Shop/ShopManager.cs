@@ -1,7 +1,11 @@
+using Firebase.Auth;
+using Firebase.Firestore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Firebase.Auth;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -40,16 +44,68 @@ public enum PriceCurrency
 [System.Serializable]
 public class ProductData
 {
+    [JsonConverter(typeof(StringEnumConverter))]
     public ShopCategory category_Id;                      // 카테고리 아이디 (Enum)
     public string productId;                               // 아이템 고유 아이디 (문자열)
     public string productName;                             // 아이템 이름
     public string description;                             // 아이템 설명
     public string image_url;                               // 아이템 이미지 위치
     public int price;                                      // 아이템 가격
+    [JsonConverter(typeof(StringEnumConverter))]
     public PriceCurrency currency;                         // 결제 재화 종류
     public bool isActive;                                  // 판매 활성화 여부
     public string sale_Start_Date;                         // 할인 시작일
     public string sale_End_Date;                           // 할인 종료기간
+    public Expansion? targetExpansion;
+    public List<string> targetClasses;
+    public List<string> fixedCardIds;
+    public List<string> randomPickPoolIds;
+    public int randomPickCount = 1;
+    public List<string> customCardPoolIds;
+    public int cardsPerPack = 5;
+    public int guaranteedLegendaryCount = 0;
+    public int guaranteedEpicCount = 0;
+    public int guaranteedRareCount = 0;
+    public int purchaseLimit = 0;                          // 계정당 구매 제한 횟수 (0: 무제한)
+    public int myPurchaseCount = 0;                         // 내가 구매한 누적 횟수
+    public int remainingPurchaseLimit = -1;                 // 남은 구매 가능 횟수 (-1: 무제한, 0: 품절)
+    public bool isPurchasable = true;                       // 구매 가능 여부
+    public bool isVisibleInShop = true;                     // 상점 진열 노출 여부 (false: 기본스킨, 비매품, 비공개 상품)
+
+    /// <summary>
+    /// 역직렬화 실패 또는 오설정 시 productId 접두사를 통해 올바른 ShopCategory 복구
+    /// </summary>
+    public ShopCategory GetActualCategory()
+    {
+        if (category_Id != ShopCategory.LeaderSkin) return category_Id;
+
+        if (string.IsNullOrEmpty(productId)) return category_Id;
+
+        if (productId.StartsWith("CardPack", StringComparison.OrdinalIgnoreCase) ||
+            productId.StartsWith("Pack_", StringComparison.OrdinalIgnoreCase) ||
+            productId.EndsWith("Pack", StringComparison.OrdinalIgnoreCase) ||
+            productId.Contains("CardPack", StringComparison.OrdinalIgnoreCase))
+        {
+            return ShopCategory.CardPack;
+        }
+        if (productId.StartsWith("Prism_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ShopCategory.PrismCard;
+        }
+        if (productId.StartsWith("Package_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ShopCategory.Package;
+        }
+        if (productId.StartsWith("Emote_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ShopCategory.Emote;
+        }
+        if (productId.StartsWith("CardBack_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ShopCategory.CardBack;
+        }
+        return category_Id;
+    }
 }
 
 /// <summary>
@@ -86,8 +142,9 @@ public class PurchaseResponse
     public int remainingGold;              // 구매 후 남은 골드
     public int remainingStellastone;       // 구매 후 남은 성석
     public int remainingStardust;          // 구매 후 남은 별가루
-    public List<string> obtainedCardIds;   // (카드팩 구매 시) 뽑힌 카드 ID 목록
-    public string obtainedItemId;          // (스킨/이모티콘 구매 시) 획득한 아이템 ID
+    public int remainingPacks;             // 구매 후 남은/보유 카드팩 수
+    public List<string> obtainedCardIds;   // 뽑힌 카드 ID 목록
+    public string obtainedItemId;          // (스킨/이모티콘/팩 구매 시) 획득한 아이템 ID
 }
 
 /// <summary>
@@ -120,6 +177,7 @@ public class ShopManager : MonoBehaviour
     public GameObject popupPanel;                   // 팝업 패널 GameObject
     public TextMeshProUGUI productNameText;         // 팝업 내 상품명 텍스트
     public TextMeshProUGUI productDescriptionText;   // 팝업 내 상품 설명 텍스트
+    public TextMeshProUGUI purchaseLimitText;        // 팝업 내 남은 구매 횟수 표시 텍스트
     public Image popupProductImage;                 // 팝업 내 상품 이미지 Image
     public Image currencyIconImage;                 // 팝업 내 결제 재화 아이콘 Image
 
@@ -131,6 +189,7 @@ public class ShopManager : MonoBehaviour
     [Header("5. 팝업 버튼")]
     public Button closeButton;    // 팝업 닫기 버튼
     public Button purchaseButton; // 구매하기 버튼
+    public TextMeshProUGUI purchaseButtonText; // 구매하기 버튼 텍스트
 
     // 구매 완료 시 알림 이벤트 (UI 재화 갱신 및 팩 개봉 연출용)
     public event Action<PurchaseResponse> OnPurchaseCompleted;
@@ -181,11 +240,11 @@ public class ShopManager : MonoBehaviour
     /// <summary>
     /// 카테고리를 변경하고 해당 상품 목록을 서버에서 불러오는 핵심 함수
     /// </summary>
-    public void LoadCategory(ShopCategory category)
+    public void LoadCategory(ShopCategory category, bool forceReload = false)
     {
-        Debug.Log($"[Shop] 카테고리 로드 요청: {category} ({(int)category})");
+        Debug.Log($"[Shop] 카테고리 로드 요청: {category} ({(int)category}) (강제새로고침: {forceReload})");
 
-        if (currentActiveCategory == category)
+        if (!forceReload && currentActiveCategory == category)
         {
             Debug.Log($"[Shop] 카테고리 {category}는 이미 표시 중입니다.");
             return;
@@ -235,58 +294,137 @@ public class ShopManager : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
-        Debug.Log("[Shop] 이전 상점 슬롯이 모두 제거되었습니다.");
     }
 
     /// <summary>
-    /// 서버로부터 특정 카테고리의 상품 데이터를 가져오는 코루틴
+    /// 서버로부터 특정 카테고리의 상품 데이터를 가져오는 코루틴 (유저 인증 토큰 포함)
     /// </summary>
     private IEnumerator GetFilteredProductsFromServer(ShopCategory category)
     {
         string requestUrl = $"{productsApiBaseUrl}?category_id={(int)category}";
-        Debug.Log($"[Shop] 상품 요청 URL: {requestUrl}");
+
+        // 1. Firebase 인증 토큰 가져오기 (로그인된 경우 서버가 유저별 구매/보유 현황 계산)
+        FirebaseUser currentUser = FirebaseAuth.DefaultInstance.CurrentUser;
+        string idToken = null;
+        if (currentUser != null)
+        {
+            var tokenTask = currentUser.TokenAsync(false);
+            yield return new WaitUntil(() => tokenTask.IsCompleted);
+            if (!tokenTask.IsFaulted && !tokenTask.IsCanceled)
+            {
+                idToken = tokenTask.Result;
+            }
+        }
 
         using (UnityWebRequest webRequest = UnityWebRequest.Get(requestUrl))
         {
+            if (!string.IsNullOrEmpty(idToken))
+            {
+                webRequest.SetRequestHeader("Authorization", "Bearer " + idToken);
+            }
+
             yield return webRequest.SendWebRequest();
 
             switch (webRequest.result)
             {
                 case UnityWebRequest.Result.ConnectionError:
-                    Debug.LogError($"[Shop] 네트워크 연결 오류: {webRequest.error}");
-                    break;
                 case UnityWebRequest.Result.ProtocolError:
-                    Debug.LogError($"[Shop] HTTP 프로토콜 오류: {webRequest.responseCode} - {webRequest.error}");
-                    Debug.LogError($"[Shop] 응답 본문: {webRequest.downloadHandler.text}");
+                    Debug.LogError($"[Shop] 서버 통신 오류 ({webRequest.result}): {webRequest.error}");
+                    if (category == ShopCategory.LeaderSkin)
+                    {
+                        Debug.Log("[Shop] 🛍️ 오프라인/로컬 SkinData 에셋 기반으로 리더 스킨 상점 슬롯을 생성합니다.");
+                        CreateLeaderSkinFallbackSlots();
+                    }
                     break;
                 case UnityWebRequest.Result.Success:
                     string jsonResponse = webRequest.downloadHandler.text;
-                    Debug.Log($"[Shop] 서버 상품 데이터 수신: {jsonResponse}");
 
                     try
                     {
-                        ProductsApiResponse apiResponse = JsonUtility.FromJson<ProductsApiResponse>(jsonResponse);
+                        ProductsApiResponse apiResponse = null;
+                        try
+                        {
+                            apiResponse = JsonConvert.DeserializeObject<ProductsApiResponse>(jsonResponse);
+                        }
+                        catch (Exception jsonEx)
+                        {
+                            Debug.LogWarning($"[Shop] Newtonsoft.Json 파싱 실패, JsonUtility 시도: {jsonEx.Message}");
+                            apiResponse = JsonUtility.FromJson<ProductsApiResponse>(jsonResponse);
+                        }
 
                         if (apiResponse != null && apiResponse.status == "success" && apiResponse.data != null)
                         {
                             List<ProductData> filteredProducts = apiResponse.data;
-                            Debug.Log($"[Shop] 카테고리 [{category}] 상품 개수: {filteredProducts.Count}개");
+                            foreach (var prod in filteredProducts)
+                            {
+                                if (prod != null)
+                                {
+                                    prod.category_Id = prod.GetActualCategory();
+                                }
+                            }
+
                             CreateShopSlots(filteredProducts);
+
+                            if (category == ShopCategory.LeaderSkin && (filteredProducts == null || filteredProducts.Count == 0 || !filteredProducts.Any(p => p.isVisibleInShop)))
+                            {
+                                CreateLeaderSkinFallbackSlots();
+                            }
                         }
                         else
                         {
                             Debug.LogError($"[Shop] 상품 데이터를 가져오지 못했습니다: {apiResponse?.message}");
+                            if (category == ShopCategory.LeaderSkin) CreateLeaderSkinFallbackSlots();
                         }
                     }
                     catch (Exception e)
                     {
                         Debug.LogError($"[Shop] JSON 파싱 오류: {e.Message} (응답: {jsonResponse})");
+                        if (category == ShopCategory.LeaderSkin) CreateLeaderSkinFallbackSlots();
                     }
                     break;
                 default:
                     Debug.LogError($"[Shop] 알 수 없는 오류: {webRequest.result} - {webRequest.error}");
+                    if (category == ShopCategory.LeaderSkin) CreateLeaderSkinFallbackSlots();
                     break;
             }
+        }
+    }
+
+    /// <summary>
+    /// 서버 연결이 원활하지 않거나 스킨 상품 목록이 비어있을 때 Resources/Skins 에셋들을 기반으로 상점 슬롯을 자동 생성합니다.
+    /// </summary>
+    private void CreateLeaderSkinFallbackSlots()
+    {
+        var masterSkinAssets = Resources.LoadAll<SkinData>("Skins");
+        if (masterSkinAssets == null || masterSkinAssets.Length == 0) return;
+
+        var products = new List<ProductData>();
+        foreach (var mSkin in masterSkinAssets)
+        {
+            if (mSkin == null) continue;
+            // 기본 스킨(0001) 제외, 판매용 스킨만 상점에 노출
+            bool isFreeDefault = mSkin.skinId.EndsWith("0001") || mSkin.skinId.EndsWith("_Default");
+            if (!isFreeDefault)
+            {
+                products.Add(new ProductData
+                {
+                    category_Id = ShopCategory.LeaderSkin,
+                    productId = mSkin.skinId,
+                    productName = mSkin.skinName,
+                    description = mSkin.description,
+                    image_url = $"Items/Skins/{mSkin.skinId}.png",
+                    currency = PriceCurrency.Stellastone,
+                    price = 500,
+                    isActive = true,
+                    isVisibleInShop = true,
+                    targetClasses = new List<string> { mSkin.targetClass.ToString() }
+                });
+            }
+        }
+
+        if (products.Count > 0)
+        {
+            CreateShopSlots(products);
         }
     }
 
@@ -301,9 +439,16 @@ public class ShopManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[Shop] 총 {products.Count}개의 상점 슬롯을 생성합니다.");
         foreach (ProductData product in products)
         {
+            if (product == null) continue;
+
+            // 비매품(상점 미노출, 비활성화, 무료/가격 미설정 상품)만 제외
+            if (!product.isVisibleInShop || !product.isActive || product.price <= 0)
+            {
+                continue;
+            }
+
             GameObject newSlot = Instantiate(shopSlotPrefab, shopContentParent);
             newSlot.name = $"ShopSlot_{product.productId}";
 
@@ -325,6 +470,22 @@ public class ShopManager : MonoBehaviour
     // ==================================================================
 
     /// <summary>
+    /// 상품의 판매 기간이 만료되었는지 확인합니다.
+    /// </summary>
+    public static bool IsProductExpired(ProductData product)
+    {
+        if (product == null) return false;
+        if (!string.IsNullOrEmpty(product.sale_End_Date))
+        {
+            if (DateTime.TryParse(product.sale_End_Date, out DateTime endDate))
+            {
+                return DateTime.Now > endDate;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// 상품 슬롯 클릭 시 팝업을 열고 상세 데이터를 표시하는 함수
     /// </summary>
     public void OpenProductPopup(ProductData product)
@@ -333,10 +494,58 @@ public class ShopManager : MonoBehaviour
 
         PopulatePopupUI(product);
 
-        if (quantitySelector != null)
+        // 0. 스킨 상품 오류 확인
+        bool isProductError = false;
+        if (product.category_Id == ShopCategory.LeaderSkin && !product.productId.StartsWith("CardPack", StringComparison.OrdinalIgnoreCase))
         {
-            quantitySelector.itemPrice = product.price;
-            quantitySelector.UpdateQuantity(1);
+            string targetClass = product.targetClasses != null && product.targetClasses.Count > 0 ? product.targetClasses[0] : null;
+            if (LeaderCardDisplay.LoadSkinData(product.productId, targetClass, fallbackToDefault: false) == null)
+            {
+                isProductError = true;
+            }
+        }
+
+        // 1. 기간 종료 여부 확인
+        bool isExpired = IsProductExpired(product);
+        // 2. 이미 구매 완료(잔여 수량 0 / 구매 불가) 여부 확인
+        bool isAlreadyPurchased = (product.remainingPurchaseLimit == 0) || (!product.isPurchasable && !isExpired);
+
+        if (isProductError)
+        {
+            SetPurchaseButtonState("상품오류", false);
+            if (quantitySelector != null) quantitySelector.SetLimits(0, product.price);
+        }
+        else if (isExpired)
+        {
+            SetPurchaseButtonState("기간종료", false);
+            if (quantitySelector != null) quantitySelector.SetLimits(0, product.price);
+        }
+        else if (isAlreadyPurchased)
+        {
+            SetPurchaseButtonState("이미구매한 상품", false);
+            if (quantitySelector != null) quantitySelector.SetLimits(0, product.price);
+        }
+        else
+        {
+            SetPurchaseButtonState("구매하기", true);
+            if (quantitySelector != null)
+            {
+                // remainingPurchaseLimit가 0 이상으로 유효하게 전달된 경우 우선 사용
+                int limit;
+                if (product.remainingPurchaseLimit >= 0)
+                {
+                    limit = product.remainingPurchaseLimit;
+                }
+                else if (product.purchaseLimit > 0)
+                {
+                    limit = Mathf.Max(0, product.purchaseLimit - product.myPurchaseCount);
+                }
+                else
+                {
+                    limit = -1; // 무제한
+                }
+                quantitySelector.SetLimits(limit, product.price);
+            }
         }
 
         if (uIPanelToggler != null)
@@ -346,6 +555,26 @@ public class ShopManager : MonoBehaviour
         else if (popupPanel != null)
         {
             popupPanel.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// 구매 버튼의 텍스트와 활성화 여부를 설정합니다.
+    /// </summary>
+    private void SetPurchaseButtonState(string buttonText, bool isInteractable)
+    {
+        if (purchaseButton != null)
+        {
+            purchaseButton.interactable = isInteractable;
+
+            TextMeshProUGUI btnText = purchaseButtonText != null
+                ? purchaseButtonText
+                : purchaseButton.GetComponentInChildren<TextMeshProUGUI>();
+
+            if (btnText != null)
+            {
+                btnText.text = buttonText;
+            }
         }
     }
 
@@ -365,58 +594,232 @@ public class ShopManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 재화 종류에 따라 로컬 스프라이트를 아이콘 Image에 설정
+    /// 재화 종류에 따라 등록된 스프라이트를 반환합니다.
     /// </summary>
-    private void SetCurrencyIcon(PriceCurrency currencyType)
+    public Sprite GetCurrencySprite(PriceCurrency currencyType)
     {
-        if (currencyIconImage == null) return;
-
         switch (currencyType)
         {
             case PriceCurrency.Gold:
-                currencyIconImage.sprite = goldIconSprite;
-                break;
+                return goldIconSprite;
             case PriceCurrency.Stellastone:
-                currencyIconImage.sprite = stellastoneIconSprite;
-                break;
+                return stellastoneIconSprite;
             case PriceCurrency.Stardust:
-                currencyIconImage.sprite = stardustIconSprite;
-                break;
+                return stardustIconSprite;
             default:
-                currencyIconImage.sprite = null;
-                break;
+                return null;
         }
     }
 
     /// <summary>
-    /// 팝업 UI 요소에 상품 데이터 채우기
+    /// 재화 종류에 따라 로컬 스프라이트를 아이콘 Image에 설정
+    /// </summary>
+    private void SetCurrencyIcon(PriceCurrency currencyType)
+    {
+        Sprite targetSprite = GetCurrencySprite(currencyType);
+
+        if (currencyIconImage != null)
+        {
+            currencyIconImage.sprite = targetSprite;
+            currencyIconImage.preserveAspect = true;
+        }
+
+        if (quantitySelector != null && quantitySelector.priceImage != null)
+        {
+            quantitySelector.priceImage.sprite = targetSprite;
+            quantitySelector.priceImage.preserveAspect = true;
+        }
+    }
+
+    /// <summary>
+    /// 팝업 UI 요소에 상품 데이터 채우기 (스킨 상품일 경우 SkinData 에셋과 4개 감정표현 안내를 함께 표시)
     /// </summary>
     private void PopulatePopupUI(ProductData product)
     {
         SetCurrencyIcon(product.currency);
 
-        if (productNameText != null) productNameText.text = product.productName;
-        if (productDescriptionText != null) productDescriptionText.text = product.description;
+        SkinData masterSkin = null;
+        bool isProductError = false;
 
-        if (popupProductImage != null && !string.IsNullOrEmpty(product.image_url))
+        if (product.category_Id == ShopCategory.LeaderSkin && !product.productId.StartsWith("CardPack", StringComparison.OrdinalIgnoreCase))
         {
-            LoadProductImage(product.image_url, popupProductImage);
+            string targetClass = product.targetClasses != null && product.targetClasses.Count > 0 ? product.targetClasses[0] : null;
+            masterSkin = LeaderCardDisplay.LoadSkinData(product.productId, targetClass, fallbackToDefault: false);
+            if (masterSkin == null)
+            {
+                isProductError = true;
+            }
+        }
+
+        if (productNameText != null)
+        {
+            if (isProductError)
+            {
+                productNameText.text = "상품오류";
+            }
+            else
+            {
+                productNameText.text = masterSkin != null ? masterSkin.skinName : product.productName;
+            }
+        }
+
+        if (productDescriptionText != null)
+        {
+            if (isProductError)
+            {
+                productDescriptionText.text = "<color=#FF4444><b>[상품오류]</b> 상품 데이터를 정상적으로 불러올 수 없습니다.\n(오타 또는 리소스 에셋 누락)</color>";
+            }
+            else
+            {
+                string desc = masterSkin != null ? masterSkin.description : product.description;
+                if (masterSkin != null)
+                {
+                    var emotes = masterSkin.GetValidEmotes();
+                    if (emotes != null && emotes.Count > 0)
+                    {
+                        desc += "\n\n<color=#FFD700><b>[기본 포함 감정표현 4종]</b></color>";
+                        for (int i = 0; i < emotes.Count; i++)
+                        {
+                            var e = emotes[i];
+                            desc += $"\n• {e.buttonLabel}: \"{e.speechMessage}\"";
+                        }
+                    }
+                }
+                productDescriptionText.text = desc;
+            }
+        }
+
+        // 남은 구매 횟수 UI 텍스트 갱신
+        if (purchaseLimitText != null)
+        {
+            if (isProductError)
+            {
+                purchaseLimitText.text = "남은 구매 횟수: <color=#FF5555>구매 불가</color>";
+            }
+            else if (product.purchaseLimit <= 0)
+            {
+                purchaseLimitText.text = "남은 구매 횟수: <color=#00E5FF>무제한</color>";
+            }
+            else if (product.remainingPurchaseLimit == 0 || (!product.isPurchasable && !IsProductExpired(product)))
+            {
+                purchaseLimitText.text = $"남은 구매 횟수: <color=#FF5555>0</color> / {product.purchaseLimit}회 (품절)";
+            }
+            else
+            {
+                int remaining = product.remainingPurchaseLimit > 0 ? product.remainingPurchaseLimit : Mathf.Max(0, product.purchaseLimit - product.myPurchaseCount);
+                purchaseLimitText.text = $"남은 구매 횟수: <color=#00E5FF>{remaining}</color> / {product.purchaseLimit}회";
+            }
+        }
+
+        // 팝업 상품 이미지 로드
+        if (popupProductImage != null)
+        {
+            popupProductImage.sprite = null;
+
+            if (isProductError)
+            {
+                popupProductImage.gameObject.SetActive(false);
+            }
+            else if (masterSkin != null)
+            {
+                Sprite skinSp = masterSkin.skinSprite != null ? masterSkin.skinSprite : masterSkin.GetIconOrMainSprite();
+                if (skinSp != null)
+                {
+                    popupProductImage.sprite = skinSp;
+                    popupProductImage.preserveAspect = true;
+                    popupProductImage.gameObject.SetActive(true);
+                }
+                else if (!string.IsNullOrEmpty(product.image_url))
+                {
+                    LoadProductImage(product.image_url, popupProductImage);
+                    popupProductImage.gameObject.SetActive(true);
+                }
+            }
+            else if (!string.IsNullOrEmpty(product.image_url))
+            {
+                LoadProductImage(product.image_url, popupProductImage);
+                popupProductImage.gameObject.SetActive(true);
+            }
         }
     }
 
     /// <summary>
-    /// 로컬 에셋 경로(Assets/Sprite/Shop/...)에서 이미지를 로드하여 Image에 표시
+    /// Resources 또는 로컬 에셋 경로에서 이미지를 로드하여 Image에 표시합니다.
+    /// (예: "Items/Skins/Yuni_Skin_0001.png", "Items/Skins/Yuni/Yuni_Skin_0001.png", "Items/Emote/V-V.png")
     /// </summary>
     public static void LoadProductImage(string imagePath, Image targetImage)
     {
         if (targetImage == null || string.IsNullOrWhiteSpace(imagePath)) return;
 
-        string cleanPath = imagePath.TrimStart('/', '\\');
-        string fullPath = System.IO.Path.Combine(Application.dataPath, "Sprite", "Shop", cleanPath);
+        // 1. Resources 로드 경로 정리 (확장자 제거 및 슬래시 표준화)
+        string cleanPath = imagePath.Replace('\\', '/').TrimStart('/');
+        string resPath = cleanPath;
+        int dotIndex = resPath.LastIndexOf('.');
+        if (dotIndex > 0) resPath = resPath.Substring(0, dotIndex);
 
+        // 1-1. 기본 Resources 경로 시도 (예: "Items/Skins/Yuni_Skin_0001", "Items/Emote/V-V")
+        Sprite resSprite = Resources.Load<Sprite>(resPath);
+
+        // 1-2. 만약 못 찾았고 "Items/" 접두사가 누락된 경우 시도
+        if (resSprite == null && !resPath.StartsWith("Items/", StringComparison.OrdinalIgnoreCase))
+        {
+            resSprite = Resources.Load<Sprite>("Items/" + resPath);
+        }
+
+        // 1-3. 캐릭터 하위 폴더 검색 시도 (예: "Items/Skins/Yuni/Yuni_Skin_0001" 또는 "Items/Skins/Yuni_Skin_0001")
+        if (resSprite == null && resPath.Contains("Skin"))
+        {
+            string fileName = System.IO.Path.GetFileName(resPath);
+            if (fileName.StartsWith("Yuni", StringComparison.OrdinalIgnoreCase))
+            {
+                resSprite = Resources.Load<Sprite>($"Items/Skins/Yuni/{fileName}") ?? Resources.Load<Sprite>($"Items/Skins/{fileName}");
+            }
+            else if (fileName.StartsWith("Gangzi", StringComparison.OrdinalIgnoreCase))
+            {
+                resSprite = Resources.Load<Sprite>($"Items/Skins/Gangzi/{fileName}") ?? Resources.Load<Sprite>($"Items/Skins/{fileName}");
+            }
+        }
+
+        // 1-4. 카드팩 하위 폴더 및 파일명 보정 검색 시도
+        if (resSprite == null && (resPath.IndexOf("CardPack", StringComparison.OrdinalIgnoreCase) >= 0 || resPath.IndexOf("Pack", StringComparison.OrdinalIgnoreCase) >= 0))
+        {
+            string fileName = System.IO.Path.GetFileName(resPath);
+            if (fileName.Equals("NormalPack", StringComparison.OrdinalIgnoreCase))
+            {
+                resSprite = Resources.Load<Sprite>("Items/CardPack/CardPack_nomal");
+            }
+            if (resSprite == null)
+            {
+                resSprite = Resources.Load<Sprite>($"Items/CardPack/{fileName}") ?? Resources.Load<Sprite>(fileName);
+            }
+        }
+
+        // 1-4. Texture2D로 등록되어 있는 경우 Sprite로 변환 생성
+        if (resSprite == null)
+        {
+            Texture2D tex = Resources.Load<Texture2D>(resPath);
+            if (tex != null)
+            {
+                resSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            }
+        }
+
+        if (resSprite != null)
+        {
+            targetImage.sprite = resSprite;
+            targetImage.preserveAspect = true;
+            return;
+        }
+
+        // 2. Resources에 없는 경우 로컬 파일 직접 로드 시도
+        string fullPath = System.IO.Path.Combine(Application.dataPath, "Sprite", "Shop", cleanPath);
         if (!System.IO.File.Exists(fullPath))
         {
             fullPath = System.IO.Path.Combine(Application.dataPath, "Sprite", "Shop", "Items", cleanPath);
+        }
+        if (!System.IO.File.Exists(fullPath))
+        {
+            fullPath = System.IO.Path.Combine(Application.dataPath, "Resources", cleanPath);
         }
 
         if (System.IO.File.Exists(fullPath))
@@ -436,21 +839,11 @@ public class ShopManager : MonoBehaviour
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[Shop] 로컬 이미지 로드 중 오류 ({fullPath}): {ex.Message}");
+                Debug.LogError($"[Shop] 이미지 로컬 파일 로드 중 오류 ({fullPath}): {ex.Message}");
             }
         }
 
-        // Resources 폴더 로드 시도
-        string resPath = cleanPath;
-        int dotIndex = resPath.LastIndexOf('.');
-        if (dotIndex > 0) resPath = resPath.Substring(0, dotIndex);
-
-        Sprite resSprite = Resources.Load<Sprite>(resPath);
-        if (resSprite != null)
-        {
-            targetImage.sprite = resSprite;
-            targetImage.preserveAspect = true;
-        }
+        Debug.LogWarning($"[Shop] 상품 이미지를 찾을 수 없습니다: {imagePath} (시도 경로: Resources/{resPath})");
     }
 
     // ==================================================================
@@ -527,10 +920,32 @@ public class ShopManager : MonoBehaviour
                 if (response != null && response.status == "success")
                 {
                     Debug.Log($"[Shop] 구매 성공! {response.message} (남은 골드: {response.remainingGold}, 남은 성석: {response.remainingStellastone})");
+                    
+                    // GameClient의 로컬 계정 데이터(재화 및 보유 스킨/아이템) 실시간 갱신
+                    if (GameClient.Instance != null)
+                    {
+                        GameClient.Instance.ApplyPurchaseResult(response);
+                    }
+
+                    // StorageManager의 로컬 창고 데이터(재화, 보유 팩, 스킨) 실시간 갱신
+                    if (StorageManager.Instance != null)
+                    {
+                        StorageManager.Instance.ApplyPurchaseResult(response);
+                    }
+
+                    // 전역 재화 UI 즉시 직접 동기화
+                    if (UserCurrencyDisplay.Instance != null)
+                    {
+                        UserCurrencyDisplay.Instance.SetCurrency(response.remainingGold, response.remainingStellastone, response.remainingStardust);
+                    }
+
                     OnPurchaseCompleted?.Invoke(response);
 
                     // 팝업 닫기
                     CloseProductPopup();
+
+                    // 구매 완료 후 상점 슬롯 상태 즉시 갱신 (품절/이미구매 표시)
+                    LoadCategory(currentActiveCategory, true);
                 }
                 else
                 {

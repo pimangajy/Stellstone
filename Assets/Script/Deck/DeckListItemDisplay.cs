@@ -1,41 +1,62 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using TMPro;
 
-// ÀÌ ½ºÅ©¸³Æ®´Â ¿À¸¥ÂÊ 'ÇöÀç µ¦ ¸®½ºÆ®'¿¡ µé¾î°¡´Â ¾ãÀº ÁÙ(Item) ÇÏ³ª¸¦ ´ã´çÇÕ´Ï´Ù.
-// ÅØ½ºÆ® À§ÁÖ·Î Ä«µå ÀÌ¸§°ú ºñ¿ë, Àå¼ö¸¦ º¸¿©Áİ´Ï´Ù.
-public class DeckListItemDisplay : MonoBehaviour, ICardDataHolder
+/// <summary>
+/// ë± í¸ì„± í™”ë©´ì˜ ì˜¤ë¥¸ìª½ 'í˜„ì¬ ë± ë¦¬ìŠ¤íŠ¸'ì— ë“¤ì–´ê°€ëŠ” ì¹´ë“œ ì¤„(Item) í•˜ë‚˜ë¥¼ ê´€ë¦¬í•©ë‹ˆë‹¤.
+/// ë§ˆìš°ìŠ¤ë¥¼ ì˜¬ë¦¬ë©´ ì¢Œì¸¡ì— ì¹´ë“œ ì›ë³¸ ë¯¸ë¦¬ë³´ê¸°ë¥¼ í‘œì‹œí•©ë‹ˆë‹¤.
+/// </summary>
+public class DeckListItemDisplay : MonoBehaviour, ICardDataHolder, IPointerEnterHandler, IPointerExitHandler
 {
-    // À¯´ÏÆ¼ ¿¡µğÅÍ¿¡¼­ ¿¬°áÇÒ ÅØ½ºÆ®µé
-    [SerializeField] private TextMeshProUGUI cardNameText;  // "È­¿°±¸"
-    [SerializeField] private TextMeshProUGUI cardCostText;  // "4"
-    [SerializeField] private TextMeshProUGUI cardCountText; // "x2"
+    [SerializeField] private TextMeshProUGUI cardNameText;  // ì¹´ë“œ ì´ë¦„ (ì˜ˆ: "í™”ì—¼êµ¬")
+    [SerializeField] private TextMeshProUGUI cardCostText;  // ë§ˆë‚˜ ì½”ìŠ¤íŠ¸ (ì˜ˆ: "4")
+    [SerializeField] private TextMeshProUGUI cardCountText; // ì¥ìˆ˜ (ì˜ˆ: "x2" ë˜ëŠ” ì „ì„¤ "*")
 
-    // ³»°¡ º¸¿©ÁÖ°í ÀÖ´Â Ä«µå µ¥ÀÌÅÍ
     private CardData cardData;
 
-    // ¿ÜºÎ¿¡¼­ µ¥ÀÌÅÍ¸¦ ³Ö¾îÁÖ´Â ÇÔ¼ö (ÃÊ±âÈ­)
     public void Setup(CardData data, int count)
     {
         this.cardData = data;
 
-        cardNameText.text = data.cardName;
-        cardCostText.text = data.manaCost.ToString();
-
-        // Àü¼³ Ä«µå´Â º¸Åë µ¦¿¡ 1Àå¸¸ ³ÖÀ» ¼ö ÀÖ¾î¼­ º°Ç¥(*)·Î Ç¥½ÃÇÏ±âµµ ÇÕ´Ï´Ù.
-        if (data.rarity == CardRarity.legendary)
+        if (cardNameText != null)
         {
-            cardCountText.text = "*";
+            CardTextFormatter.EnsureTextAutoFit(cardNameText, minSize: 11f, maxSize: 22f, wordWrap: false, overflowMode: TextOverflowModes.Ellipsis);
+            cardNameText.text = data.cardName;
         }
-        else
+        if (cardCostText != null) cardCostText.text = data.manaCost.ToString();
+
+        if (cardCountText != null)
         {
-            // ÀÏ¹İ Ä«µå´Â "x2" Ã³·³ Àå¼ö¸¦ Ç¥½ÃÇÕ´Ï´Ù.
             cardCountText.text = "x" + count;
         }
     }
 
-    // ÀÎÅÍÆäÀÌ½º ±¸Çö: ³» Ä«µå Á¤º¸¸¦ ¹İÈ¯
     public CardData GetCardData()
     {
         return cardData;
+    }
+
+    /// <summary>
+    /// ë§ˆìš°ìŠ¤ ì»¤ì„œê°€ ë± ìŠ¬ë¡¯ ìœ„ë¡œ ì˜¬ë¼ì™”ì„ ë•Œ ì›ë³¸ ì¹´ë“œ ë¯¸ë¦¬ë³´ê¸°ë¥¼ í‘œì‹œí•©ë‹ˆë‹¤.
+    /// </summary>
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (cardData != null)
+        {
+            DeckCardPreviewManager.Instance?.ShowPreview(cardData, transform.position);
+        }
+    }
+
+    /// <summary>
+    /// ë§ˆìš°ìŠ¤ ì»¤ì„œê°€ ë± ìŠ¬ë¡¯ì„ ë²—ì–´ë‚¬ì„ ë•Œ ë¯¸ë¦¬ë³´ê¸°ë¥¼ ìˆ¨ê¹ë‹ˆë‹¤.
+    /// </summary>
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        DeckCardPreviewManager.Instance?.HidePreview();
+    }
+
+    private void OnDisable()
+    {
+        DeckCardPreviewManager.Instance?.HidePreview();
     }
 }

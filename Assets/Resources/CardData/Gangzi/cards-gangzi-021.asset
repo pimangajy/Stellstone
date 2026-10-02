@@ -13,26 +13,56 @@ MonoBehaviour:
   m_Name: cards-gangzi-021
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-gangzi-021
-  cardName: "\uAC15\uB3C4\uB2E8\uC744 \uBD80\uB974\uB294 \uD53C\uB9AC"
+  cardName: "\uC2A4\uD2B8\uB9AC\uBA38 \uAC15\uC9C0"
+  isToken: 0
+  isDefaultCard: 0
   cardClass: 0
-  cardType: 1
-  rarity: 0
+  cardType: 3
+  rarity: 3
   expansion: 0
-  manaCost: 2
-  attack: 1
-  health: 1
-  minionTribe: 0
-  description: "\uB465\uC7A5: \uC9C0\uC815\uD55C \uC544\uAD70 \uD544\uB4DC\uC5D0
-    1/1 \uAC15\uB3C4\uB2E8\uC744 \uC18C\uD658\uD569\uB2C8\uB2E4. \uB450\uBC88 \uBC1C\uB3D9\uD569\uB2C8\uB2E4"
+  manaCost: 5
+  attack: 0
+  health: 3
+  minionTribe: 4
+  description: "+1 \uCE74\uB4DC\uB97C 1\uC7A5 \uBF51\uC2B5\uB2C8\uB2E4.\n-2 \uBAA8\uB4E0
+    \uC801\uC5D0\uAC8C \uD53C\uD574\uB97C {damage:1}\uC90D\uB2C8\uB2E4\n-4 \uBAA8\uB4E0
+    \uC801\uD558\uC218\uC778\uC5D0\uAC8C {damage:3}\uC758 \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
   additionalExplanation: 
-  keyward: 
-  targeting: 1
-  triggerVFXList: []
+  keywords: 
+  targeting: 0
+  memberSkills:
+  - skillId: 0
+    name: "\uC2A4\uD0AC 1"
+    description: "\uCE74\uB4DC\uB97C 1\uC7A5 \uBF51\uC2B5\uB2C8\uB2E4."
+    healthCost: 1
+    manaCost: 0
+    targeting: 0
+    canUse: 0
+  - skillId: 1
+    name: "\uC2A4\uD0AC 2"
+    description: "\uBAA8\uB4E0 \uC801\uC5D0\uAC8C \uD53C\uD574\uB97C {damage:1}\uC90D\uB2C8\uB2E4"
+    healthCost: -2
+    manaCost: 0
+    targeting: 0
+    canUse: 0
+  - skillId: 2
+    name: "\uC2A4\uD0AC 3"
+    description: "\uBAA8\uB4E0 \uC801\uD558\uC218\uC778\uC5D0\uAC8C {damage:3}\uC758
+      \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
+    healthCost: -4
+    manaCost: 0
+    targeting: 0
+    canUse: 0
+  spellAmp: 0
+  spellWeakness: 0
+  drawSeal: 0
+  buffAmpAttack: 0
+  buffAmpHealth: 0
+  triggerVFXList:
+  - {fileID: 11400000, guid: c8b4b1322a0df514b8f337bc0222282b, type: 2}
   animationFrames:
-  - {fileID: 21300000, guid: 945333ea6d4e2bc4caaec4b2555ba4a6, type: 3}
-  cardDissolveEffect: {fileID: 0}
-  spawnEffectData: {fileID: 11400000, guid: 82cdf19ee8c674c4fad6f6143f4ee3ce, type: 2}
+  - {fileID: 21300000, guid: d96923c46c27ede4d9d932ca5f1a450f, type: 3}
+  spawnEffectData: {fileID: 11400000, guid: e468f40264b1f55478c81e7b98256996, type: 2}
   memberIcon: {fileID: 0}
-  spawnEffect: {fileID: 0}
-  attackSound: {fileID: 0}
-  projectilePrefab: {fileID: 3300439051078825739, guid: 7128603d714ada24090d8c6a938a8ebd, type: 3}
+  projectilePrefab: {fileID: 2635855287139922103, guid: ce76e7b2425b6b14e8c8b8b165298906, type: 3}
+  heavyProjectilePrefab: {fileID: 2635855287139922103, guid: 33dd5864187e13f48b90c8c095daa64e, type: 3}

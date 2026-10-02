@@ -13,26 +13,32 @@ MonoBehaviour:
   m_Name: cards-yuni-020
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardID: cards-yuni-020
-  cardName: "\uD3ED\uC8FC\uD558\uB294 \uC544\uB974\uB0E5"
+  cardName: "\uAC70\uC778 \uC544\uB974\uB0E5"
+  isToken: 0
   cardClass: 1
   cardType: 1
-  rarity: 0
+  rarity: 1
   expansion: 0
-  manaCost: 2
-  attack: 2
-  health: 2
+  manaCost: 12
+  attack: 8
+  health: 8
   minionTribe: 2
-  description: "\uD134 \uC2DC\uC791 \uC2DC: \uC801 \uB9AC\uB354\uC5D0\uAC8C 1\uC758
-    \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
+  description: "\uB0B4 \uC190\uC758 \uCE74\uB4DC\uC218\uB9CC\uD07C \uBE44\uC6A9\uC774
+    \uAC10\uC18C\uD569\uB2C8\uB2E4."
   additionalExplanation: 
-  keyward: 
+  keywords: 
   targeting: 0
-  triggerVFXList: []
+  memberSkills: []
+  spellAmp: 0
+  spellWeakness: 0
+  drawSeal: 0
+  buffAmpAttack: 0
+  buffAmpHealth: 0
+  triggerVFXList:
+  - {fileID: 11400000, guid: 0a70ae327c9177a418c87d6c31f1614d, type: 2}
   animationFrames:
   - {fileID: 21300000, guid: 8b1996b7e65287d41baacac8324d3463, type: 3}
-  cardDissolveEffect: {fileID: 0}
-  spawnEffectData: {fileID: 11400000, guid: 731cd3f5b236bf84eb92df42f9045823, type: 2}
-  memberIcon: {fileID: 0}
-  spawnEffect: {fileID: 0}
-  attackSound: {fileID: 0}
-  projectilePrefab: {fileID: 976789555600343322, guid: 4b0e5d08ac3fd0d4ea83172b9ecd05df, type: 3}
+  spawnEffectData: {fileID: 11400000, guid: a5807bbb453d3174fbe026972e87bc48, type: 2}
+  memberIcon: {fileID: 21300000, guid: 9c682c819e99db847a7c7b9db4373385, type: 3}
+  projectilePrefab: {fileID: 3300439051078825739, guid: 0b66d64236854824eb746250b9775c18, type: 3}
+  heavyProjectilePrefab: {fileID: 3300439051078825739, guid: 4fb96922fd6eba74e9d761c52347cb03, type: 3}

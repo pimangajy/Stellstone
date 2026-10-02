@@ -28,7 +28,7 @@ public class SceneLoadButton : MonoBehaviour
         if (UIManager.Instance != null)
         {
             // 5. UIManager 인스턴스에 붙어있는 SceneLoader 컴포넌트를 찾습니다.
-            SceneLoader loader = UIManager.Instance.GetComponent<SceneLoader>();
+            SceneLoader loader = UIManager.Instance.sceneLoader;
 
             if (loader != null)
             {

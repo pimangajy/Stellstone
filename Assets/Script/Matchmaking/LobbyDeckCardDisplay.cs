@@ -3,28 +3,28 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// ·Îºñ(MatchingManager) ¾ÀÀÇ µ¦ ¸ñ·Ï¿¡ Ç¥½ÃµÉ °³º° Ä«µå UI Ç×¸ñÀÔ´Ï´Ù.
+/// ë¡œë¹„(MatchingManager) ì”¬ì˜ ë± ëª©ë¡ì— í‘œì‹œë  ê°œë³„ ì¹´ë“œ UI í•­ëª©ì…ë‹ˆë‹¤.
 /// </summary>
 public class LobbyDeckCardDisplay : MonoBehaviour
 {
-    [Header("UI ±¸¼º ¿ä¼Ò")]
-    [Tooltip("Ä«µå ÀÌ¸§À» Ç¥½ÃÇÒ TextMeshPro")]
+    [Header("UI êµ¬ì„± ìš”ì†Œ")]
+    [Tooltip("ì¹´ë“œ ì´ë¦„ì„ í‘œì‹œí•  TextMeshPro")]
     [SerializeField] private TextMeshProUGUI cardNameText;
-    [Tooltip("Ä«µå ÄÚ½ºÆ®¸¦ Ç¥½ÃÇÒ TextMeshPro")]
+    [Tooltip("ì¹´ë“œ ì½”ìŠ¤íŠ¸ë¥¼ í‘œì‹œí•  TextMeshPro")]
     [SerializeField] private TextMeshProUGUI costText;
-    [Tooltip("Ä«µå ÀÌ¹ÌÁö¸¦ Ç¥½ÃÇÒ Image")]
+    [Tooltip("ì¹´ë“œ ì´ë¯¸ì§€ë¥¼ í‘œì‹œí•  Image")]
     [SerializeField] private Image cardImage;
-    [Tooltip("Áßº¹ Ä«µå °³¼ö(¿¹: x2)¸¦ Ç¥½ÃÇÒ TextMeshPro")]
+    [Tooltip("ì¤‘ë³µ ì¹´ë“œ ê°œìˆ˜(ì˜ˆ: x2)ë¥¼ í‘œì‹œí•  TextMeshPro")]
     [SerializeField] private TextMeshProUGUI countText;
 
     /// <summary>
-    /// (¼öÁ¤) CardDataFirebase ´ë½Å CardData(ScriptableObject)¸¦ ¹Ş½À´Ï´Ù.
+    /// CardData(ScriptableObject)ë¥¼ ë°›ì•„ UIë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
     /// </summary>
     public void Setup(CardData card, int count)
     {
         if (card == null) return;
 
-        // 1. ÄÚ½ºÆ®¿Í ÀÌ¸§ ¼³Á¤
+        // 1. ì½”ìŠ¤íŠ¸ì™€ ì´ë¦„ ì„¤ì •
         if (costText != null)
         {
             costText.text = card.manaCost.ToString(); // cost -> manaCost
@@ -34,7 +34,7 @@ public class LobbyDeckCardDisplay : MonoBehaviour
             cardNameText.text = card.cardName; // name -> cardName
         }
 
-        // 2. Ä«µå °³¼ö Ç¥½Ã
+        // 2. ì¹´ë“œ ê°œìˆ˜ í‘œì‹œ
         if (countText != null)
         {
             if (count > 1)
@@ -47,17 +47,17 @@ public class LobbyDeckCardDisplay : MonoBehaviour
             }
         }
 
-        // 3. Ä«µå ÀÌ¹ÌÁö ¼³Á¤ (ResourceManager ´öºĞ¿¡ ¾ÆÁÖ ½¬¿öÁ³½À´Ï´Ù!)
+        // 3. ì¹´ë“œ ì´ë¯¸ì§€ ì„¤ì • (ResourceManager ë•ë¶„ì— ì•„ì£¼ ì‰¬ì›Œì¡ŒìŠµë‹ˆë‹¤!)
         if (cardImage != null)
         {
-            // ½æ³×ÀÏ(thumbnail) ÇÁ·ÎÆÛÆ¼ »ç¿ë
+            // ì¸ë„¤ì¼(thumbnail) í”„ë¡œí¼í‹° ì‚¬ìš©
             if (card.thumbnail != null)
             {
                 cardImage.sprite = card.thumbnail;
             }
             else
             {
-                // ÀÌ¹ÌÁö°¡ ¾øÀ» °æ¿ì ±âº»»ö Ã³¸® µî
+                // ì´ë¯¸ì§€ê°€ ì—†ì„ ê²½ìš° ê¸°ë³¸ìƒ‰ ì²˜ë¦¬ ë“±
                 // cardImage.color = Color.gray; 
             }
         }

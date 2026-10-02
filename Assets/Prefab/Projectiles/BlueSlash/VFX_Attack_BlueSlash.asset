@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9865b3663d5750419b8b0870b20d99b, type: 3}
+  m_Name: VFX_Attack_BlueSlash
+  m_EditorClassIdentifier: Assembly-CSharp::CardVFXData
+  triggerType: 6
+  playType: 0
+  vfxPrefab: {fileID: 2635855287139922103, guid: ce76e7b2425b6b14e8c8b8b165298906, type: 3}
+  soundEffect: {fileID: 0}
+  heavyVfxPrefab: {fileID: 2635855287139922103, guid: 33dd5864187e13f48b90c8c095daa64e, type: 3}
+  heavyDamageThreshold: 6
+  heavySoundEffect: {fileID: 0}
+  damageDelay: 0.35
+  vfxDestroyTime: 3
+  projectileInterval: 0
+  leaderDefeatMotion: {fileID: 0}

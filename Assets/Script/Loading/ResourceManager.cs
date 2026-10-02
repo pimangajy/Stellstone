@@ -6,17 +6,18 @@ public class ResourceManager : MonoBehaviour
 {
     public static ResourceManager Instance;
 
-    // ¸ğµç Ä«µå µ¥ÀÌÅÍ¸¦ ÀúÀåÇÒ µñ¼Å³Ê¸® (°Ë»ö ¼Óµµ ºü¸§)
+    // ëª¨ë“  ì¹´ë“œ ë°ì´í„°ë¥¼ ì €ì¥í•˜ëŠ” ë”•ì…”ë„ˆë¦¬ (ê²€ìƒ‰ ì†ë„ ìµœì í™”)
     private Dictionary<string, CardData> _cardDatabase = new Dictionary<string, CardData>();
 
     void Awake()
     {
-        // --- (¼öÁ¤) ¾ÈÀüÇÑ ½Ì±ÛÅæ ÆĞÅÏ Àû¿ë ---
+        // ì”¬ ì „í™˜ ì‹œ ìœ ì§€ë˜ëŠ” ì‹±ê¸€í†¤ ì„¤ì •
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
-            return; // Áßº¹ÀÌ¸é ÃÊ±âÈ­ ·ÎÁ÷ ½ÇÇà ¾È ÇÔ
-        }else
+            return;
+        }
+        else
         {
             DontDestroyOnLoad(gameObject);
         }
@@ -24,9 +25,12 @@ public class ResourceManager : MonoBehaviour
         Instance = this;
     }
 
+    // [ìµœì í™”] GetAllCards() í˜¸ì¶œ ì‹œ ë§¤ë²ˆ í™ì— ìƒˆ Listë¥¼ ìƒì„±í•˜ì§€ ì•Šë„ë¡ ìºì‹±
+    private List<CardData> _cachedCardList;
+
     public void LoadAllCards()
     {
-        // "Resources/Cards" Æú´õ¿¡ ÀÖ´Â ¸ğµç ScriptableObject¸¦ ºÒ·¯¿É´Ï´Ù.
+        // "Resources/CardData" ê²½ë¡œì— ìˆëŠ” ëª¨ë“  CardData ScriptableObjectë¥¼ ë¡œë“œí•©ë‹ˆë‹¤.
         CardData[] allCards = Resources.LoadAll<CardData>("CardData");
 
         foreach (var card in allCards)
@@ -37,25 +41,48 @@ public class ResourceManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"Áßº¹µÈ Ä«µå ID ¹ß°ß: {card.cardID}");
+                Debug.LogWarning($"[ResourceManager] ì¤‘ë³µëœ ì¹´ë“œ ID ì¶”ê°€ ì‹œë„: {card.cardID}");
             }
         }
+
+        _cachedCardList = new List<CardData>(_cardDatabase.Values);
     }
 
-    public CardData GetCardData(string cardId)
+    /// <summary>
+    /// ì¹´ë“œ IDë¡œ ë°ì´í„°ë¥¼ ì¡°íšŒí•©ë‹ˆë‹¤. ì¡´ì¬í•˜ì§€ ì•Šì„ ê²½ìš° ì—ëŸ¬ ë¡œê·¸ë¥¼ ì¶œë ¥í•©ë‹ˆë‹¤.
+    /// </summary>
+    public CardData GetCardData(string cardId, string callerContext = null)
     {
         if (_cardDatabase.TryGetValue(cardId, out CardData data))
         {
             return data;
         }
 
-        Debug.LogError($"Ä«µå¸¦ Ã£À» ¼ö ¾øÀ½: {cardId}");
+        if (!string.IsNullOrEmpty(callerContext))
+        {
+            Debug.LogError($"[ResourceManager] ì¹´ë“œë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŒ: {cardId} (í˜¸ì¶œì²˜: {callerContext})");
+        }
+        else
+        {
+            Debug.LogError($"[ResourceManager] ì¹´ë“œë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŒ: {cardId}");
+        }
         return null;
+    }
+
+    /// <summary>
+    /// ì—ëŸ¬ ë¡œê·¸ ì¶œë ¥ ì—†ì´ ì•ˆì „í•˜ê²Œ ì¹´ë“œ ë°ì´í„° ì¡´ì¬ ì—¬ë¶€ë¥¼ í™•ì¸í•©ë‹ˆë‹¤.
+    /// </summary>
+    public bool TryGetCardData(string cardId, out CardData data)
+    {
+        return _cardDatabase.TryGetValue(cardId, out data);
     }
 
     public List<CardData> GetAllCards()
     {
-        // µñ¼Å³Ê¸®ÀÇ '°ª(Value)'µé¸¸ ¸ğ¾Æ¼­ ¸®½ºÆ®·Î º¯È¯ÇØ ¹İÈ¯
-        return _cardDatabase.Values.ToList();
+        if (_cachedCardList == null || _cachedCardList.Count != _cardDatabase.Count)
+        {
+            _cachedCardList = _cardDatabase.Values.ToList();
+        }
+        return _cachedCardList;
     }
 }

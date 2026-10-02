@@ -1,45 +1,75 @@
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic;
-using System.Linq; // µ¥ÀÌÅÍ¸¦ ÇÊÅÍ¸µ(°Ë»ö)ÇÒ ¶§ ¾ÆÁÖ °­·ÂÇÑ µµ±¸(LINQ)¸¦ »ç¿ëÇÕ´Ï´Ù.
+using System.Linq; // ë°ì´í„°ë¥¼ í•„í„°ë§(ê²€ìƒ‰)í•  ë•Œ ì•„ì£¼ ê°•ë ¥í•œ ë„êµ¬(LINQ)ë¥¼ ì‚¬ìš©í•©ë‹ˆë‹¤.
 using System;
 
 /// <summary>
-/// µ¦ ºô´õ(Deck Builder) È­¸éÀÇ ÃÑ°¨µ¶ÀÔ´Ï´Ù.
-/// ³»°¡ °¡Áø Ä«µå¸¦ º¸¿©ÁÖ°í, Á÷¾÷/ÄÚ½ºÆ®/°Ë»ö¾î¿¡ µû¶ó Ä«µå¸¦ °É·¯¼­(ÇÊÅÍ¸µ) º¸¿©Áİ´Ï´Ù.
+/// ë± ë¹Œë”(Deck Builder) í™”ë©´ì˜ ì´ê°ë…ì…ë‹ˆë‹¤.
+/// ë‚´ê°€ ê°€ì§„ ì¹´ë“œë¥¼ ë³´ì—¬ì£¼ê³ , ì§ì—…/ì½”ìŠ¤íŠ¸/ê²€ìƒ‰ì–´ì— ë”°ë¼ ì¹´ë“œë¥¼ ê±¸ëŸ¬ì„œ(í•„í„°ë§) ë³´ì—¬ì¤ë‹ˆë‹¤.
 /// </summary>
 public class DeckBuilder : MonoBehaviour
 {
     public static DeckBuilder Instance { get; private set; }
 
     [Header("UI & Prefab Settings")]
-    // Ä«µå¸¦ È­¸é¿¡ Âï¾î³¾ ¶§ »ç¿ëÇÒ ¿øº» Æ² (ºØ¾î»§ Æ² °°Àº ÇÁ¸®ÆÕ)
+    // ì¹´ë“œë¥¼ í™”ë©´ì— ì°ì–´ë‚¼ ë•Œ ì‚¬ìš©í•  ì›ë³¸ í‹€ (ë¶•ì–´ë¹µ í‹€ ê°™ì€ í”„ë¦¬íŒ¹)
     public GameObject cardPrefab;
-    // »ı¼ºµÈ Ä«µå°¡ µé¾î°¥ ºÎ¸ğ UI (Scroll ViewÀÇ Content ºÎºĞ)
+    // ìƒì„±ëœ ì¹´ë“œê°€ ë“¤ì–´ê°ˆ ë¶€ëª¨ UI (Scroll Viewì˜ Content ë¶€ë¶„)
     public Transform cardListParent;
 
     [Header("Component References")]
-    // ÇÊÅÍ ¹öÆ°µéÀ» °ü¸®ÇÏ´Â ¸Å´ÏÀú¿Í ¿¬°áÇÕ´Ï´Ù.
+    // í•„í„° ë²„íŠ¼ë“¤ì„ ê´€ë¦¬í•˜ëŠ” ë§¤ë‹ˆì €ì™€ ì—°ê²°í•©ë‹ˆë‹¤.
     public FilterManager filterManager;
 
-    // °ÔÀÓÀÇ ¸ğµç Ä«µå µ¥ÀÌÅÍ¸¦ ÀúÀåÇØµÎ´Â ¿øº» ¸®½ºÆ®ÀÔ´Ï´Ù.
+    // ê²Œì„ì˜ ëª¨ë“  ì¹´ë“œ ë°ì´í„°ë¥¼ ì €ì¥í•´ë‘ëŠ” ì›ë³¸ ë¦¬ìŠ¤íŠ¸ì…ë‹ˆë‹¤.
     private List<CardData> allCardsList;
 
     // ---------------------------------------------------------
-    // ÇöÀç ¾î¶² ÇÊÅÍ°¡ Àû¿ëµÇ¾î ÀÖ´ÂÁö ±â¾ïÇÏ´Â º¯¼öµé
+    // í˜„ì¬ ì–´ë–¤ í•„í„°ê°€ ì ìš©ë˜ì–´ ìˆëŠ”ì§€ ê¸°ì–µí•˜ëŠ” ë³€ìˆ˜ë“¤
     // ---------------------------------------------------------
 
-    // 1. ¸ŞÀÎ Á÷¾÷ (¿¹: ¸¶¹ı»ç¸¦ ¼±ÅÃÇÏ¸é ¸¶¹ı»ç Ä«µå + Áß¸³ Ä«µå¸¸ º¸¿©¾ß ÇÔ)
-    // '?'´Â °ªÀÌ ¾øÀ» ¼öµµ ÀÖ´Ù(null °¡´É)´Â ¶æÀÔ´Ï´Ù.
+    // 1. ë©”ì¸ ì§ì—… (ì˜ˆ: ë§ˆë²•ì‚¬ë¥¼ ì„ íƒí•˜ë©´ ë§ˆë²•ì‚¬ ì¹´ë“œ + ì¤‘ë¦½ ì¹´ë“œë§Œ ë³´ì—¬ì•¼ í•¨)
+    // '?'ëŠ” ê°’ì´ ì—†ì„ ìˆ˜ë„ ìˆë‹¤(null ê°€ëŠ¥)ëŠ” ëœ»ì…ë‹ˆë‹¤.
     private CardClass? currentClassFilter = null;
 
-    // 2. »ó¼¼ ÇÊÅÍ (Àü¼³ Ä«µå¸¸ º¸±â, Â¦¼ö ºñ¿ë¸¸ º¸±â µî)
+    // 2. ìƒì„¸ í•„í„° (ì „ì„¤ ì¹´ë“œë§Œ ë³´ê¸°, ì§ìˆ˜ ë¹„ìš©ë§Œ ë³´ê¸° ë“±)
     private FilterManager.FilterSettings currentDetailFilters;
 
-    // 3. ºñ¿ë(¸¶³ª) ÇÊÅÍ (-1ÀÌ¸é ÇÊÅÍ ¾È ÇÔ, 0~10ÀÌ¸é ±× ºñ¿ë¸¸ º½)
+    // 3. ë¹„ìš©(ë§ˆë‚˜) í•„í„° (-1ì´ë©´ í•„í„° ì•ˆ í•¨, 0~10ì´ë©´ ê·¸ ë¹„ìš©ë§Œ ë´„)
     private int currentCostFilter = -1;
 
-    // 4. °Ë»ö¾î (°Ë»öÃ¢¿¡ ÀÔ·ÂÇÑ ±ÛÀÚ)
+    // 4. ê²€ìƒ‰ì–´ (ê²€ìƒ‰ì°½ì— ì…ë ¥í•œ ê¸€ì)
     private string currentSearchText = "";
+
+    [Header("Cost Filter UI")]
+    [Tooltip("ë§ˆë‚˜ ì½”ìŠ¤íŠ¸ í•„í„° í† ê¸€/ë²„íŠ¼ë“¤ì´ ìœ„ì¹˜í•œ ë¶€ëª¨ (Manafilter)")]
+    public Transform manaFilterParent;
+
+    // ì½”ìŠ¤íŠ¸ í† ê¸€/ë²„íŠ¼ë“¤ê³¼ ì¸ë±ìŠ¤ ë§¤í•‘ (0~10)
+    private readonly List<(Toggle toggle, Button button, Image image, TextMeshProUGUI text, int cost)> _costFilterEntries = new List<(Toggle, Button, Image, TextMeshProUGUI, int)>();
+
+    // ì½”ìŠ¤íŠ¸ í† ê¸€ ìƒ‰ìƒ ìŠ¤íƒ€ì¼ (PastelUIFree í…Œë§ˆ)
+    private static readonly Color CostBtnNormalBg = Color.white;                             // ì›ë³¸ PastelUIFree ë³´ë¼ ë²„íŠ¼ ìŠ¤í”„ë¼ì´íŠ¸
+    private static readonly Color CostBtnActiveBg = new Color(1f, 0.70f, 0.85f, 1f);        // í™”ì‚¬í•œ íŒŒìŠ¤í…” í•‘í¬ í•˜ì´ë¼ì´íŠ¸
+    private static readonly Color CostBtnNormalText = new Color(0.30f, 0.18f, 0.45f, 1f);   // ì§™ì€ ë³´ë¼ í…ìŠ¤íŠ¸
+    private static readonly Color CostBtnActiveText = new Color(0.48f, 0.10f, 0.28f, 1f);   // ì§„í•œ í•‘í¬ í…ìŠ¤íŠ¸ (ë³¼ë“œ)
+
+    [Header("Crafting Mode (ì œì‘ ëª¨ë“œ)")]
+    [Tooltip("ì œì‘ ëª¨ë“œ í† ê¸€ ë²„íŠ¼ (/Canvas/Deck/Tool/create)")]
+    public Button craftModeButton;
+    public TextMeshProUGUI craftModeButtonText;
+    public Image craftModeButtonImage;
+    public bool isCraftingMode = false;
+
+    private static readonly Color CraftBtnNormalBg = new Color(1f, 0.95f, 0.82f, 1f);       // íŒŒìŠ¤í…” ì›œ ì˜ë¡œìš°
+    private static readonly Color CraftBtnActiveBg = new Color(1f, 0.75f, 0.85f, 1f);       // íŒŒìŠ¤í…” í•‘í¬
+    private static readonly Color CraftBtnNormalText = new Color(0.42f, 0.28f, 0.10f, 1f); // ì§™ì€ ì›œ ë¸Œë¼ìš´
+    private static readonly Color CraftBtnActiveText = new Color(0.48f, 0.10f, 0.28f, 1f); // ì§„í•œ í•‘í¬
+
+    // [ìµœì í™”] ì¹´ë“œ UI ì˜¤ë¸Œì íŠ¸ ì¬í™œìš© í’€ (Destroy/Instantiate ë°˜ë³µ ë°©ì§€)
+    private readonly List<DeckCardDisplay> _cardDisplayPool = new List<DeckCardDisplay>();
 
     void Awake()
     {
@@ -53,160 +83,228 @@ public class DeckBuilder : MonoBehaviour
             return;
         }
 
+        // ë§ˆë‚˜ ì½”ìŠ¤íŠ¸ í•„í„° í† ê¸€(0~10+) ì´ˆê¸°í™” ë° ë¦¬ìŠ¤ë„ˆ ì—°ê²°
+        InitCostFilterButtons();
+        // ì œì‘ ëª¨ë“œ ë²„íŠ¼ ì´ˆê¸°í™”
+        InitCraftModeButton();
     }
 
-    // ÀÌ ¿ÀºêÁ§Æ®°¡ ÄÑÁú ¶§(È°¼ºÈ­) ½ÇÇàµË´Ï´Ù.
+    // ì´ ì˜¤ë¸Œì íŠ¸ê°€ ì¼œì§ˆ ë•Œ(í™œì„±í™”) ì‹¤í–‰ë©ë‹ˆë‹¤.
     private void OnEnable()
     {
-        // "ÇÊÅÍ°¡ Àû¿ëµÆ´Ù"´Â ½ÅÈ£(ÀÌº¥Æ®)°¡ ¿À¸é HandleDetailFilterApply ÇÔ¼ö¸¦ ½ÇÇàÇÏ¶ó°í ¿¬°á(±¸µ¶)ÇÕ´Ï´Ù.
+        // "í•„í„°ê°€ ì ìš©ëë‹¤"ëŠ” ì‹ í˜¸(ì´ë²¤íŠ¸)ê°€ ì˜¤ë©´ HandleDetailFilterApply í•¨ìˆ˜ë¥¼ ì‹¤í–‰í•˜ë¼ê³  ì—°ê²°(êµ¬ë…)í•©ë‹ˆë‹¤.
         FilterManager.OnFilterApplied += HandleDetailFilterApply;
+        DeckManager.OnCurrentDeckCardsChanged += UpdateAllCardCounts;
     }
 
-    // ÀÌ ¿ÀºêÁ§Æ®°¡ ²¨Áú ¶§(ºñÈ°¼ºÈ­) ½ÇÇàµË´Ï´Ù.
+    // ì´ ì˜¤ë¸Œì íŠ¸ê°€ êº¼ì§ˆ ë•Œ(ë¹„í™œì„±í™”) ì‹¤í–‰ë©ë‹ˆë‹¤.
     private void OnDisable()
     {
-        // ¿¬°áÇß´ø ½ÅÈ£¸¦ ²÷½À´Ï´Ù. (¾È ²÷À¸¸é ¿¡·¯°¡ ³ª°Å³ª ¸Ş¸ğ¸®°¡ ³¶ºñµË´Ï´Ù)
+        // ì—°ê²°í–ˆë˜ ì‹ í˜¸ë¥¼ ëŠìŠµë‹ˆë‹¤. (ì•ˆ ëŠìœ¼ë©´ ì—ëŸ¬ê°€ ë‚˜ê±°ë‚˜ ë©”ëª¨ë¦¬ê°€ ë‚­ë¹„ë©ë‹ˆë‹¤)
         FilterManager.OnFilterApplied -= HandleDetailFilterApply;
+        DeckManager.OnCurrentDeckCardsChanged -= UpdateAllCardCounts;
     }
 
-    // °ÔÀÓ ½ÃÀÛ ½Ã µü ÇÑ ¹ø ½ÇÇàµË´Ï´Ù.
+    // ê²Œì„ ì‹œì‘ ì‹œ ë”± í•œ ë²ˆ ì‹¤í–‰ë©ë‹ˆë‹¤.
     void Start()
     {
-        // ¼­¹ö(Firebase)¿¡¼­ ¸ğµç Ä«µå Á¤º¸¸¦ ¿ÏÀüÈ÷ °¡Á®¿Ã ¶§±îÁö ´ë±âÇÕ´Ï´Ù(await).
-        // Firebase¿¡ ÀúÀåÇÑ µ¥ÀÌÅÍ¸¦ ºÒ·¯¿Í ÀúÀåÇÏ´Â ¹æ½Ä
-        // await CardDatabaseManager.instance.GetAllCardsAsync();
+        // ë§ˆë‚˜ ì½”ìŠ¤íŠ¸ í•„í„° ë²„íŠ¼(0~10+) ì´ˆê¸°í™” ë° í´ë¦­ ë¦¬ìŠ¤ë„ˆ ì—°ê²°
+        InitCostFilterButtons();
 
-        // ¸®¼Ò½º ¸Å´ÏÀú¿¡°Ô "¸ğµç Ä«µå µ¥ÀÌÅÍ ºÒ·¯¿Í!"¶ó°í ½ÃÅµ´Ï´Ù.
-        // Å¬¶óÀÌ¾ğÆ®¿¡ ÀúÀåÇÑ µ¥ÀÌÅÍ¸¦ ÀúÀåÇÏ´Â ¹æ½Ä
-        // ResourceManager.Instance.LoadAllCards();
-        // ºÒ·¯¿Â µ¥ÀÌÅÍ¸¦ ³» º¯¼ö¿¡ ÀúÀåÇÕ´Ï´Ù.
+        // ë¦¬ì†ŒìŠ¤ ë§¤ë‹ˆì €ì—ì„œ ëª¨ë“  ì¹´ë“œ ë°ì´í„°ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
         allCardsList = ResourceManager.Instance.GetAllCards();
 
-        // Ä«µå°¡ ÀÖÀ¸¸é ÀÏ´Ü È­¸é¿¡ ÂÓ »Ñ·ÁÁİ´Ï´Ù.
+        // ì¹´ë“œê°€ ìˆìœ¼ë©´ ì´ˆê¸° í•„í„° ê·œì¹™(í† í° ì œì™¸ ë“±)ì— ë§ì¶° í™”ë©´ì— í‘œì‹œí•©ë‹ˆë‹¤.
         if (allCardsList != null && allCardsList.Count > 0)
         {
-            DisplayCards(allCardsList);
+            UpdateCardDisplay();
         }
     }
 
 
     /// <summary>
-    /// [ÇÙ½É ±â´É] ÇöÀç ¼³Á¤µÈ ¸ğµç Á¶°Ç(Á÷¾÷, ºñ¿ë, °Ë»ö¾î µî)À» Á¾ÇÕÇØ¼­
-    /// Á¶°Ç¿¡ ¸Â´Â Ä«µå¸¸ ½ï½ï °ñ¶ó³»°í È­¸éÀ» ´Ù½Ã ±×¸³´Ï´Ù.
+    /// [í•µì‹¬ ê¸°ëŠ¥] í˜„ì¬ ì„¤ì •ëœ ëª¨ë“  ì¡°ê±´(ì§ì—…, ë¹„ìš©, ê²€ìƒ‰ì–´ ë“±)ì„ ì¢…í•©í•´ì„œ
+    /// ì¡°ê±´ì— ë§ëŠ” ì¹´ë“œë§Œ ì™ì™ ê³¨ë¼ë‚´ê³  í™”ë©´ì„ ë‹¤ì‹œ ê·¸ë¦½ë‹ˆë‹¤.
     /// </summary>
     private void UpdateCardDisplay()
     {
-        // Ä«µå µ¥ÀÌÅÍ°¡ ¾øÀ¸¸é ÀÏÇÒ ÇÊ¿ä ¾øÀ½
+        // ì¹´ë“œ ë°ì´í„°ê°€ ì—†ìœ¼ë©´ ì¼í•  í•„ìš” ì—†ìŒ
         if (allCardsList == null) return;
 
-        // LINQÀÇ ½ÃÀÛ: ÀüÃ¼ ¸®½ºÆ®¸¦ '°Ë»ö °¡´ÉÇÑ »óÅÂ'·Î µÓ´Ï´Ù.
+        // LINQì˜ ì‹œì‘: ì „ì²´ ë¦¬ìŠ¤íŠ¸ë¥¼ 'ê²€ìƒ‰ ê°€ëŠ¥í•œ ìƒíƒœ'ë¡œ ë‘¡ë‹ˆë‹¤.
         IEnumerable<CardData> filteredResult = allCardsList;
 
-        // 1. Á÷¾÷ ÇÊÅÍ Àû¿ë
+        // 0. í† í° ì¹´ë“œ ì œì™¸ (ë± í¸ì„± ë¶ˆê°€ ì¹´ë“œ)
+        filteredResult = filteredResult.Where(card => !card.isToken);
+
+        // 0.5 ë³´ìœ /ë¯¸ë³´ìœ  í•„í„°ë§
+        if (!isCraftingMode)
+        {
+            // ê¸°ë³¸ ëª¨ë“œ: ê³„ì •ì´ ë³´ìœ í•œ ì¹´ë“œë§Œ í‘œì‹œ (ë³´ìœ  ìˆ˜ëŸ‰ > 0)
+            filteredResult = filteredResult.Where(card => DeckManager.instance == null || DeckManager.instance.GetOwnedCardCount(card) > 0);
+        }
+        // ì œì‘ ëª¨ë“œ(isCraftingMode == true): ë³´ìœ  ì¹´ë“œì™€ ë¯¸ë³´ìœ (ì œì‘ ê°€ëŠ¥) ì¹´ë“œê°€ ëª¨ë‘ í•¨ê»˜ í‘œì‹œë¨
+
+        // 1. ì§ì—… í•„í„° ì ìš©
         if (currentClassFilter.HasValue)
         {
-            // "³» Á÷¾÷ÀÌ°Å³ª" ¶Ç´Â "Áß¸³(°­Áö)" Ä«µå¸¸ ³²±é´Ï´Ù.
-            // .Where´Â Á¶°Ç¿¡ ¸Â´Â ³à¼®¸¸ Åë°ú½ÃÅ°´Â °Å¸§¸Á ¿ªÇÒÀ» ÇÕ´Ï´Ù.
+            // "ë‚´ ì§ì—…ì´ê±°ë‚˜" ë˜ëŠ” "ì¤‘ë¦½(ê°•ì§€)" ì¹´ë“œë§Œ ë‚¨ê¹ë‹ˆë‹¤.
+            // .WhereëŠ” ì¡°ê±´ì— ë§ëŠ” ë…€ì„ë§Œ í†µê³¼ì‹œí‚¤ëŠ” ê±°ë¦„ë§ ì—­í• ì„ í•©ë‹ˆë‹¤.
             filteredResult = filteredResult.Where(card =>
                 card.cardClass == currentClassFilter.Value ||
                 card.cardClass == CardClass.Gangzi);
         }
 
-        // 2. »ó¼¼ ÇÊÅÍ Àû¿ë (ÇÊÅÍ ¸Å´ÏÀú ¼³Á¤°ª)
+        // 2. ìƒì„¸ í•„í„° ì ìš© (í•„í„° ë§¤ë‹ˆì € ì„¤ì •ê°’)
 
-        // Á÷¾÷ Àü¿ë ÇÊÅÍ°¡ ÀÖ´Ù¸é Àû¿ë
+        // ì§ì—… ì „ìš© í•„í„°ê°€ ìˆë‹¤ë©´ ì ìš©
         if (currentDetailFilters.cardClass.HasValue)
         {
             filteredResult = filteredResult.Where(card => card.cardClass == currentDetailFilters.cardClass.Value);
         }
 
-        // Ä«µå Á¾·ù(ÇÏ¼öÀÎ/ÁÖ¹®) ÇÊÅÍ°¡ ÀÖ´Ù¸é Àû¿ë
+        // ì¹´ë“œ ì¢…ë¥˜(í•˜ìˆ˜ì¸/ì£¼ë¬¸) í•„í„°ê°€ ìˆë‹¤ë©´ ì ìš©
         if (currentDetailFilters.CardType.HasValue)
         {
             filteredResult = filteredResult.Where(card => card.cardType == currentDetailFilters.CardType.Value);
         }
 
-        // Èñ±Íµµ(ÀÏ¹İ/Àü¼³) ÇÊÅÍ°¡ ÀÖ´Ù¸é Àû¿ë
+        // í¬ê·€ë„(ì¼ë°˜/ì „ì„¤) í•„í„°ê°€ ìˆë‹¤ë©´ ì ìš©
         if (currentDetailFilters.Rarity.HasValue)
         {
             filteredResult = filteredResult.Where(card => card.rarity == currentDetailFilters.Rarity.Value);
         }
 
-        // È®ÀåÆÑ ÇÊÅÍ°¡ ÀÖ´Ù¸é Àû¿ë
+        // í™•ì¥íŒ© í•„í„°ê°€ ìˆë‹¤ë©´ ì ìš©
         if (currentDetailFilters.Expansion.HasValue)
         {
             filteredResult = filteredResult.Where(card => card.expansion == currentDetailFilters.Expansion.Value);
         }
 
-        // 3. ¸¶³ª ÄÚ½ºÆ® ÇÊÅÍ
-        if (currentCostFilter != -1) // -1ÀÌ ¾Æ´Ï¸é ÇÊÅÍ°¡ ÄÑÁø °Í
+        // 3. ë§ˆë‚˜ ì½”ìŠ¤íŠ¸ í•„í„°
+        if (currentCostFilter != -1) // -1ì´ ì•„ë‹ˆë©´ í•„í„°ê°€ ì¼œì§„ ê²ƒ
         {
             if (currentCostFilter >= 10)
-                // 10 ÀÌ»ó ¹öÆ°À» ´­·¶À¸¸é 10º¸´Ù Å©°Å³ª °°Àº ¾Öµé ´Ù º¸¿©ÁÜ
+                // 10 ì´ìƒ ë²„íŠ¼ì„ ëˆŒë €ìœ¼ë©´ 10ë³´ë‹¤ í¬ê±°ë‚˜ ê°™ì€ ì• ë“¤ ë‹¤ ë³´ì—¬ì¤Œ
                 filteredResult = filteredResult.Where(card => card.manaCost >= currentCostFilter);
             else
-                // ±×°Ô ¾Æ´Ï¸é Á¤È®È÷ ±× ÄÚ½ºÆ®ÀÎ ¾Öµé¸¸ º¸¿©ÁÜ
+                // ê·¸ê²Œ ì•„ë‹ˆë©´ ì •í™•íˆ ê·¸ ì½”ìŠ¤íŠ¸ì¸ ì• ë“¤ë§Œ ë³´ì—¬ì¤Œ
                 filteredResult = filteredResult.Where(card => card.manaCost == currentCostFilter);
         }
 
-        // 4. °Ë»ö¾î ÇÊÅÍ
-        // °Ë»öÃ¢ÀÌ ºñ¾îÀÖÁö ¾Ê´Ù¸é ½ÇÇà
+        // 4. ê²€ìƒ‰ì–´ í•„í„° (ë¬´í• ë‹¹ ëŒ€ì†Œë¬¸ì ë¬´ì‹œ ë¹„êµ)
         if (!string.IsNullOrWhiteSpace(currentSearchText))
         {
-            // ´ë¼Ò¹®ÀÚ ±¸ºĞ ¾øÀÌ Ã£±â À§ÇØ ´Ù ¼Ò¹®ÀÚ·Î ¹Ù²ã¼­ ºñ±³ÇÕ´Ï´Ù.
-            string lowerSearchText = currentSearchText.ToLower();
+            string trimmedSearch = currentSearchText.Trim();
             filteredResult = filteredResult.Where(card =>
-                (card.cardName != null && card.cardName.ToLower().Contains(lowerSearchText)) || // ÀÌ¸§¿¡ Æ÷ÇÔµÇ°Å³ª
-                (card.description != null && card.description.ToLower().Contains(lowerSearchText)) // ¼³¸í¿¡ Æ÷ÇÔµÇ°Å³ª
+                (card.cardName != null && card.cardName.IndexOf(trimmedSearch, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (card.description != null && card.description.IndexOf(trimmedSearch, StringComparison.OrdinalIgnoreCase) >= 0)
             );
         }
 
-        // ÇÊÅÍ¸µµÈ ÃÖÁ¾ °á°ú¸¦ ¸®½ºÆ®·Î º¯È¯(.ToList())ÇØ¼­ È­¸é ±×¸®±â ÇÔ¼ö·Î ³Ñ±é´Ï´Ù.
+        // 5. ì •ë ¬: ì„ íƒëœ ì •ë ¬ ê¸°ì¤€(7ê°€ì§€) ë° ë°©ì‹(ì˜¤ë¦„ì°¨ìˆœ/ë‚´ë¦¼ì°¨ìˆœ) ì ìš©
+        bool isAscending = currentDetailFilters.sortOrder == CardSortOrder.Ascending;
+
+        switch (currentDetailFilters.sortCriterion)
+        {
+            case CardSortCriterion.Cost:
+                filteredResult = isAscending
+                    ? filteredResult.OrderBy(card => card.manaCost).ThenBy(card => card.cardID)
+                    : filteredResult.OrderByDescending(card => card.manaCost).ThenBy(card => card.cardID);
+                break;
+
+            case CardSortCriterion.Class:
+                filteredResult = isAscending
+                    ? filteredResult.OrderBy(card => (int)card.cardClass).ThenBy(card => card.manaCost).ThenBy(card => card.cardID)
+                    : filteredResult.OrderByDescending(card => (int)card.cardClass).ThenBy(card => card.manaCost).ThenBy(card => card.cardID);
+                break;
+
+            case CardSortCriterion.Attack:
+                filteredResult = isAscending
+                    ? filteredResult.OrderBy(card => card.attack).ThenBy(card => card.manaCost).ThenBy(card => card.cardID)
+                    : filteredResult.OrderByDescending(card => card.attack).ThenBy(card => card.manaCost).ThenBy(card => card.cardID);
+                break;
+
+            case CardSortCriterion.Health:
+                filteredResult = isAscending
+                    ? filteredResult.OrderBy(card => card.health).ThenBy(card => card.manaCost).ThenBy(card => card.cardID)
+                    : filteredResult.OrderByDescending(card => card.health).ThenBy(card => card.manaCost).ThenBy(card => card.cardID);
+                break;
+
+            case CardSortCriterion.Rarity:
+                filteredResult = isAscending
+                    ? filteredResult.OrderBy(card => (int)card.rarity).ThenBy(card => card.manaCost).ThenBy(card => card.cardID)
+                    : filteredResult.OrderByDescending(card => (int)card.rarity).ThenBy(card => card.manaCost).ThenBy(card => card.cardID);
+                break;
+
+            case CardSortCriterion.Tribe:
+                filteredResult = isAscending
+                    ? filteredResult.OrderBy(card => (int)card.minionTribe).ThenBy(card => card.manaCost).ThenBy(card => card.cardID)
+                    : filteredResult.OrderByDescending(card => (int)card.minionTribe).ThenBy(card => card.manaCost).ThenBy(card => card.cardID);
+                break;
+
+            case CardSortCriterion.Type:
+                filteredResult = isAscending
+                    ? filteredResult.OrderBy(card => (int)card.cardType).ThenBy(card => card.manaCost).ThenBy(card => card.cardID)
+                    : filteredResult.OrderByDescending(card => (int)card.cardType).ThenBy(card => card.manaCost).ThenBy(card => card.cardID);
+                break;
+
+            default:
+                filteredResult = filteredResult
+                    .OrderBy(card => card.manaCost)
+                    .ThenBy(card => card.cardID);
+                break;
+        }
+
+        // í•„í„°ë§ê³¼ ì •ë ¬ì„ ê±°ì¹œ ìµœì¢… ê²°ê³¼ë¥¼ ë¦¬ìŠ¤íŠ¸ë¡œ ë³€í™˜í•˜ì—¬ í™”ë©´ì— ì „ë‹¬í•©ë‹ˆë‹¤.
         DisplayCards(filteredResult.ToList());
     }
 
     /// <summary>
-    /// ¸ğµç ÇÊÅÍ¸¦ ½Ï Áö¿ì°í ÃÊ±âÈ­ÇÏ´Â ¹öÆ°¿ë ÇÔ¼öÀÔ´Ï´Ù.
+    /// ëª¨ë“  í•„í„°ë¥¼ ì‹¹ ì§€ìš°ê³  ì´ˆê¸°í™”í•˜ëŠ” ë²„íŠ¼ìš© í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
     public void ResetAllFilters()
     {
         currentClassFilter = null;
-        currentDetailFilters = new FilterManager.FilterSettings(); // »õ ¼³Á¤(ºó °ª)À¸·Î µ¤¾î¾²±â
+        currentDetailFilters = new FilterManager.FilterSettings(); // ìƒˆ ì„¤ì •(ë¹ˆ ê°’)ìœ¼ë¡œ ë®ì–´ì“°ê¸°
         currentCostFilter = -1;
         currentSearchText = "";
 
-        // ÃÊ±âÈ­µÆÀ¸´Ï È­¸éµµ ´Ù½Ã ±×¸²
+        UpdateCostButtonVisuals();
+        // ì´ˆê¸°í™”ëìœ¼ë‹ˆ í™”ë©´ë„ ë‹¤ì‹œ ê·¸ë¦¼
         UpdateCardDisplay();
     }
 
     /// <summary>
-    /// [»õ µ¦ ¸¸µé±â] Á÷¾÷À» ¼±ÅÃÇßÀ» ¶§ ½ÇÇàµË´Ï´Ù.
+    /// [ìƒˆ ë± ë§Œë“¤ê¸°] ì§ì—…ì„ ì„ íƒí–ˆì„ ë•Œ ì‹¤í–‰ë©ë‹ˆë‹¤.
+    /// (ì„œë²„ì— ë¯¸ë¦¬ ë¹ˆ ë±ì„ ìƒì„±í•˜ì§€ ì•Šê³ , ìœ ì €ê°€ 'ì €ì¥' ë²„íŠ¼ì„ ëˆ„ë¥¼ ë•Œë§Œ ì„œë²„ì— ë“±ë¡ë©ë‹ˆë‹¤)
     /// </summary>
-    public async void SetClassFilter(string className)
+    public void SetClassFilter(string className)
     {
-        // 1. ¼­¹ö(Firebase)¿¡ "ÀÌ Á÷¾÷À¸·Î »õ µ¦ ÇÏ³ª ¸¸µé¾îÁà"¶ó°í ¿äÃ»ÇÏ°í °á°ú¸¦ ±â´Ù¸³´Ï´Ù(await).
-        DeckData newDeck = await DeckSaveManager_Firebase.instance.ServerCreateNewDeck(className);
+        // 1. ì„ì‹œ(Draft) ìƒˆ ë± ë°ì´í„° ìƒì„±
+        DeckData draftDeck = new DeckData("", "ìƒˆë¡œìš´ ë±", className);
 
-        // 2. µ¦ ¸Å´ÏÀú(¿À¸¥ÂÊ ¸®½ºÆ® °ü¸®ÀÚ)¿¡°Ô "ÀÌÁ¦ ÀÌ »õ µ¦À» ÆíÁıÇÒ °Å¾ß"¶ó°í ¾Ë·ÁÁİ´Ï´Ù.
-        DeckManager.instance.StartNewDeck(newDeck);
+        // 2. ë± ë§¤ë‹ˆì €(ì˜¤ë¥¸ìª½ ë¦¬ìŠ¤íŠ¸ ê´€ë¦¬ì)ì—ê²Œ "ì´ì œ ì´ ìƒˆ ë±ì„ í¸ì§‘í•  ê±°ì•¼"ë¼ê³  ì•Œë ¤ì¤ë‹ˆë‹¤.
+        DeckManager.instance.StartNewDeck(draftDeck);
 
-        // 3. ÇÊÅÍµéÀ» ±ú²ıÇÏ°Ô Ã»¼ÒÇÕ´Ï´Ù.
+        // 3. í•„í„°ë“¤ì„ ê¹¨ë—í•˜ê²Œ ì²­ì†Œí•©ë‹ˆë‹¤.
         currentDetailFilters = new FilterManager.FilterSettings();
         currentCostFilter = -1;
         currentSearchText = "";
+        UpdateCostButtonVisuals();
 
-        // 4. ¹®ÀÚ¿­·Î µÈ Á÷¾÷ ÀÌ¸§(¿¹: "Mage")À» ÄÄÇ»ÅÍ°¡ ÀÌÇØÇÏ´Â Enum(ClassType.Mage)À¸·Î ¹Ù²ß´Ï´Ù.
+        // 4. ë¬¸ìì—´ë¡œ ëœ ì§ì—… ì´ë¦„(ì˜ˆ: "Mage")ì„ ì»´í“¨í„°ê°€ ì´í•´í•˜ëŠ” Enum(ClassType.Mage)ìœ¼ë¡œ ë°”ê¿‰ë‹ˆë‹¤.
         if (Enum.TryParse(className, out CardClass classEnum))
         {
             currentClassFilter = classEnum;
         }
         else
         {
-            // º¯È¯ ½ÇÆĞÇÏ¸é ±âº»°ª(°­Áö/Áß¸³)À¸·Î ¼³Á¤
+            // ë³€í™˜ ì‹¤íŒ¨í•˜ë©´ ê¸°ë³¸ê°’(ê°•ì§€/ì¤‘ë¦½)ìœ¼ë¡œ ì„¤ì •
             currentClassFilter = CardClass.Gangzi;
         }
 
-        // 5. ÇÊÅÍ UI(Ã¥°¥ÇÇ ÅÇ)µµ ÇØ´ç Á÷¾÷¸¸ º¸ÀÌ°Ô °»½ÅÇÕ´Ï´Ù.
+        // 5. í•„í„° UI(ì±…ê°ˆí”¼ íƒ­)ë„ í•´ë‹¹ ì§ì—…ë§Œ ë³´ì´ê²Œ ê°±ì‹ í•©ë‹ˆë‹¤.
         if (filterManager != null)
         {
             filterManager.ResetFilterUI();
@@ -214,24 +312,24 @@ public class DeckBuilder : MonoBehaviour
             filterManager.UpdateMemberToggles(availableMembers);
         }
 
-        // 6. ¼³Á¤ ³¡³µÀ¸´Ï È­¸é °»½Å!
+        // 6. ì„¤ì • ëë‚¬ìœ¼ë‹ˆ í™”ë©´ ê°±ì‹ !
         UpdateCardDisplay();
     }
 
     /// <summary>
-    /// [±âÁ¸ µ¦ ¼öÁ¤] ÀúÀåµÈ µ¦À» ºÒ·¯¿Í¼­ ÆíÁı ¸ğµå·Î µé¾î°©´Ï´Ù.
+    /// [ê¸°ì¡´ ë± ìˆ˜ì •] ì €ì¥ëœ ë±ì„ ë¶ˆëŸ¬ì™€ì„œ í¸ì§‘ ëª¨ë“œë¡œ ë“¤ì–´ê°‘ë‹ˆë‹¤.
     /// </summary>
     public void LoadDeckForEditing(DeckData deckToLoad)
     {
-        // µ¦¿¡´Â Ä«µå ID(¹®ÀÚ¿­)¸¸ µé¾îÀÖÀ¸¹Ç·Î, ½ÇÁ¦ Ä«µå µ¥ÀÌÅÍ(°´Ã¼)·Î ¹Ù²ãÁÖ´Â ÀÛ¾÷ÀÔ´Ï´Ù.
-        // ¸ŞÀÎµ¦
+        // ë±ì—ëŠ” ì¹´ë“œ ID(ë¬¸ìì—´)ë§Œ ë“¤ì–´ìˆìœ¼ë¯€ë¡œ, ì‹¤ì œ ì¹´ë“œ ë°ì´í„°(ê°ì²´)ë¡œ ë°”ê¿”ì£¼ëŠ” ì‘ì—…ì…ë‹ˆë‹¤.
+        // ë©”ì¸ë±
         List<CardData> mainCardsForDeck = new List<CardData>();
         foreach (string cardId in deckToLoad.cardIds)
         {
             CardData card = ResourceManager.Instance.GetCardData(cardId);
             if (card != null) mainCardsForDeck.Add(card);
         }
-        // »çÀÌµå µ¦
+        // ì‚¬ì´ë“œ ë±
         List<CardData> sideCardsForDeck = new List<CardData>();
         foreach (string cardId in deckToLoad.sideDeckCardIds)
         {
@@ -239,19 +337,20 @@ public class DeckBuilder : MonoBehaviour
             if (card != null) sideCardsForDeck.Add(card);
         }
 
-        // µ¦ ¸Å´ÏÀú¿¡°Ô "ÀÌ µ¦ ³»¿ëÀ¸·Î Ã¤¿ö³Ö¾î"¶ó°í ½ÃÅµ´Ï´Ù.
+        // ë± ë§¤ë‹ˆì €ì—ê²Œ "ì´ ë± ë‚´ìš©ìœ¼ë¡œ ì±„ì›Œë„£ì–´"ë¼ê³  ì‹œí‚µë‹ˆë‹¤.
         DeckManager.instance.LoadDeck(deckToLoad, mainCardsForDeck, sideCardsForDeck);
 
-        // µ¦ÀÇ Á÷¾÷¿¡ ¸ÂÃç¼­ ÇÊÅÍ¸¦ ¼³Á¤ÇÕ´Ï´Ù.
+        // ë±ì˜ ì§ì—…ì— ë§ì¶°ì„œ í•„í„°ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
         SetClassFilterForEditing(deckToLoad.deckClass);
     }
 
-    // µ¦ ¼öÁ¤ ½Ã ÇÊÅÍ¿Í UI¸¦ ¼³Á¤ÇÏ´Â ³»ºÎ µµ¿ì¹Ì ÇÔ¼ö
+    // ë± ìˆ˜ì • ì‹œ í•„í„°ì™€ UIë¥¼ ì„¤ì •í•˜ëŠ” ë‚´ë¶€ ë„ìš°ë¯¸ í•¨ìˆ˜
     private void SetClassFilterForEditing(string className)
     {
         currentDetailFilters = new FilterManager.FilterSettings();
         currentCostFilter = -1;
         currentSearchText = "";
+        UpdateCostButtonVisuals();
 
         if (Enum.TryParse(className, out CardClass classEnum))
         {
@@ -272,18 +371,194 @@ public class DeckBuilder : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸¶³ª ¼öÁ¤(0~10) ¹öÆ°À» ´­·¶À» ¶§ ½ÇÇàµË´Ï´Ù.
+    /// ë§ˆë‚˜ í•„í„°(0~10+ ì½”ìŠ¤íŠ¸) í† ê¸€/ë²„íŠ¼ë“¤ì„ ê²€ìƒ‰í•˜ì—¬ ì´ë²¤íŠ¸ ë° íŒŒìŠ¤í…” í…Œë§ˆ ë¹„ì£¼ì–¼ì„ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
     /// </summary>
-    public void OnCostButtonClick(int cost)
+    public void InitCostFilterButtons()
     {
-        // ÀÌ¹Ì 3ÄÚ½ºÆ®¸¦ º¸°í ÀÖ´Âµ¥ ¶Ç 3À» ´©¸£¸é -> ÇÊÅÍ ²û(-1)
-        // ´Ù¸¥ °É ´©¸£¸é -> ±× ÄÚ½ºÆ®·Î º¯°æ
-        currentCostFilter = (currentCostFilter == cost) ? -1 : cost;
+        if (manaFilterParent == null)
+        {
+            var go = GameObject.Find("Manafilter");
+            if (go != null) manaFilterParent = go.transform;
+        }
+
+        if (manaFilterParent == null) return;
+
+        // ToggleGroupì´ ì¼œì ¸ ìˆìœ¼ë©´ í† ê¸€ ì „í™˜ ì‹œ ìƒí˜¸ ê°„ì„­ ë° ì¬ì§„ì… ì·¨ì†Œ ë²„ê·¸ê°€ ë°œìƒí•˜ë¯€ë¡œ ë¹„í™œì„±í™”í•©ë‹ˆë‹¤.
+        var tg = manaFilterParent.GetComponent<ToggleGroup>();
+        if (tg != null)
+        {
+            tg.enabled = false;
+        }
+
+        _costFilterEntries.Clear();
+
+        for (int i = 0; i < manaFilterParent.childCount; i++)
+        {
+            var child = manaFilterParent.GetChild(i);
+            var toggle = child.GetComponent<Toggle>();
+            var btn = child.GetComponent<Button>();
+            if (toggle == null && btn == null) continue;
+
+            // ì´ë¦„ ë˜ëŠ” í…ìŠ¤íŠ¸ì—ì„œ ì½”ìŠ¤íŠ¸ íŒŒì‹± (0cost ~ 10+cost)
+            int cost = i;
+            string childName = child.name.ToLower();
+            if (childName.Contains("10"))
+            {
+                cost = 10;
+            }
+            else
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(childName, @"\d+");
+                if (match.Success)
+                {
+                    int.TryParse(match.Value, out cost);
+                }
+            }
+
+            var img = child.GetComponent<Image>();
+            var txt = child.GetComponentInChildren<TextMeshProUGUI>(true);
+
+            int capturedCost = cost;
+            if (toggle != null)
+            {
+                toggle.group = null; // ToggleGroup ì—°ê²° í•´ì œ (ê°œë³„ ì œì–´)
+                toggle.onValueChanged.RemoveAllListeners();
+                toggle.onValueChanged.AddListener((isOn) => OnCostToggleChanged(capturedCost, isOn));
+            }
+            else if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() => OnCostButtonClick(capturedCost));
+            }
+
+            _costFilterEntries.Add((toggle, btn, img, txt, capturedCost));
+        }
+
+        UpdateCostButtonVisuals();
+    }
+
+    /// <summary>
+    /// í˜„ì¬ ì„ íƒëœ ì½”ìŠ¤íŠ¸ í•„í„°(currentCostFilter)ì— ë§ì¶° í† ê¸€ ìƒíƒœ ë° ë°°ê²½ìƒ‰, í…ìŠ¤íŠ¸ë¥¼ í•˜ì´ë¼ì´íŠ¸í•©ë‹ˆë‹¤.
+    /// </summary>
+    public void UpdateCostButtonVisuals()
+    {
+        foreach (var entry in _costFilterEntries)
+        {
+            bool isActive = (currentCostFilter != -1 && (
+                (entry.cost < 10 && entry.cost == currentCostFilter) ||
+                (entry.cost >= 10 && currentCostFilter >= 10)
+            ));
+
+            if (entry.toggle != null && entry.toggle.isOn != isActive)
+            {
+                entry.toggle.SetIsOnWithoutNotify(isActive);
+            }
+
+            if (entry.image != null)
+            {
+                entry.image.color = isActive ? CostBtnActiveBg : CostBtnNormalBg;
+            }
+
+            if (entry.text != null)
+            {
+                entry.text.color = isActive ? CostBtnActiveText : CostBtnNormalText;
+                entry.text.fontStyle = isActive ? FontStyles.Bold : FontStyles.Normal;
+            }
+        }
+    }
+
+    /// <summary>
+    /// ë§ˆë‚˜ ì½”ìŠ¤íŠ¸ í† ê¸€ ìƒíƒœê°€ ë³€ê²½ë˜ì—ˆì„ ë•Œ ì‹¤í–‰ë©ë‹ˆë‹¤.
+    /// - ë‹¤ë¥¸ ì½”ìŠ¤íŠ¸ë¥¼ ëˆ„ë¥´ë©´: í•´ë‹¹ ì½”ìŠ¤íŠ¸ë¡œ ë°”ë¡œ ì „í™˜ (ê¸°ì¡´ ì½”ìŠ¤íŠ¸ í•´ì œ, ìƒˆ ì½”ìŠ¤íŠ¸ ì¼œì§)
+    /// - ì´ë¯¸ í™œì„±í™”ëœ ì½”ìŠ¤íŠ¸ë¥¼ ë‹¤ì‹œ ëˆ„ë¥´ë©´: í•´ë‹¹ ì½”ìŠ¤íŠ¸ í•´ì œ (ì „ì²´ ë³´ê¸°)
+    /// </summary>
+    public void OnCostToggleChanged(int cost, bool isOn)
+    {
+        if (isOn)
+        {
+            // ë‹¤ë¥¸ ì½”ìŠ¤íŠ¸ í† ê¸€ì„ ì¼œë©´ ì¦‰ì‹œ í•´ë‹¹ ì½”ìŠ¤íŠ¸ë¡œ í•„í„° ì „í™˜
+            currentCostFilter = cost;
+        }
+        else
+        {
+            // ì´ë¯¸ í™œì„±í™”ëœ í† ê¸€ì„ ë‹¤ì‹œ ëˆŒëŸ¬ì„œ ê»ì„ ë•Œë§Œ í•„í„° í•´ì œ
+            if (currentCostFilter == cost)
+            {
+                currentCostFilter = -1;
+            }
+        }
+
+        UpdateCostButtonVisuals();
         UpdateCardDisplay();
     }
 
     /// <summary>
-    /// °Ë»öÃ¢¿¡ ±ÛÀÚ¸¦ Ä¥ ¶§¸¶´Ù ½ÇÇàµË´Ï´Ù.
+    /// ë§ˆë‚˜ ìˆ˜ì •(0~10) ë²„íŠ¼ì„ ëˆŒë €ì„ ë•Œ ì‹¤í–‰ë©ë‹ˆë‹¤. (ë²„íŠ¼ í˜¸í™˜ìš©)
+    /// </summary>
+    public void OnCostButtonClick(int cost)
+    {
+        // ì´ë¯¸ í•´ë‹¹ ì½”ìŠ¤íŠ¸ë¥¼ ë³´ê³  ìˆëŠ”ë° ë˜ ëˆ„ë¥´ë©´ -> í•„í„° ë”(-1)
+        // ë‹¤ë¥¸ ê±¸ ëˆ„ë¥´ë©´ -> ê·¸ ì½”ìŠ¤íŠ¸ë¡œ ë³€ê²½
+        currentCostFilter = (currentCostFilter == cost) ? -1 : cost;
+        UpdateCostButtonVisuals();
+        UpdateCardDisplay();
+    }
+
+    /// <summary>
+    /// ì œì‘ ëª¨ë“œ ë²„íŠ¼ ì´ˆê¸°í™” ë° ì´ë²¤íŠ¸ ì—°ê²°
+    /// </summary>
+    public void InitCraftModeButton()
+    {
+        if (craftModeButton == null)
+        {
+            var go = GameObject.Find("/Canvas/Deck/Tool/create");
+            if (go != null)
+            {
+                craftModeButton = go.GetComponent<Button>();
+                craftModeButtonImage = go.GetComponent<Image>();
+                craftModeButtonText = go.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+        }
+
+        if (craftModeButton != null)
+        {
+            craftModeButton.onClick.RemoveAllListeners();
+            craftModeButton.onClick.AddListener(ToggleCraftingMode);
+            UpdateCraftButtonVisuals();
+        }
+    }
+
+    /// <summary>
+    /// ì œì‘ ëª¨ë“œ On/Off í† ê¸€
+    /// </summary>
+    public void ToggleCraftingMode()
+    {
+        isCraftingMode = !isCraftingMode;
+        UpdateCraftButtonVisuals();
+        UpdateCardDisplay();
+    }
+
+    /// <summary>
+    /// ì œì‘ ëª¨ë“œ ë²„íŠ¼ ë¹„ì£¼ì–¼(í…ìŠ¤íŠ¸ ë° ìƒ‰ìƒ) ê°±ì‹ 
+    /// </summary>
+    public void UpdateCraftButtonVisuals()
+    {
+        if (craftModeButtonText != null)
+        {
+            craftModeButtonText.text = isCraftingMode ? "ë³´ìœ  ì¹´ë“œ" : "ì œì‘";
+        }
+        if (craftModeButtonImage != null)
+        {
+            craftModeButtonImage.color = isCraftingMode ? CraftBtnActiveBg : CraftBtnNormalBg;
+        }
+        if (craftModeButtonText != null)
+        {
+            craftModeButtonText.color = isCraftingMode ? CraftBtnActiveText : CraftBtnNormalText;
+        }
+    }
+
+    /// <summary>
+    /// ê²€ìƒ‰ì°½ì— ê¸€ìë¥¼ ì¹  ë•Œë§ˆë‹¤ ì‹¤í–‰ë©ë‹ˆë‹¤.
     /// </summary>
     public void OnSearchTextChanged(string searchText)
     {
@@ -292,7 +567,7 @@ public class DeckBuilder : MonoBehaviour
     }
 
     /// <summary>
-    /// FilterManager(»ó¼¼ ÇÊÅÍ UI)¿¡¼­ ¹º°¡ ¹Ù²î¾úÀ» ¶§ ½ÅÈ£¸¦ ¹Ş¾Æ ½ÇÇàµÇ´Â ÇÔ¼öÀÔ´Ï´Ù.
+    /// FilterManager(ìƒì„¸ í•„í„° UI)ì—ì„œ ë­”ê°€ ë°”ë€Œì—ˆì„ ë•Œ ì‹ í˜¸ë¥¼ ë°›ì•„ ì‹¤í–‰ë˜ëŠ” í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
     private void HandleDetailFilterApply(FilterManager.FilterSettings settings)
     {
@@ -301,29 +576,88 @@ public class DeckBuilder : MonoBehaviour
     }
 
     /// <summary>
-    /// [È­¸é ±×¸®±â] ÃÖÁ¾ÀûÀ¸·Î ¼±ÅÃµÈ Ä«µå ¸®½ºÆ®¸¦ ¹Ş¾Æ¼­ ½ÇÁ¦ °ÔÀÓ ¿ÀºêÁ§Æ®·Î ¸¸µì´Ï´Ù.
+    /// [í™”ë©´ ê·¸ë¦¬ê¸°] ì„ íƒëœ ì¹´ë“œ ë¦¬ìŠ¤íŠ¸ë¥¼ ë°›ì•„ì„œ ê¸°ì¡´ UI ì˜¤ë¸Œì íŠ¸ë¥¼ ì¬í™œìš©(Pool)í•˜ì—¬ í‘œì‹œí•©ë‹ˆë‹¤.
+    /// (Destroy/Instantiateë¥¼ ë§¤ë²ˆ ë°˜ë³µí•˜ì§€ ì•Šì•„ ê²€ìƒ‰ ë° í•„í„° ì „í™˜ ì‹œ ë ‰ì„ ë°©ì§€í•©ë‹ˆë‹¤)
     /// </summary>
     void DisplayCards(List<CardData> cardsToDisplay)
     {
-        // 1. Ã»¼Ò: ±âÁ¸¿¡ È­¸é¿¡ º¸¿©ÁÖ´ø Ä«µåµéÀ» ½Ï Áö¿ó´Ï´Ù.
-        foreach (Transform child in cardListParent)
+        if (cardsToDisplay == null) return;
+
+        int targetCount = cardsToDisplay.Count;
+
+        // 1. í’€ì— ì˜¤ë¸Œì íŠ¸ê°€ ë¶€ì¡±í•˜ë©´ í•„ìš”í•œ ë§Œí¼ë§Œ ìƒˆë¡œ ìƒì„±í•˜ì—¬ ì¶”ê°€
+        while (_cardDisplayPool.Count < targetCount)
         {
-            Destroy(child.gameObject);
+            GameObject newCard = Instantiate(cardPrefab, cardListParent);
+            DeckCardDisplay cardDisplay = newCard.GetComponent<DeckCardDisplay>();
+
+            // 'ìˆ˜ì§‘í’ˆ(Collection)' ì¹´ë“œ ì„¤ì • (í´ë¦­ ì‹œ ë±ì— ì¶”ê°€ë˜ë„ë¡)
+            CardInteraction cardInteraction = newCard.GetComponent<CardInteraction>();
+            if (cardInteraction != null)
+            {
+                cardInteraction.location = CardInteraction.CardLocation.Collection;
+            }
+
+            _cardDisplayPool.Add(cardDisplay);
         }
 
-        // 2. »ı¼º: ¸®½ºÆ®¿¡ ÀÖ´Â Ä«µå °³¼ö¸¸Å­ ºØ¾î»§(ÇÁ¸®ÆÕ)À» Âï¾î³À´Ï´Ù.
-        foreach (var data in cardsToDisplay)
+        // 2. í•„ìš”í•œ ì¹´ë“œ ìŠ¬ë¡¯ì„ ì¼œê³ (SetActive true) ë°ì´í„°ë§Œ ê°±ì‹ 
+        for (int i = 0; i < targetCount; i++)
         {
-            // ÇÁ¸®ÆÕ º¹Á¦(Instantiate)
-            GameObject newCard = Instantiate(cardPrefab, cardListParent);
+            DeckCardDisplay cardDisplay = _cardDisplayPool[i];
+            CardData data = cardsToDisplay[i];
 
-            // º¹Á¦µÈ Ä«µå UI¿¡ µ¥ÀÌÅÍ(°ø°İ·Â, ÀÌ¹ÌÁö µî)¸¦ Ã¤¿ö ³Ö½À´Ï´Ù.
-            DeckCardDisplay cardDisplay = newCard.GetComponent<DeckCardDisplay>();
-            if (cardDisplay != null) cardDisplay.Setup(data);
+            if (!cardDisplay.gameObject.activeSelf)
+            {
+                cardDisplay.gameObject.SetActive(true);
+            }
 
-            // ÀÌ Ä«µå´Â '¼öÁıÇ°(Collection)'¿¡ ÀÖ´Â Ä«µå¶ó°í À§Ä¡¸¦ ÁöÁ¤ÇØÁİ´Ï´Ù. (Å¬¸¯ ½Ã µ¦¿¡ Ãß°¡µÇ°Ô)
-            CardInteraction cardInteraction = newCard.GetComponent<CardInteraction>();
-            if (cardInteraction != null) cardInteraction.location = CardInteraction.CardLocation.Collection;
+            int remainingCount = DeckManager.instance != null
+                ? DeckManager.instance.GetRemainingCardCount(data)
+                : 2;
+            int ownedCount = DeckManager.instance != null
+                ? DeckManager.instance.GetOwnedCardCount(data)
+                : 2;
+
+            cardDisplay.Setup(data, remainingCount);
+            cardDisplay.SetRemainingState(remainingCount, ownedCount);
+        }
+
+        // 3. ì´ë²ˆ ëª©ë¡ì— í•„ìš” ì—†ëŠ” ë‚¨ì€ ìŠ¬ë¡¯ì€ ë¹„í™œì„±í™”(ìˆ¨ê¹€)
+        for (int i = targetCount; i < _cardDisplayPool.Count; i++)
+        {
+            if (_cardDisplayPool[i] != null && _cardDisplayPool[i].gameObject.activeSelf)
+            {
+                _cardDisplayPool[i].gameObject.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// í˜„ì¬ ë±ì˜ ìƒíƒœì— ë§ì¶° í™œì„±í™”ëœ ëª¨ë“  ì¹´ë“œì˜ ì”ì—¬ ìˆ˜ëŸ‰ ë° ì‚¬ìš© ë¶ˆê°€ ìƒíƒœë¥¼ ì‹¤ì‹œê°„ìœ¼ë¡œ ê°±ì‹ í•©ë‹ˆë‹¤.
+    /// (GetComponent íƒìƒ‰ ëŒ€ì‹  í’€ë§ ë¦¬ìŠ¤íŠ¸ë¥¼ ì§ì ‘ ìˆœíšŒí•˜ì—¬ ì„±ëŠ¥ì„ ìµœì í™”í•©ë‹ˆë‹¤)
+    /// </summary>
+    public void UpdateAllCardCounts()
+    {
+        if (DeckManager.instance == null) return;
+
+        for (int i = 0; i < _cardDisplayPool.Count; i++)
+        {
+            DeckCardDisplay cardDisplay = _cardDisplayPool[i];
+            if (cardDisplay == null || !cardDisplay.gameObject.activeSelf) continue;
+
+            CardData card = cardDisplay.GetCardData();
+            if (card != null)
+            {
+                int remaining = DeckManager.instance.GetRemainingCardCount(card);
+                int owned = DeckManager.instance.GetOwnedCardCount(card);
+                cardDisplay.SetRemainingState(remaining, owned);
+            }
+        }
+
+        if (isCraftingMode)
+        {
+            UpdateCardDisplay();
         }
     }
 }

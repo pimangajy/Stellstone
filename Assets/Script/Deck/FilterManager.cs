@@ -3,186 +3,334 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using TMPro;
 
 /// <summary>
-/// °Ë»ö ÇÊÅÍ UI(Á÷¾÷, Á¾·ù, Èñ±Íµµ µî)¸¦ ÃÑ°ıÇÏ´Â ¸Å´ÏÀúÀÔ´Ï´Ù.
-/// ¹öÆ°µéÀ» ÀÚµ¿À¸·Î »ı¼ºÇÏ°í, »ç¿ëÀÚ°¡ ¼±ÅÃÇÑ ÇÊÅÍ °ªÀ» ÀúÀåÇß´Ù°¡ DeckBuilder¿¡ Àü´ŞÇÕ´Ï´Ù.
+/// ì •ë ¬ ê¸°ì¤€ ë¶„ë¥˜ (7ì¢…ë¥˜)
+/// </summary>
+public enum CardSortCriterion
+{
+    Cost,       // ì½”ìŠ¤íŠ¸
+    Class,      // ì§ì—…
+    Attack,     // ê³µê²©ë ¥
+    Health,     // ì²´ë ¥
+    Rarity,     // ë ˆì–´ë„
+    Tribe,      // ì¢…ì¡±
+    Type        // íƒ€ì…
+}
+
+/// <summary>
+/// ì •ë ¬ ë°©ì‹ (ì˜¤ë¦„ì°¨ìˆœ / ë‚´ë¦¼ì°¨ìˆœ)
+/// </summary>
+public enum CardSortOrder
+{
+    Ascending,  // ì˜¤ë¦„ì°¨ìˆœ
+    Descending  // ë‚´ë¦¼ì°¨ìˆœ
+}
+
+/// <summary>
+/// ê²€ìƒ‰ í•„í„° UI(ì§ì—…, ì¢…ë¥˜, í¬ê·€ë„ ë“±) ë° ì •ë ¬ UIë¥¼ ì´ê´„í•˜ëŠ” ë§¤ë‹ˆì €ì…ë‹ˆë‹¤.
+/// ë²„íŠ¼ë“¤ì„ ìë™ìœ¼ë¡œ ìƒì„±í•˜ê³ , ì‚¬ìš©ìê°€ ì„ íƒí•œ í•„í„° ë° ì •ë ¬ ê°’ì„ ì €ì¥í–ˆë‹¤ê°€ DeckBuilderì— ì „ë‹¬í•©ë‹ˆë‹¤.
 /// </summary>
 public class FilterManager : MonoBehaviour
 {
     // -------------------------------------------------------------------------
-    // 1. µ¥ÀÌÅÍ ±¸Á¶ Á¤ÀÇ
+    // 1. ë°ì´í„° êµ¬ì¡° ì •ì˜
     // -------------------------------------------------------------------------
 
-    // [Áß¿ä] ÇÊÅÍ ¼³Á¤°ªÀ» ´ã´Â °¡¹æ(±¸Á¶Ã¼)ÀÔ´Ï´Ù.
-    // '?' (Nullable)À» ºÙ¿©¼­ "¼±ÅÃ ¾È ÇÔ(null)" »óÅÂ¸¦ Ç¥ÇöÇÒ ¼ö ÀÖ°Ô Çß½À´Ï´Ù.
+    // í•„í„° ë° ì •ë ¬ ì„¤ì •ê°’ì„ ë‹´ëŠ” êµ¬ì¡°ì²´ì…ë‹ˆë‹¤.
     public struct FilterSettings
     {
-        public CardClass? cardClass;    // Á÷¾÷ (nullÀÌ¸é ÀüÃ¼ Á÷¾÷)
-        public CardType? CardType;   // Ä«µå Á¾·ù
-        public CardRarity? Rarity;       // Èñ±Íµµ
-        public Expansion? Expansion; // È®ÀåÆÑ
+        public CardClass? cardClass;        // ì§ì—… (nullì´ë©´ ì „ì²´ ì§ì—…)
+        public CardType? CardType;          // ì¹´ë“œ ì¢…ë¥˜
+        public CardRarity? Rarity;          // í¬ê·€ë„
+        public Expansion? Expansion;        // í™•ì¥íŒ©
+        public CardSortCriterion sortCriterion; // ì •ë ¬ ê¸°ì¤€ (ê¸°ë³¸: Cost)
+        public CardSortOrder sortOrder;         // ì •ë ¬ ìˆœì„œ (ê¸°ë³¸: Ascending)
     }
 
     // -------------------------------------------------------------------------
-    // 2. ÀÌº¥Æ® Á¤ÀÇ
+    // 2. ì´ë²¤íŠ¸ ì •ì˜
     // -------------------------------------------------------------------------
 
-    // "ÇÊÅÍ Àû¿ë ¹öÆ°ÀÌ ´­·È´Ù!"¶ó°í ¾Ë¸®´Â ¹æ¼Û(Event)ÀÔ´Ï´Ù.
-    // DeckBuilder°¡ ÀÌ ¹æ¼ÛÀ» µè°í(±¸µ¶ÇÏ°í) È­¸éÀ» °»½ÅÇÕ´Ï´Ù.
+    // "í•„í„° ë° ì •ë ¬ ì ìš© ë²„íŠ¼ì´ ëˆŒë ¸ë‹¤!"ë¼ê³  ì•Œë¦¬ëŠ” ì´ë²¤íŠ¸ì…ë‹ˆë‹¤.
+    // DeckBuilder ë“±ì´ êµ¬ë…í•˜ì—¬ ì¹´ë“œ ëª©ë¡ì„ ê°±ì‹ í•©ë‹ˆë‹¤.
     public static event Action<FilterSettings> OnFilterApplied;
 
     // -------------------------------------------------------------------------
-    // 3. UI ÄÄÆ÷³ÍÆ® ¿¬°á
+    // 3. UI ì»´í¬ë„ŒíŠ¸ ì—°ê²°
     // -------------------------------------------------------------------------
 
-    [Header("UI ¿¬°á (Parents)")]
-    // Åä±Û ¹öÆ°µéÀÌ »ı¼ºµÉ ºÎ¸ğ À§Ä¡ (GridLayoutGroupÀ¸·Î Á¤·ÄµÊ)
+    [Header("UI íƒ­ (Filter / Sort)")]
+    [SerializeField] private Toggle filterTabToggle;
+    [SerializeField] private Toggle sortTabToggle;
+    [SerializeField] private GameObject filterContentPanel; // enumeration íŒ¨ë„
+    [SerializeField] private GameObject sortContentPanel;   // sortPanel íŒ¨ë„
+    [SerializeField] private TextMeshProUGUI titleText;      // ìƒë‹¨ ì œëª© í…ìŠ¤íŠ¸
+
+    [Header("í•„í„° UI ì—°ê²° (Parents)")]
     [SerializeField] private Transform memberToggleParent;
     [SerializeField] private Transform cardTypeToggleParent;
     [SerializeField] private Transform rarityToggleParent;
     [SerializeField] private Transform expansionToggleParent;
 
-    [Header("UI ¿¬°á (Groups)")]
-    // ¶óµğ¿À ¹öÆ° ±×·ì (±×·ì ³»¿¡¼­ ÇÏ³ª¸¸ ¼±ÅÃµÇ°Ô ÇÔ)
+    [Header("í•„í„° UI ì—°ê²° (Groups)")]
     [SerializeField] private ToggleGroup memberToggleGroup;
     [SerializeField] private ToggleGroup cardTypeToggleGroup;
     [SerializeField] private ToggleGroup rarityToggleGroup;
     [SerializeField] private ToggleGroup expansionToggleGroup;
 
-    [Header("UI ¿¬°á (Buttons)")]
-    [SerializeField] private Button applyFilterButton; // ÇÊÅÍ Àû¿ë ¹öÆ°
+    [Header("ì •ë ¬ UI ì—°ê²° (Parents)")]
+    [SerializeField] private Transform sortCriterionParent;
+    [SerializeField] private Transform sortOrderParent;
+
+    [Header("ì •ë ¬ UI ì—°ê²° (Groups)")]
+    [SerializeField] private ToggleGroup sortCriterionGroup;
+    [SerializeField] private ToggleGroup sortOrderGroup;
+
+    [Header("UI ì—°ê²° (Buttons)")]
+    [SerializeField] private Button applyFilterButton; // ì ìš© ë²„íŠ¼
 
     [Header("Prefab")]
-    [SerializeField] private GameObject filterTogglePrefab; // ¹öÆ° ¿øº»(ÇÁ¸®ÆÕ)
+    [SerializeField] private GameObject filterTogglePrefab; // ë²„íŠ¼ ì›ë³¸(í”„ë¦¬íŒ¹)
 
-    // ÇöÀç ¼±ÅÃµÈ ÇÊÅÍ ¼³Á¤°ª
+    // í˜„ì¬ ì„ íƒëœ í•„í„°/ì •ë ¬ ì„¤ì •ê°’
     private FilterSettings currentSettings;
 
     // -------------------------------------------------------------------------
-    // 4. ÃÊ±âÈ­ ·ÎÁ÷
+    // 4. ì´ˆê¸°í™” ë¡œì§
     // -------------------------------------------------------------------------
 
     private void Awake()
     {
-        // ¼³Á¤°ªÀ» ¸ğµÎ null(ÀüÃ¼)·Î ÃÊ±âÈ­
+        // ì„¤ì •ê°’ ì´ˆê¸°í™”
         currentSettings = new FilterSettings
         {
             cardClass = null,
             CardType = null,
             Rarity = null,
-            Expansion = null
+            Expansion = null,
+            sortCriterion = CardSortCriterion.Cost,
+            sortOrder = CardSortOrder.Ascending
         };
 
-        // Àû¿ë ¹öÆ° Å¬¸¯ ½Ã ½ÇÇàÇÒ ÇÔ¼ö ¿¬°á
+        // ì ìš© ë²„íŠ¼ í´ë¦­ ì‹œ ì‹¤í–‰í•  í•¨ìˆ˜ ì—°ê²°
         if (applyFilterButton != null)
         {
             applyFilterButton.onClick.AddListener(OnApplyButtonClicked);
         }
 
-        // [ÇÙ½É] °¢ Ä«Å×°í¸®º° ¹öÆ°µéÀ» ÀÚµ¿À¸·Î »ı¼ºÇÏ´Â ¸¶¹ıÀÇ ÇÔ¼ö È£Ãâ
-        // InitializeCategory<EnumÅ¸ÀÔ> ÇüÅÂ·Î È£ÃâÇÏ¿© ÄÚµå¸¦ Àç»ç¿ëÇÕ´Ï´Ù.
+        // íƒ­ í† ê¸€ ë¦¬ìŠ¤ë„ˆ ì—°ê²°
+        if (filterTabToggle != null)
+        {
+            filterTabToggle.onValueChanged.AddListener((isOn) =>
+            {
+                if (isOn) SwitchTab(true);
+            });
+        }
 
-        // (1) Á÷¾÷ ÇÊÅÍ »ı¼º
+        if (sortTabToggle != null)
+        {
+            sortTabToggle.onValueChanged.AddListener((isOn) =>
+            {
+                if (isOn) SwitchTab(false);
+            });
+        }
+
+        // (1) ì§ì—… í•„í„° ìƒì„±
         InitializeCategory<CardClass>(memberToggleParent, memberToggleGroup, (val) =>
         {
-            // ¹öÆ° ´­¸®¸é ¼³Á¤°ª º¯¼ö¿¡ ÀúÀå
             currentSettings.cardClass = val;
         });
 
-        // (2) Ä«µå Á¾·ù ÇÊÅÍ »ı¼º
+        // (2) ì¹´ë“œ ì¢…ë¥˜ í•„í„° ìƒì„±
         InitializeCategory<CardType>(cardTypeToggleParent, cardTypeToggleGroup, (val) =>
         {
             currentSettings.CardType = val;
         });
 
-        // (3) Èñ±Íµµ ÇÊÅÍ »ı¼º
+        // (3) í¬ê·€ë„ í•„í„° ìƒì„±
         InitializeCategory<CardRarity>(rarityToggleParent, rarityToggleGroup, (val) =>
         {
             currentSettings.Rarity = val;
         });
 
-        // (4) È®ÀåÆÑ ÇÊÅÍ »ı¼º
+        // (4) í™•ì¥íŒ© í•„í„° ìƒì„±
         InitializeCategory<Expansion>(expansionToggleParent, expansionToggleGroup, (val) =>
         {
             currentSettings.Expansion = val;
         });
 
-        // UI¸¦ ÃÊ±â »óÅÂ·Î ¸®¼Â
+        // (5) ì •ë ¬ UI ìƒì„±
+        InitializeSortUI();
+
+        // UIë¥¼ ì´ˆê¸° ìƒíƒœë¡œ ë¦¬ì…‹
         ResetFilterUI();
+
+        // ì´ˆê¸°ì—ëŠ” í•„í„° íƒ­ í™œì„±í™”
+        SwitchTab(true);
     }
 
     // -------------------------------------------------------------------------
-    // 5. ÁÖ¿ä ±â´É ÇÔ¼öµé
+    // 5. íƒ­ ì „í™˜ ë° ì •ë ¬ UI êµ¬ì„± ë¡œì§
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// [Àû¿ë] ¹öÆ° Å¬¸¯ ½Ã È£Ãâ
+    /// í•„í„° íƒ­ / ì •ë ¬ íƒ­ í™”ë©´ ì „í™˜
+    /// </summary>
+    private void SwitchTab(bool isFilterTab)
+    {
+        if (filterContentPanel != null) filterContentPanel.SetActive(isFilterTab);
+        if (sortContentPanel != null) sortContentPanel.SetActive(!isFilterTab);
+        if (titleText != null)
+        {
+            titleText.text = isFilterTab ? "í•„í„°" : "ì •ë ¬";
+        }
+    }
+
+    /// <summary>
+    /// ì •ë ¬ ê¸°ì¤€(7ê°€ì§€) ë° ì •ë ¬ ë°©ì‹(2ê°€ì§€) ë²„íŠ¼ì„ ìƒì„±í•©ë‹ˆë‹¤.
+    /// </summary>
+    private void InitializeSortUI()
+    {
+        // 1. ì •ë ¬ ê¸°ì¤€ ë²„íŠ¼ ìƒì„± (ì½”ìŠ¤íŠ¸, ì§ì—…, ê³µê²©ë ¥, ì²´ë ¥, ë ˆì–´ë„, ì¢…ì¡±, íƒ€ì…)
+        if (sortCriterionParent != null)
+        {
+            foreach (Transform child in sortCriterionParent) Destroy(child.gameObject);
+
+            var criteria = new (string label, CardSortCriterion criterion)[]
+            {
+                ("ì½”ìŠ¤íŠ¸", CardSortCriterion.Cost),
+                ("ì§ì—…", CardSortCriterion.Class),
+                ("ê³µê²©ë ¥", CardSortCriterion.Attack),
+                ("ì²´ë ¥", CardSortCriterion.Health),
+                ("ë ˆì–´ë„", CardSortCriterion.Rarity),
+                ("ì¢…ì¡±", CardSortCriterion.Tribe),
+                ("íƒ€ì…", CardSortCriterion.Type)
+            };
+
+            for (int i = 0; i < criteria.Length; i++)
+            {
+                var item = criteria[i];
+                bool isDefault = (i == 0); // ì½”ìŠ¤íŠ¸ê°€ ê¸°ë³¸ ì„ íƒ
+                CreateToggle(sortCriterionParent, sortCriterionGroup, item.label, isDefault, (isOn) =>
+                {
+                    if (isOn)
+                    {
+                        currentSettings.sortCriterion = item.criterion;
+                    }
+                });
+            }
+        }
+
+        // 2. ì •ë ¬ ë°©ì‹ ë²„íŠ¼ ìƒì„± (ì˜¤ë¦„ì°¨ìˆœ, ë‚´ë¦¼ì°¨ìˆœ)
+        if (sortOrderParent != null)
+        {
+            foreach (Transform child in sortOrderParent) Destroy(child.gameObject);
+
+            var orders = new (string label, CardSortOrder order)[]
+            {
+                ("ì˜¤ë¦„ì°¨ìˆœ", CardSortOrder.Ascending),
+                ("ë‚´ë¦¼ì°¨ìˆœ", CardSortOrder.Descending)
+            };
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                var item = orders[i];
+                bool isDefault = (i == 0); // ì˜¤ë¦„ì°¨ìˆœì´ ê¸°ë³¸ ì„ íƒ
+                CreateToggle(sortOrderParent, sortOrderGroup, item.label, isDefault, (isOn) =>
+                {
+                    if (isOn)
+                    {
+                        currentSettings.sortOrder = item.order;
+                    }
+                });
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. ì£¼ìš” ê¸°ëŠ¥ í•¨ìˆ˜ë“¤
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// [ì ìš©] ë²„íŠ¼ í´ë¦­ ì‹œ í˜¸ì¶œ
     /// </summary>
     private void OnApplyButtonClicked()
     {
-        // ¹æ¼ÛÀ» º¸³»¼­ DeckBuilder°¡ ¾Ë°Ô ÇÔ
         NotifyFilterChanged();
     }
 
     /// <summary>
-    /// [¹ü¿ë »ı¼º±â] ¾î¶² Enum(Á÷¾÷, Èñ±Íµµ µî)ÀÌµç ¹Ş¾Æ¼­ ±× Ç×¸ñ¸¸Å­ ¹öÆ°À» ¸¸µé¾îÁÖ´Â ÇÔ¼öÀÔ´Ï´Ù.
-    /// <T>´Â Á¦³×¸¯ÀÌ¶ó°í ÇÏ¸ç, "¾î¶² Å¸ÀÔÀÌµç µé¾î¿Ã ¼ö ÀÖ´Ù"´Â ¶æÀÔ´Ï´Ù.
+    /// [ë²”ìš© ìƒì„±ê¸°] ì–´ë–¤ Enum(ì§ì—…, í¬ê·€ë„ ë“±)ì´ë“  ë°›ì•„ì„œ ê·¸ í•­ëª©ë§Œí¼ ë²„íŠ¼ì„ ë§Œë“¤ì–´ì£¼ëŠ” í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
     private void InitializeCategory<T>(Transform parent, ToggleGroup group, Action<T?> onSelected) where T : struct, Enum
     {
-        // ±âÁ¸ ¹öÆ° »èÁ¦ (Ã»¼Ò)
+        if (parent == null) return;
         foreach (Transform child in parent) Destroy(child.gameObject);
 
-        // 1. "ÀüÃ¼" ¹öÆ° »ı¼º (°ªÀº null)
-        CreateToggle(parent, group, "ÀüÃ¼", true, (isOn) =>
+        // 1. "ì „ì²´" ë²„íŠ¼ ìƒì„± (ê°’ì€ null)
+        CreateToggle(parent, group, "ì „ì²´", true, (isOn) =>
         {
             if (isOn) onSelected(null);
         });
 
-        // 2. Enum¿¡ ÀÖ´Â ¸ğµç Ç×¸ñ¿¡ ´ëÇØ ¹öÆ° »ı¼º
+        // 2. Enumì— ìˆëŠ” ëª¨ë“  í•­ëª© ìˆœíšŒ ë²„íŠ¼ ìƒì„±
         foreach (T value in Enum.GetValues(typeof(T)))
         {
+            if (value is CardType cardType)
+            {
+                if (cardType == CardType.UNKNOWN || cardType == CardType.READER)
+                {
+                    continue;
+                }
+            }
+
             CreateToggle(parent, group, value.ToString(), false, (isOn) =>
             {
-                if (isOn) onSelected(value); // ÄÑÁö¸é ÇØ´ç °ª ¼±ÅÃ
+                if (isOn) onSelected(value);
             });
         }
     }
 
     /// <summary>
-    /// ½ÇÁ¦·Î ¹öÆ°(ÇÁ¸®ÆÕ) ÇÏ³ª¸¦ »ı¼ºÇÏ°í ¼³Á¤ÇÏ´Â ÇÔ¼ö
+    /// ì‹¤ì œë¡œ ë²„íŠ¼(í”„ë¦¬íŒ¹) í•˜ë‚˜ë¥¼ ìƒì„±í•˜ê³  ì„¤ì •í•˜ëŠ” í•¨ìˆ˜
     /// </summary>
     private void CreateToggle(Transform parent, ToggleGroup group, string label, bool isDefault, UnityAction<bool> callback)
     {
+        if (filterTogglePrefab == null || parent == null) return;
+
         GameObject newObj = Instantiate(filterTogglePrefab, parent);
         FilterToggle toggleScript = newObj.GetComponent<FilterToggle>();
 
         if (toggleScript != null)
         {
-            // ¶óº§, ±×·ì, ÇÒ ÀÏ(Callback) Àü´Ş
             toggleScript.Setup(label, group, callback);
-            // ÃÊ±â »óÅÂ(ÄÑÁü/²¨Áü) ¼³Á¤
             toggleScript.SetIsOn(isDefault);
         }
     }
 
     /// <summary>
-    /// [Á÷¾÷ ÇÊÅÍ °»½Å] µ¦ ÆíÁı ½Ã¿¡´Â '³» Á÷¾÷'°ú 'Áß¸³'¸¸ º¸¿©¾ß ÇÏ¹Ç·Î ¸ñ·ÏÀ» ´Ù½Ã ¸¸µì´Ï´Ù.
-    /// DeckBuilder¿¡¼­ È£ÃâÇÕ´Ï´Ù.
+    /// [ì§ì—… í•„í„° ê°±ì‹ ] ë± í¸ì§‘ ì‹œì—ëŠ” 'ì „ì²´', 'ë‚´ ì§ì—…', 'ì¤‘ë¦½(ê°•ì§€)' ìˆœì„œë¡œ í† ê¸€ì„ ìƒì„±í•©ë‹ˆë‹¤.
     /// </summary>
     public void UpdateMemberToggles(List<string> availableMembers)
     {
+        if (memberToggleParent == null) return;
         foreach (Transform child in memberToggleParent) Destroy(child.gameObject);
+
+        CreateToggle(memberToggleParent, memberToggleGroup, "ì „ì²´", true, (isOn) =>
+        {
+            if (isOn)
+            {
+                currentSettings.cardClass = null;
+            }
+        });
 
         foreach (string memberName in availableMembers)
         {
             if (Enum.TryParse(memberName, out CardClass memberEnum))
             {
-                // Ã¹ ¹øÂ° Á÷¾÷(³» Á÷¾÷)À» ±âº» ¼±ÅÃÀ¸·Î
-                bool isDefault = (memberName == availableMembers[0]);
-
-                CreateToggle(memberToggleParent, memberToggleGroup, memberName, isDefault, (isOn) =>
+                CreateToggle(memberToggleParent, memberToggleGroup, memberName, false, (isOn) =>
                 {
                     if (isOn)
                     {
@@ -194,18 +342,33 @@ public class FilterManager : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸ğµç ÇÊÅÍ¸¦ "ÀüÃ¼" »óÅÂ·Î ÃÊ±âÈ­ÇÕ´Ï´Ù.
+    /// ëª¨ë“  í•„í„°ì™€ ì •ë ¬ì„ ê¸°ë³¸ ìƒíƒœë¡œ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
     /// </summary>
     public void ResetFilterUI()
     {
-        // µ¥ÀÌÅÍ ÃÊ±âÈ­
-        currentSettings = new FilterSettings();
+        currentSettings = new FilterSettings
+        {
+            cardClass = null,
+            CardType = null,
+            Rarity = null,
+            Expansion = null,
+            sortCriterion = CardSortCriterion.Cost,
+            sortOrder = CardSortOrder.Ascending
+        };
 
-        // UI ÃÊ±âÈ­: °¢ ±×·ìÀÇ Ã¹ ¹øÂ°(ÀüÃ¼) ¹öÆ° °­Á¦ ¼±ÅÃ
         ResetToggleGroup(memberToggleGroup);
         ResetToggleGroup(cardTypeToggleGroup);
         ResetToggleGroup(rarityToggleGroup);
         ResetToggleGroup(expansionToggleGroup);
+
+        ResetToggleGroup(sortCriterionGroup);
+        ResetToggleGroup(sortOrderGroup);
+
+        if (filterTabToggle != null)
+        {
+            filterTabToggle.isOn = true;
+        }
+        SwitchTab(true);
     }
 
     private void ResetToggleGroup(ToggleGroup group)
@@ -213,7 +376,6 @@ public class FilterManager : MonoBehaviour
         if (group == null) return;
         if (group.transform.childCount > 0)
         {
-            // Ã¹ ¹øÂ° ÀÚ½ÄÀÇ ToggleÀ» ÄÔ
             Toggle firstToggle = group.transform.GetChild(0).GetComponent<Toggle>();
             if (firstToggle != null) firstToggle.isOn = true;
         }
@@ -221,7 +383,6 @@ public class FilterManager : MonoBehaviour
 
     private void NotifyFilterChanged()
     {
-        // ±¸µ¶ÀÚµé¿¡°Ô ÇöÀç ¼³Á¤°ª Àü¼Û
         OnFilterApplied?.Invoke(currentSettings);
     }
 }

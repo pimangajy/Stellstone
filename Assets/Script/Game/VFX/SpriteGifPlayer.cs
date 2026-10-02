@@ -1,49 +1,40 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
-using System.Linq;
 using UnityEngine.UI;
 
 /// <summary>
-/// 여러 장의 스프라이트(이미지)를 연속으로 보여줘서
-/// 마치 GIF처럼 움직이는 그림을 만들어주는 스크립트입니다.
+/// 여러 장의 스프라이트(이미지)를 연속으로 보여주어
+/// 2D UI(Image) 또는 3D 필드(SpriteRenderer)에서 움직이는 GIF 연출을 처리하는 스크립트입니다.
 /// </summary>
 public class SpriteGifPlayer : MonoBehaviour
 {
-    // 이미지를 어떻게 채울지 결정하는 옵션
-    public enum ScaleType
-    {
-        Stretch,    // 찌그러져도 꽉 채움
-        FitInside,  // 비율 유지하며 안에 쏙 (여백 생김 - 필드 카드용)
-        Cover       // 비율 유지하며 꽉 채움 (잘림 - 손패 카드용)
-    }
-
     [Header("설정")]
+    [Tooltip("필드 카드 여부 (체크 시 상시 애니메이션 정지)")]
     public bool feildCard;
     public Sprite[] gifFrames; // 프레임 이미지들
     public float framesPerSecond = 10.0f; // 1초에 몇 장 보여줄지
 
-    [Header("크기 자동 조절")]
-    public bool autoFitSize = true;
-    public ScaleType scaleType = ScaleType.Cover;
-    public Vector2 targetSize = new Vector2(1.0f, 1.5f); // 목표 크기
-
-    public Image image;  // ui용
-    public SpriteRenderer spriteRenderer;  //  필드 용
+    [Header("렌더러 컴포넌트 연결")]
+    public Image image;                   // UI용 (손패 카드 등)
+    public SpriteRenderer spriteRenderer; // 필드용 (3D 하수인 등)
     private Coroutine playCoroutine;
 
     void Awake()
     {
-        // spriteRenderer = GetComponent<SpriteRenderer>(); // 필요하면 주석 해제
+        if (image == null) image = GetComponent<Image>();
+        if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
     void OnEnable()
     {
         if (gifFrames != null && gifFrames.Length > 0)
         {
-            // 프레임 수만큼 속도 자동 조절 (선택사항)
-            framesPerSecond = gifFrames.Count();
-            if (autoFitSize) FitSpriteToSize();
-            if(!feildCard) PlayAnimation();
+            ApplyCurrentFrame(0);
+
+            if (!feildCard && gifFrames.Length > 1)
+            {
+                PlayAnimation();
+            }
         }
     }
 
@@ -52,48 +43,25 @@ public class SpriteGifPlayer : MonoBehaviour
         StopAnimation();
     }
 
-    // 이미지를 목표 크기에 맞게 스케일 조절
-    void FitSpriteToSize()
+    /// <summary>
+    /// 지정된 인덱스의 프레임을 Image 및 SpriteRenderer에 적용합니다.
+    /// </summary>
+    private void ApplyCurrentFrame(int index)
     {
-        if (spriteRenderer == null || gifFrames.Length == 0) return;
+        if (gifFrames == null || gifFrames.Length == 0) return;
 
-        // 첫 프레임 적용
-        spriteRenderer.sprite = gifFrames[0];
+        if (index < 0 || index >= gifFrames.Length) index = 0;
+        Sprite currentSprite = gifFrames[index];
 
-        // 2. Sprite의 원본 픽셀 크기 가져오기
-        Vector2 spriteSize = spriteRenderer.sprite.rect.size;
-
-        // 원본 이미지가 비어있을 경우 오류 방지
-        if (spriteSize.x == 0 || spriteSize.y == 0) return;
-
-        float ratioX = targetSize.x / spriteSize.x;
-        float ratioY = targetSize.y / spriteSize.y;
-        float finalScaleX = 1f, finalScaleY = 1f;
-
-        switch (scaleType)
+        if (image != null)
         {
-            case ScaleType.Stretch:
-                finalScaleX = ratioX;
-                finalScaleY = ratioY;
-                break;
-            case ScaleType.FitInside:
-                float minRatio = Mathf.Min(ratioX, ratioY);
-                finalScaleX = finalScaleY = minRatio;
-                break;
-            case ScaleType.Cover:
-                float maxRatio = Mathf.Max(ratioX, ratioY);
-                finalScaleX = finalScaleY = maxRatio;
-                break;
+            image.sprite = currentSprite;
         }
 
-        // 3. UI에 맞게 Transform 대신 RectTransform의 sizeDelta(너비/높이) 조절
-        RectTransform rectTransform = spriteRenderer.GetComponent<RectTransform>();
-
-        // Scale은 1,1,1로 초기화 (UI 권장 사항)
-        rectTransform.localScale = Vector3.one;
-
-        // 최종 크기(원본 픽셀 크기 * 계산된 비율)를 RectTransform 사이즈에 적용
-        rectTransform.sizeDelta = new Vector2(spriteSize.x * finalScaleX, spriteSize.y * finalScaleY);
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.sprite = currentSprite;
+        }
     }
 
     void PlayAnimation()
@@ -104,44 +72,71 @@ public class SpriteGifPlayer : MonoBehaviour
 
     void StopAnimation()
     {
-        StopAllCoroutines();
-        playCoroutine = null;
+        if (playCoroutine != null)
+        {
+            StopCoroutine(playCoroutine);
+            playCoroutine = null;
+        }
     }
 
     // 이미지를 계속 교체하며 재생하는 루프
     IEnumerator PlayGifRoutine()
     {
         int index = 0;
-        float waitTime = 1f / framesPerSecond;
+        float waitTime = framesPerSecond > 0 ? 1f / framesPerSecond : 0.1f;
+        var wait = YieldInstructionCache.WaitForSeconds(waitTime);
 
         while (true)
         {
-            if (spriteRenderer != null && gifFrames.Length > 0)
+            if (gifFrames != null && gifFrames.Length > 0)
             {
-                spriteRenderer.sprite = gifFrames[index];
+                ApplyCurrentFrame(index);
                 index = (index + 1) % gifFrames.Length;
             }
-            yield return new WaitForSeconds(waitTime);
+            yield return wait;
         }
     }
 
-    // 외부에서 새로운 GIF를 설정할 때 사용
+    /// <summary>
+    /// 외부에서 새로운 애니메이션 프레임들을 설정할 때 사용합니다.
+    /// 첫 번째 프레임을 메인 이미지로 즉시 적용합니다.
+    /// </summary>
     public void SetGif(Sprite[] newFrames, float speed = 10.0f)
     {
+        if (image == null) image = GetComponent<Image>();
+        if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+
         this.gifFrames = newFrames;
         this.framesPerSecond = speed;
-        if (gameObject.activeInHierarchy)
+
+        if (gifFrames != null && gifFrames.Length > 0)
         {
-            if (autoFitSize) FitSpriteToSize();
-            PlayAnimation();
+            // 첫 번째 프레임을 메인 이미지로 즉시 적용
+            ApplyCurrentFrame(0);
+
+            if (gameObject.activeInHierarchy)
+            {
+                if (!feildCard && gifFrames.Length > 1)
+                {
+                    PlayAnimation();
+                }
+                else
+                {
+                    StopAnimation();
+                }
+            }
         }
     }
 
+    /// <summary>
+    /// 필드 하수인 등 단일 정지 이미지를 적용할 때 사용합니다.
+    /// </summary>
     public void SetSpriteRender(Sprite[] newImage)
     {
-        if(newImage != null)
+        if (newImage != null && newImage.Length > 0)
         {
-            spriteRenderer.sprite = newImage[0];
+            this.gifFrames = newImage;
+            ApplyCurrentFrame(0);
         }
     }
 }

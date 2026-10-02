@@ -1,77 +1,77 @@
 using UnityEngine;
-using UnityEngine.SceneManagement; // ¾À °ü¸®¸¦ À§ÇØ ÇÊ¿ä
-using System.Threading.Tasks; // Task¸¦ »ç¿ëÇÏ±â À§ÇØ ÇÊ¿ä
-using TMPro; // (¼±ÅÃ »çÇ×) ·Îµù »óÅÂ ÅØ½ºÆ®
+using UnityEngine.SceneManagement; // ì”¬ ê´€ë¦¬ë¥¼ ìœ„í•´ í•„ìš”
+using System.Threading.Tasks; // Taskë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ í•„ìš”
+using TMPro; // (ì„ íƒ ì‚¬í•­) ë¡œë”© ìƒíƒœ í…ìŠ¤íŠ¸
 
 /// <summary>
-/// °ÔÀÓ ½ÃÀÛ ½Ã ÇÊ¿äÇÑ ¸ğµç µ¥ÀÌÅÍ¸¦ ·ÎµåÇÏ°í ¸ŞÀÎ ¾ÀÀ¸·Î ÀÌµ¿½ÃÅµ´Ï´Ù.
-/// ·Îµù ¾À(0¹ø ¾À)¿¡ ¹èÄ¡µÇ¾î¾ß ÇÕ´Ï´Ù.
+/// ê²Œì„ ì‹œì‘ ì‹œ í•„ìš”í•œ ëª¨ë“  ë°ì´í„°ë¥¼ ë¡œë“œí•˜ê³  ë©”ì¸ ì”¬ìœ¼ë¡œ ì´ë™ì‹œí‚µë‹ˆë‹¤.
+/// ë¡œë”© ì”¬(0ë²ˆ ì”¬)ì— ë°°ì¹˜ë˜ì–´ì•¼ í•©ë‹ˆë‹¤.
 /// </summary>
 public class LoadingSceneManager : MonoBehaviour
 {
-    [Header("¾À ¼³Á¤")]
-    [Tooltip("·ÎµùÀÌ ¿Ï·áµÈ ÈÄ ÀÌµ¿ÇÒ ¾ÀÀÇ ÀÌ¸§")]
-    [SerializeField] private string nextSceneName = "1. MainMenuScene"; // ·Îºñ ¾À ÀÌ¸§À¸·Î º¯°æÇÏ¼¼¿ä
+    [Header("ì”¬ ì„¤ì •")]
+    [Tooltip("ë¡œë”©ì´ ì™„ë£Œëœ í›„ ì´ë™í•  ì”¬ì˜ ì´ë¦„")]
+    [SerializeField] private string nextSceneName = "1. MainMenuScene"; // ë¡œë¹„ ì”¬ ì´ë¦„ìœ¼ë¡œ ë³€ê²½í•˜ì„¸ìš”
 
-    [Header("UI (¼±ÅÃ »çÇ×)")]
-    [Tooltip("ÇöÀç ·Îµù »óÅÂ¸¦ Ç¥½ÃÇÒ ÅØ½ºÆ®")]
+    [Header("UI (ì„ íƒ ì‚¬í•­)")]
+    [Tooltip("í˜„ì¬ ë¡œë”© ìƒíƒœë¥¼ í‘œì‹œí•  í…ìŠ¤íŠ¸")]
     [SerializeField] private TextMeshProUGUI loadingStatusText;
 
 
-    // Start() ÇÔ¼ö¸¦ async void·Î ¼±¾ğÇÏ¿© ºñµ¿±â ÀÛ¾÷À» awaitÇÒ ¼ö ÀÖ°Ô ÇÕ´Ï´Ù.
+    private void Awake()
+    {
+        // [ìµœì í™”] ê¸°ê¸° ê³¼ì—´ ë°©ì§€ ë° ë¶€ë“œëŸ¬ìš´ í”„ë ˆì„ ìœ ì§€ë¥¼ ìœ„í•´ 60 FPS ê³ ì •
+        Application.targetFrameRate = 60;
+    }
+
+    // Start() í•¨ìˆ˜ë¥¼ async voidë¡œ ì„ ì–¸í•˜ì—¬ ë¹„ë™ê¸° ì‘ì—…ì„ awaití•  ìˆ˜ ìˆê²Œ í•©ë‹ˆë‹¤.
     async void Start()
     {
-        // ¿µ±¸ ¸Å´ÏÀúµéÀÌ DontDestroyOnLoad·Î µî·ÏµÉ ½Ã°£À» ¹ú¾îÁİ´Ï´Ù.
-        // (º¸Åë ÇÊ¿ä ¾øÁö¸¸, ¾ÈÀüÀ» À§ÇØ Ã¹ ÇÁ·¹ÀÓ ´ë±â)
+        // ì˜êµ¬ ë§¤ë‹ˆì €ë“¤ì´ DontDestroyOnLoadë¡œ ë“±ë¡ë  ì‹œê°„ì„ ë²Œì–´ì¤ë‹ˆë‹¤.
+        // (ë³´í†µ í•„ìš” ì—†ì§€ë§Œ, ì•ˆì „ì„ ìœ„í•´ ì²« í”„ë ˆì„ ëŒ€ê¸°)
         await Task.Yield();
 
         try
         {
-            // --- 1. ¸ğµç Ä«µå Á¤º¸ ·Îµå ---
-            UpdateStatus("¸ğµç Ä«µå Á¤º¸¸¦ ºÒ·¯¿À´Â Áß...");
+            // --- 1. ëª¨ë“  ì¹´ë“œ ì •ë³´ ë¡œë“œ ---
+            UpdateStatus("ëª¨ë“  ì¹´ë“œ ì •ë³´ë¥¼ ë¶ˆëŸ¬ì˜¤ëŠ” ì¤‘...");
 
-            // ÅØ½ºÆ®°¡ ¹Ù²ğ ½Ã°£À» ¾ÆÁÖ Àá±ñ Áİ´Ï´Ù (0.1ÃÊ)
+            // í…ìŠ¤íŠ¸ê°€ ë°”ë€” ì‹œê°„ì„ ì•„ì£¼ ì ê¹ ì¤ë‹ˆë‹¤ (0.1ì´ˆ)
             await Task.Delay(100);
-            // CardDatabaseManagerÀÇ ÀÎ½ºÅÏ½º¸¦ Ã£¾Æ GetAllCardsAsync¸¦ È£ÃâÇÕ´Ï´Ù.
-            // ÀÌ ÇÔ¼ö´Â ³»ºÎ¿¡ Ä³½Ã ±â´ÉÀÌ ÀÖÀ¸¹Ç·Î, ¼­¹ö ·Îµå´Â ÃÖÃÊ 1È¸¸¸ ½ÇÇàµË´Ï´Ù.
-
-            // (½Å±Ô) ResourceManager¿¡°Ô ·Îµù Áö½Ã
+            // ResourceManagerì—ê²Œ ë¡œë”© ì§€ì‹œ
             if (ResourceManager.Instance != null)
             {
                 ResourceManager.Instance.LoadAllCards();
             }
             else
             {
-                Debug.LogError("ResourceManager°¡ ¾À¿¡ ¾ø½À´Ï´Ù!");
+                Debug.LogError("ResourceManagerê°€ ì”¬ì— ì—†ìŠµë‹ˆë‹¤!");
             }
 
-            // CardDatabaseManager ¹öÀü
-            //await CardDatabaseManager.instance.GetAllCardsAsync();
-
-            // --- 2. À¯Àú µ¦ Á¤º¸ ·Îµå ---
-            UpdateStatus("À¯Àú µ¦ ¸ñ·ÏÀ» ºÒ·¯¿À´Â Áß...");
+            // --- 2. ìœ ì € ë± ì •ë³´ ë¡œë“œ ---
+            UpdateStatus("ìœ ì € ë± ëª©ë¡ì„ ë¶ˆëŸ¬ì˜¤ëŠ” ì¤‘...");
 
 
-            // DeckSaveManagerÀÇ ÀÎ½ºÅÏ½º¸¦ Ã£¾Æ »õ·Î ¸¸µç InitializeAsync¸¦ È£ÃâÇÕ´Ï´Ù.
+            // DeckSaveManagerì˜ ì¸ìŠ¤í„´ìŠ¤ë¥¼ ì°¾ì•„ ìƒˆë¡œ ë§Œë“  InitializeAsyncë¥¼ í˜¸ì¶œí•©ë‹ˆë‹¤.
             //await DeckSaveManager_Firebase.instance.InitializeAsync(currentUser.UserId);
 
-            // --- 3. ¸ğµç ·Îµù ¿Ï·á ---
-            UpdateStatus("·Îµå ¿Ï·á!");
+            // --- 3. ëª¨ë“  ë¡œë”© ì™„ë£Œ ---
+            UpdateStatus("ë¡œë“œ ì™„ë£Œ!");
 
-            // ¸ğµç ÀÛ¾÷ÀÌ ¼º°øÀûÀ¸·Î ³¡³ª¸é ´ÙÀ½ ¾ÀÀ¸·Î ÀÌµ¿ÇÕ´Ï´Ù.
+            // ëª¨ë“  ì‘ì—…ì´ ì„±ê³µì ìœ¼ë¡œ ëë‚˜ë©´ ë‹¤ìŒ ì”¬ìœ¼ë¡œ ì´ë™í•©ë‹ˆë‹¤.
             SceneManager.LoadScene(nextSceneName);
         }
         catch (System.Exception e)
         {
-            // ·Îµù Áß ¿À·ù ¹ß»ı ½Ã (ÀÎÅÍ³İ ¿¬°á ²÷±è, ¼­¹ö ¿À·ù µî)
-            Debug.LogError($"ÇÊ¼ö µ¥ÀÌÅÍ ·Îµù ½ÇÆĞ: {e.Message}");
-            UpdateStatus($"¿À·ù ¹ß»ı: {e.Message}\n¾ÛÀ» Àç½ÃÀÛÇÏ¼¼¿ä.");
-            // TODO: ¿©±â¿¡ "Àç½Ãµµ" ¹öÆ°ÀÌ³ª "Á¾·á" ¹öÆ°À» È°¼ºÈ­ÇÏ´Â UI ·ÎÁ÷À» ³ÖÀ¸¸é ÁÁ½À´Ï´Ù.
+            // ë¡œë”© ì¤‘ ì˜¤ë¥˜ ë°œìƒ ì‹œ (ì¸í„°ë„· ì—°ê²° ëŠê¹€, ì„œë²„ ì˜¤ë¥˜ ë“±)
+            Debug.LogError($"í•„ìˆ˜ ë°ì´í„° ë¡œë”© ì‹¤íŒ¨: {e.Message}");
+            UpdateStatus($"ì˜¤ë¥˜ ë°œìƒ: {e.Message}\nì•±ì„ ì¬ì‹œì‘í•˜ì„¸ìš”.");
+            // TODO: ì—¬ê¸°ì— "ì¬ì‹œë„" ë²„íŠ¼ì´ë‚˜ "ì¢…ë£Œ" ë²„íŠ¼ì„ í™œì„±í™”í•˜ëŠ” UI ë¡œì§ì„ ë„£ìœ¼ë©´ ì¢‹ìŠµë‹ˆë‹¤.
         }
     }
 
     /// <summary>
-    /// (¼±ÅÃ »çÇ×) ·Îµù »óÅÂ ÅØ½ºÆ® UI¸¦ ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.
+    /// (ì„ íƒ ì‚¬í•­) ë¡œë”© ìƒíƒœ í…ìŠ¤íŠ¸ UIë¥¼ ì—…ë°ì´íŠ¸í•©ë‹ˆë‹¤.
     /// </summary>
     private void UpdateStatus(string message)
     {

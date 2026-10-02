@@ -1,379 +1,527 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
-using DG.Tweening; // 부드러운 UI 이동 및 애니메이션을 위한 라이브러리
-using UnityEngine.UI; // 버튼 등 UI 컴포넌트를 사용하기 위해 필수
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using DG.Tweening;
 
 /// <summary>
-/// 2D UI 캔버스 기반: 게임 시작 전, '멀리건(Mulligan)' 단계를 관리합니다.
-/// 처음에 뽑힌 카드들 중 마음에 안 드는 카드를 선택하면 덱에 넣고 다른 카드로 교체해주는 시스템입니다.
+/// 멀리건(Mulligan) 단계 관리 매니저 (3D 월드 좌표계 기반)
+/// HandCardControllManager 및 CardDrawManager와 연동하여 동작합니다.
+/// 멀리건 신호(서버 또는 M키) 수신 시 5장 드로우 -> 카드 클릭 시 3D 중앙(centerAnchor) 나열 -> 재클릭 시 원래 손패 위치(인덱스)로 정확히 복원 -> 확인 시 덱 귀환 및 교체분 재드로우
 /// </summary>
 public class GameMulliganManager : MonoBehaviour
 {
     public static GameMulliganManager instance;
 
-    [Header("연결")]
-    [Tooltip("손패 관리를 담당하는 매니저 (카드 선택/취소 시 손패와 연동)")]
+    [Header("1. 3D 매니저 및 오브젝트 연결 (World Transform)")]
+    [Tooltip("손패 관리를 담당하는 매니저")]
     public HandCardControllManager handManager;
+
+    [Tooltip("카드 드로우 매니저")]
     public CardDrawManager cardDrawManager;
 
-    [Tooltip("선택된 카드들이 모여서 보여질 화면 중앙의 UI 빈 객체")]
-    public RectTransform centerAnchor;
-    [Tooltip("교체할 카드들이 버려질(돌아갈) 덱의 UI 위치")]
-    public RectTransform deckTransform;
+    [Tooltip("선택된 카드들이 모여서 보여질 3D 월드 중앙 기준점 (mulliganPos)")]
+    public Transform centerAnchor;
+
+    [Tooltip("교체할 카드들이 버려질(돌아갈) 3D 월드 덱 위치 (deckPos)")]
+    public Transform deckTransform;
+
     [Tooltip("교체를 확정짓는 '확인' 버튼")]
     public Button mulliganCheck;
 
-    [Header("설정")]
-    [Tooltip("중앙에 선택된 카드들이 나열될 때의 간격 (UI 픽셀 단위이므로 200~300 등 큰 값 필요)")]
-    public float cardSpacing = 250f;
+    [Header("2. 3D 멀리건 연출 설정 (미터 단위)")]
+    [Tooltip("3D 중앙에 선택된 카드들이 나열될 때의 간격 (미터 단위, 기본: 1.8m)")]
+    public float cardSpacing = 1.8f;
+
     [Tooltip("카드가 손패 ↔ 중앙으로 이동할 때 걸리는 애니메이션 시간")]
     public float animDuration = 0.3f;
-    [Tooltip("멀리건 단계임을 알리는 안내 이미지 (예: '교체할 카드를 선택하세요')")]
+
+    [Tooltip("멀리건 단계임을 알리는 안내 UI 이미지 (예: '교체할 카드를 선택하세요')")]
     public GameObject mulliganImg;
+
     [Tooltip("선택되어 중앙으로 온 카드의 크기 배율 (1.0 = 원래 크기 유지)")]
     public float selectedCardScaleMultiplier = 1.0f;
 
+    [Header("3. 로컬/에디터 테스트 단축키")]
+    [Tooltip("멀리건 5장 드로우 테스트 단축키 (기본: M)")]
+    public KeyCode testMulliganKey = KeyCode.M;
+
+    [Tooltip("멀리건 시작 시 드로우할 카드 수 (기본: 5장)")]
+    public int testDrawCount = 5;
+
     // --- 내부 변수 ---
-    [Tooltip("현재 교체하려고 클릭(선택)한 카드들의 리스트")]
+    [Tooltip("현재 교체하려고 선택한 카드들의 리스트")]
     public List<GameObject> _selectedCards = new List<GameObject>();
-    private Dictionary<GameObject, int> _originalIndices = new Dictionary<GameObject, int>();
+
+    // 최초 5장 드로우 시의 고유 손패 순서 기억 (선택 취소 시 원래 슬롯 위치로 정확히 복원하기 위함)
+    private readonly Dictionary<GameObject, int> _originalCardOrder = new Dictionary<GameObject, int>();
+    private bool _isConfirming = false;
 
     private void Awake()
     {
-        // 싱글톤 패턴 (어디서든 쉽게 접근 가능하도록)
-        if (instance != null && instance != this) Destroy(this.gameObject);
-        else instance = this;
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        instance = this;
 
-        // 확인 버튼에 클릭 이벤트(ConfirmMulligan 함수)를 연결합니다.
-        if (mulliganCheck != null) mulliganCheck.onClick.AddListener(ConfirmMulligan);
+        if (mulliganCheck != null)
+        {
+            mulliganCheck.onClick.RemoveAllListeners();
+            mulliganCheck.onClick.AddListener(ConfirmMulligan);
+        }
     }
 
-    private void StartMulligan()
+    private void Start()
     {
-        mulliganImg.SetActive(true);
+        if (handManager == null) handManager = HandCardControllManager.instance;
+        if (cardDrawManager == null) cardDrawManager = CardDrawManager.Instance;
+    }
+
+    private bool IsTestModeEnabled()
+    {
+        if (handManager != null) return handManager.isTestMode;
+        if (HandCardControllManager.instance != null) return HandCardControllManager.instance.isTestMode;
+        return true;
+    }
+
+    private void Update()
+    {
+        if (!IsTestModeEnabled()) return;
+
+        // M키 입력: 5장 드로우 및 멀리건 테스트 시작
+        if (Input.GetKeyDown(testMulliganKey))
+        {
+            StartTestMulligan();
+        }
+    }
+
+    // ==========================================================
+    // 멀리건 시작 (5장 드로우 & 상태 진입)
+    // ==========================================================
+
+    /// <summary>
+    /// 로컬 / 에디터 테스트용: 기존 손패 정리 후 5장 드로우와 함께 멀리건 단계를 시작합니다.
+    /// </summary>
+    public void StartTestMulligan()
+    {
+        if (handManager == null) handManager = HandCardControllManager.instance;
+        if (cardDrawManager == null) cardDrawManager = CardDrawManager.Instance;
+
+        Debug.Log("[GameMulliganManager] M키 입력: 5장 드로우 멀리건 테스트 시작");
+
+        // 1. 기존 선택 상태 및 손패 초기화
+        ClearMulliganState();
+        if (handManager != null)
+        {
+            for (int i = handManager.handCards.Count - 1; i >= 0; i--)
+            {
+                if (handManager.handCards[i] != null)
+                {
+                    handManager.handCards[i].transform.DOKill();
+                    Destroy(handManager.handCards[i]);
+                }
+            }
+            handManager.handCards.Clear();
+        }
+
+        // 2. 멀리건 상태 활성화 (호버 및 드래그 차단)
+        if (handManager != null)
+        {
+            handManager.isMulliganPhase = true;
+            handManager.isMulligan = true;
+            handManager.ClearHover();
+        }
+        if (BattleManager.Instance != null)
+        {
+            BattleManager.Instance.isMulliganPhase = true;
+        }
+        if (mulliganImg != null)
+        {
+            mulliganImg.SetActive(true);
+        }
+
+        // 3. 테스트용 5장 카드 데이터 생성 후 순차 드로우
+        List<CardInfo> testCards = new List<CardInfo>();
+        for (int i = 0; i < testDrawCount; i++)
+        {
+            testCards.Add(new CardInfo
+            {
+                cardId = "cards-gangzi-00" + ((i % 8) + 1),
+                instanceId = "mulligan_test_" + Random.Range(10000, 99999)
+            });
+        }
+
+        if (cardDrawManager != null)
+        {
+            cardDrawManager.PerformBatchDraw(testCards);
+        }
     }
 
     /// <summary>
-    /// 카드를 클릭했을 때 실행되는 함수입니다. (GameInputManager나 손패 매니저에서 호출됨)
+    /// 서버로부터 멀리건 카드 정보를 받았을 때 호출되는 진입점
+    /// </summary>
+    public void StartMulliganPhase(List<CardInfo> cards)
+    {
+        if (handManager == null) handManager = HandCardControllManager.instance;
+        if (cardDrawManager == null) cardDrawManager = CardDrawManager.Instance;
+
+        ClearMulliganState();
+
+        if (handManager != null)
+        {
+            handManager.isMulliganPhase = true;
+            handManager.isMulligan = true;
+            handManager.ClearHover();
+        }
+        if (BattleManager.Instance != null)
+        {
+            BattleManager.Instance.isMulliganPhase = true;
+        }
+        if (mulliganImg != null)
+        {
+            mulliganImg.SetActive(true);
+        }
+
+        if (cards != null && cards.Count > 0 && cardDrawManager != null)
+        {
+            cardDrawManager.PerformBatchDraw(cards);
+        }
+    }
+
+    // ==========================================================
+    // 카드 클릭 처리 (선택 <-> 취소 토글)
+    // ==========================================================
+
+    /// <summary>
+    /// 카드를 클릭했을 때 실행되는 함수 (HandCardControllManager 또는 GameInputManager에서 호출)
     /// </summary>
     public void OnCardClicked(GameObject card)
     {
-        // 이미 중앙에 올라가 있는 카드라면 -> 선택 취소 (다시 손패로)
+        if (_isConfirming || card == null) return;
+
+        // 이미 중앙에 선택되어 올라가 있는 카드라면 -> 선택 취소 (다시 손패 원래 위치로 복원)
         if (_selectedCards.Contains(card))
         {
             DeselectCard(card);
         }
-        // 손패에 있는 카드라면 -> 교체할 카드로 선택 (중앙으로)
+        // 손패에 있는 카드라면 -> 교체할 카드로 선택 (3D 중앙 centerAnchor로 이동)
         else
         {
             SelectCard(card);
         }
     }
 
-    // ==========================================================
-    // 카드 선택 / 취소 로직
-    // ==========================================================
+    /// <summary>
+    /// 손패에 있는 모든 카드의 최초 고유 순서(0, 1, 2, ...)를 기록합니다.
+    /// </summary>
+    private void EnsureOriginalOrderRecorded()
+    {
+        if (handManager == null) handManager = HandCardControllManager.instance;
+        if (handManager == null || handManager.handCards == null) return;
+
+        for (int i = 0; i < handManager.handCards.Count; i++)
+        {
+            GameObject c = handManager.handCards[i];
+            if (c != null && !_originalCardOrder.ContainsKey(c))
+            {
+                _originalCardOrder[c] = i;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 카드 선택: 손패 -> 3D 화면 중앙(centerAnchor)으로 이동 및 나열
+    /// </summary>
     private void SelectCard(GameObject card)
     {
-        // 선택 리스트에 추가
+        if (handManager == null) handManager = HandCardControllManager.instance;
+
+        // 1. 현재 손패에 있는 카드들의 원래 순서 기록
+        EnsureOriginalOrderRecorded();
+
+        // 2. 손패 리스트에서 제외 (리스트만 제외하여 남아있는 손패들이 재정렬되도록 함)
+        if (handManager != null)
+        {
+            handManager.RemoveCardFromHandListOnly(card);
+        }
+
+        // 3. 선택 리스트에 추가
         _selectedCards.Add(card);
 
-        // [중요] 부모를 손패에서 화면 중앙(centerAnchor)으로 변경합니다.
-        // 이때 매개변수 true를 주어 화면상의 현재 위치(시각적 좌표)를 유지하게 만들어 순간이동을 방지합니다.
-        card.transform.SetParent(centerAnchor, true);
+        // 4. 부모를 3D 중앙 앵커(centerAnchor)로 변경
+        Transform anchor = centerAnchor != null ? centerAnchor : transform;
+        card.transform.SetParent(anchor, true);
 
-        // 중앙 카드들과 손패 카드들을 각각 예쁘게 재정렬합니다.
+        // 5. 3D 중앙 선택 영역 및 손패 재정렬
         UpdateCenterLayout();
-        handManager.AlignHand();
+        if (handManager != null)
+        {
+            handManager.AlignHand();
+        }
     }
 
+    /// <summary>
+    /// 카드 선택 취소: 3D 화면 중앙 -> 손패의 원래 위치(인덱스)로 정확히 복원
+    /// </summary>
     private void DeselectCard(GameObject card)
     {
-        // 선택 리스트에서 제거
+        if (handManager == null) handManager = HandCardControllManager.instance;
+
+        // 1. 선택 리스트에서 제거
         _selectedCards.Remove(card);
 
-        // 부모를 다시 손패 앵커(handAnchor)로 돌려놓습니다. (마찬가지로 true로 순간이동 방지)
-        card.transform.SetParent(handManager.handAnchor, true);
+        // 2. 부모를 다시 손패 앵커로 변경
+        Transform handAnchor = (handManager != null && handManager.handAnchor != null) ? handManager.handAnchor : transform;
+        card.transform.SetParent(handAnchor, true);
 
-        // 중앙 카드들과 손패 카드들을 각각 예쁘게 재정렬합니다.
+        // 3. [핵심] 원래 손패 순서(_originalCardOrder)를 기반으로 정확한 상대 인덱스에 재삽입
+        if (handManager != null && handManager.handCards != null)
+        {
+            int myOrder = _originalCardOrder.TryGetValue(card, out int order) ? order : 0;
+            int targetIndex = handManager.handCards.Count; // 기본값: 맨 끝
+
+            for (int i = 0; i < handManager.handCards.Count; i++)
+            {
+                GameObject otherCard = handManager.handCards[i];
+                if (otherCard != null && _originalCardOrder.TryGetValue(otherCard, out int otherOrder))
+                {
+                    if (myOrder < otherOrder)
+                    {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            handManager.handCards.Insert(targetIndex, card);
+            handManager.AlignHand(); // 원래 위치로 자연스럽게 복귀
+        }
+
+        // 4. 중앙에 남아있는 카드들 재정렬
         UpdateCenterLayout();
-        handManager.AlignHand();
     }
 
     // ==========================================================
-    // 중앙 선택 영역 2D UI 정렬 로직
+    // 3D 중앙 선택 영역 가로 정렬 로직 (World Space)
     // ==========================================================
     private void UpdateCenterLayout()
     {
         int count = _selectedCards.Count;
         if (count == 0) return;
 
-        // 선택된 카드 개수에 따라 전체 너비를 구하고, 시작 지점(startX)을 계산해 카드를 가운데 정렬합니다.
         float totalWidth = (count - 1) * cardSpacing;
         float startX = -totalWidth / 2.0f;
 
-        // 기준 스케일값에 배율을 곱해 목표 크기를 계산합니다.
         Vector3 baseScale = (handManager != null) ? handManager.OriginalCardScale : Vector3.one;
         Vector3 targetScale = baseScale * selectedCardScaleMultiplier;
+        Transform anchor = centerAnchor != null ? centerAnchor : transform;
+        Quaternion targetRotation = (handManager != null) ? (anchor.rotation * Quaternion.Euler(handManager.cardBaseRotation)) : anchor.rotation;
 
         for (int i = 0; i < count; i++)
         {
             GameObject card = _selectedCards[i];
-            RectTransform cardRect = card.GetComponent<RectTransform>();
+            if (card == null) continue;
 
-            // X축 위치만 나란히 띄우고(startX + i * 간격), Y축은 0으로 중앙에 맞춥니다.
-            Vector2 targetPos = new Vector2(startX + (i * cardSpacing), 0);
+            Vector3 targetLocalPos = new Vector3(startX + (i * cardSpacing), 0f, 0f);
+            Vector3 targetWorldPos = anchor.TransformPoint(targetLocalPos);
 
-            // 중앙에 뜬 카드가 다른 손패 카드에 가리지 않도록 렌더링 순서를 맨 앞으로 당깁니다.
-            cardRect.SetAsLastSibling();
-
-            cardRect.DOKill();
-            // 부드러운 이동(DOAnchorPos), 회전(기울어진 카드를 똑바로 폄), 크기 조절 애니메이션 실행
-            cardRect.DOAnchorPos(targetPos, animDuration).SetEase(Ease.OutQuad);
-            cardRect.DOLocalRotateQuaternion(Quaternion.identity, animDuration).SetEase(Ease.OutQuad);
-            cardRect.DOScale(targetScale, animDuration).SetEase(Ease.OutQuad);
+            card.transform.SetAsLastSibling();
+            card.transform.DOKill();
+            card.transform.DOMove(targetWorldPos, animDuration).SetEase(Ease.OutQuad);
+            card.transform.DORotateQuaternion(targetRotation, animDuration).SetEase(Ease.OutQuad);
+            card.transform.DOScale(targetScale, animDuration).SetEase(Ease.OutQuad);
         }
     }
 
     // ==========================================================
-    // 멀리건 확정 (덱으로 카드 돌려보내기)
+    // 멀리건 확정 (3D 덱으로 귀환 & 교체분 재드로우)
     // ==========================================================
     public void ConfirmMulligan()
     {
-        if (deckTransform == null) return;
+        if (_isConfirming) return;
+        if (handManager == null) handManager = HandCardControllManager.instance;
+        if (cardDrawManager == null) cardDrawManager = CardDrawManager.Instance;
 
-        HandCardControllManager.instance.isMulligan = true;
+        _isConfirming = true;
+        int replaceCount = _selectedCards.Count;
+        Debug.Log($"[GameMulliganManager] 멀리건 확인 버튼 클릭: {replaceCount}장 교체 진행");
 
-        // 서버에 '이 카드들을 교체해주세요'라고 알리기 위해 ID를 모아둘 리스트입니다.
+        // 1. 서버 전송용 카드 ID 수집
         List<string> idsToSend = new List<string>();
-
         foreach (GameObject cardObj in _selectedCards)
         {
-            var cardScript = cardObj.GetComponent<GameCardDisplay>();
-            if (cardScript != null) idsToSend.Add(cardScript.InstanceId);
+            if (cardObj != null)
+            {
+                var cardScript = cardObj.GetComponent<GameCardDisplay>();
+                if (cardScript != null && !string.IsNullOrEmpty(cardScript.InstanceId))
+                {
+                    idsToSend.Add(cardScript.InstanceId);
+                }
+            }
         }
 
-        // 여러 카드의 애니메이션을 하나로 묶어서 관리하는 DOTween Sequence를 생성합니다.
-        Sequence returnSequence = DOTween.Sequence();
-
-        // 원본 리스트를 복사해두고, 선택 리스트는 비웁니다.
+        // 2. 복사본 생성 후 선택 리스트 비우기
         List<GameObject> cardsToReturn = new List<GameObject>(_selectedCards);
         _selectedCards.Clear();
 
-        // 각 카드를 덱으로 날려보내는 연출을 생성합니다.
+        // 3. 3D 덱 위치로 날아가며 회전/축소 및 파괴 연출 시퀀스
+        Sequence returnSequence = DOTween.Sequence();
+        Transform targetDeck = deckTransform != null ? deckTransform : ((cardDrawManager != null) ? cardDrawManager.deckTransform : null);
+
         for (int i = 0; i < cardsToReturn.Count; i++)
         {
             GameObject card = cardsToReturn[i];
-            RectTransform cardRect = card.GetComponent<RectTransform>();
+            if (card == null) continue;
 
-            // 카드가 동시에 날아가지 않고 약간의 시차(0.1초 간격)를 두고 차례대로 날아가도록 시작 시간을 설정합니다.
             float startTime = i * 0.1f;
-            float flightDuration = 0.5f;
+            float flightDuration = 0.4f;
 
-            // 실제 손패 관리 데이터에서도 이 카드를 완전히 삭제합니다.
-            handManager.RemoveCardFromHandListOnly(card);
-
-            // [애니메이션 1] 덱의 화면 위치(position)를 향해 곡선 형태(InCubic)로 가속하며 날아갑니다.
-            returnSequence.Insert(startTime, cardRect.DOMove(deckTransform.position, flightDuration).SetEase(Ease.InCubic));
-
-            // [애니메이션 2] 날아가면서 Y축을 180도 회전시켜 덱에 꽂히는 느낌(뒷면 보이기)을 줍니다.
-            returnSequence.Insert(startTime, cardRect.DORotateQuaternion(deckTransform.rotation * Quaternion.Euler(0, 180f, 0), flightDuration));
-
-            // [애니메이션 3] 덱 안으로 빨려 들어가는 것처럼 크기를 0으로 줄입니다.
-            returnSequence.Insert(startTime, cardRect.DOScale(Vector3.zero, flightDuration));
-
-            // 카드가 덱에 완전히 도착할 시간이 되면 메모리에서 카드를 파괴(삭제)합니다.
-            returnSequence.InsertCallback(startTime + flightDuration, () => { Destroy(card); });
+            if (targetDeck != null)
+            {
+                returnSequence.Insert(startTime, card.transform.DOMove(targetDeck.position, flightDuration).SetEase(Ease.InCubic));
+                returnSequence.Insert(startTime, card.transform.DORotateQuaternion(targetDeck.rotation * Quaternion.Euler(0f, 180f, 0f), flightDuration));
+            }
+            returnSequence.Insert(startTime, card.transform.DOScale(Vector3.zero, flightDuration));
+            returnSequence.InsertCallback(startTime + flightDuration, () =>
+            {
+                if (card != null)
+                {
+                    card.transform.DOKill();
+                    Destroy(card);
+                }
+            });
         }
 
-        // 모든 카드가 덱으로 들어가는 애니메이션이 완전히 끝났을 때 서버에 메시지를 보냅니다.
+        // 4. 귀환 연출 완료 후: 서버 전송 및 교체분 재드로우
         returnSequence.OnComplete(() =>
         {
-            Debug.Log($"[Mulligan] 결정 완료. 교체 수: {idsToSend.Count}");
-
-            // 네트워크를 통해 서버로 멀리건 확정 메시지를 전송합니다.
+            // 네트워크 서버로 멀리건 결정 전송
             var decision = new C_MulliganDecision
             {
                 action = GameActionType.MULLIGAN_DECISION,
                 cardInstanceIdsToReplace = idsToSend
             };
 
-            if (GameClient.Instance != null) GameClient.Instance.SendMessageAsync(decision);
+            if (GameClient.Instance != null && GameClient.Instance.IsConnected)
+            {
+                GameClient.Instance.SendMessageAsync(decision);
+            }
 
-            // "교체할 카드를 선택하세요" 등의 안내 UI를 화면에서 숨깁니다.
-            if (mulliganImg != null) mulliganImg.SetActive(false);
+            // 교체된 카드 수만큼 새 카드 재드로우
+            if (replaceCount > 0)
+            {
+                // 오프라인 / 테스트 모드일 경우 자체 재드로우 코루틴 실행
+                if (GameClient.Instance == null || !GameClient.Instance.IsConnected)
+                {
+                    StartCoroutine(RedrawReplacementCardsRoutine(replaceCount));
+                }
+                // (온라인 연결 시에는 서버에서 S_GameReady 수신 후 SyncHandWithServer가 실행되어 자동 드로우)
+            }
+            else
+            {
+                // 0장 교체인 경우 즉시 멀리건 종료 및 일반 모드 전환
+                EndMulliganPhase();
+            }
         });
-    }
-}
-
-
-/*
-
-using UnityEngine;
-using System.Collections.Generic;
-using DG.Tweening;
-using UnityEngine.UI;
-using System.Collections;
-
-/// <summary>
-/// 게임 시작 전, '멀리건(Mulligan)' 단계를 관리합니다.
-/// 마음에 안 드는 카드를 선택하면 교체해주는 시스템입니다.
-/// </summary>
-public class GameMulliganManager : MonoBehaviour
-{
-    public static GameMulliganManager instance;
-
-    [Header("연결")]
-    public HandInteractionManager handManager; // 손패 관리자
-    public CardDrawManager cardDrawManager;    // 드로우 관리자
-    public Transform centerAnchor;             // 선택된 카드가 모일 중앙 위치
-    public Transform deckTransform;            // 카드가 돌아갈 덱 위치
-    public Button mulliganCheck;               // '확인(교체)' 버튼
-
-    [Header("설정")]
-    public float cardSpacing = 2.5f;           // 중앙 정렬 간격
-    public float animDuration = 0.3f;          // 이동 애니메이션 시간
-    public GameObject mulliganImg;             // 멀리건 안내 이미지
-    public float selectedCardScaleMultiplier = 1.0f; // 선택된 카드 크기
-
-    // 현재 교체하려고 선택한 카드 목록
-    public List<GameObject> _selectedCards = new List<GameObject>();
-    // 카드의 원래 인덱스를 저장할 사전 추가
-    private Dictionary<GameObject, int> _originalIndices = new Dictionary<GameObject, int>();
-
-    private void Awake()
-    {
-        if (instance != null && instance != this) Destroy(this.gameObject);
-        else instance = this;
-
-        mulliganCheck.onClick.AddListener(ConfirmMulligan); // 버튼 클릭 시 함수 연결
     }
 
     /// <summary>
-    /// 카드를 클릭했을 때 (HandInteractionManager가 호출해줌)
+    /// 버려진 카드 수만큼 새 카드를 순차 드로우하고 멀리건을 종료합니다.
     /// </summary>
-    public void OnCardClicked(GameObject card)
+    private IEnumerator RedrawReplacementCardsRoutine(int count)
     {
-        if (_selectedCards.Contains(card))
-        {
-            // 이미 선택된 카드면 -> 선택 취소 (다시 손패로)
-            DeselectCard(card);
-        }
-        else
-        {
-            // 손패에 있던 카드면 -> 선택 (중앙으로)
-            SelectCard(card);
-        }
-    }
+        yield return YieldInstructionCache.WaitForSeconds(0.2f);
 
-    // 카드 선택 (손패 -> 중앙)
-    private void SelectCard(GameObject card)
-    {
-        // 리스트에서 제거하지 않습니다!
-        _selectedCards.Add(card);
-
-        card.transform.SetParent(centerAnchor);
-
-        UpdateCenterLayout();
-        // 리스트는 그대로이므로 AlignHand()를 호출해도 빈자리가 생기지 않도록 처리가 필요합니다.
-        handManager.AlignHand();
-    }
-
-    // 카드 선택 취소 (중앙 -> 손패)
-    private void DeselectCard(GameObject card)
-    {
-        _selectedCards.Remove(card);
-
-        // 다시 손패 앵커로 부모 설정
-        card.transform.SetParent(handManager.handAnchor);
-
-        UpdateCenterLayout();
-        handManager.AlignHand(); // 원래 위치로 자연스럽게 돌아갑니다.
-    }
-
-    // 중앙에 모인 카드들 예쁘게 정렬하기
-    private void UpdateCenterLayout()
-    {
-        int count = _selectedCards.Count;
-        if (count == 0) return;
-
-        float totalWidth = (count - 1) * cardSpacing;
-        float startX = -totalWidth / 2.0f;
-
-        Vector3 baseScale = (handManager != null) ? handManager.OriginalCardScale : Vector3.one;
-        Vector3 targetScale = baseScale * selectedCardScaleMultiplier;
-
+        List<CardInfo> replacementCards = new List<CardInfo>();
         for (int i = 0; i < count; i++)
         {
-            GameObject card = _selectedCards[i];
-            Vector3 targetLocalPos = new Vector3(startX + (i * cardSpacing), 0, 0);
-            Vector3 targetWorldPos = centerAnchor.TransformPoint(targetLocalPos);
-
-            card.transform.DOMove(targetWorldPos, animDuration).SetEase(Ease.OutQuad);
-            card.transform.DORotateQuaternion(centerAnchor.rotation, animDuration).SetEase(Ease.OutQuad);
-            card.transform.DOScale(targetScale, animDuration).SetEase(Ease.OutQuad);
+            replacementCards.Add(new CardInfo
+            {
+                cardId = "cards-gangzi-00" + Random.Range(1, 9),
+                instanceId = "mulligan_replace_" + Random.Range(10000, 99999)
+            });
         }
+
+        if (cardDrawManager != null)
+        {
+            cardDrawManager.PerformBatchDraw(replacementCards);
+            float totalDrawTime = (count * cardDrawManager.batchDrawInterval) + cardDrawManager.drawDuration + cardDrawManager.showDuration + 0.6f;
+            yield return YieldInstructionCache.WaitForSeconds(totalDrawTime);
+        }
+
+        EndMulliganPhase();
     }
 
     /// <summary>
-    /// [확인] 버튼 클릭 시 실행.
-    /// 선택된 카드들을 덱으로 보내고, 서버에 교체 요청을 보냅니다.
+    /// 멀리건 단계를 종료하고 일반 플레이 모드로 전환합니다 (호버 및 드래그 정상 복구)
     /// </summary>
-    public void ConfirmMulligan()
+    public void EndMulliganPhase()
     {
-        if (deckTransform == null) return;
+        Debug.Log("[GameMulliganManager] 멀리건 단계 종료 -> 일반 플레이 모드 전환 (호버/드래그 활성화)");
 
-        List<string> idsToSend = new List<string>(); // 서버에 보낼 ID 목록
-
-        // 선택된 카드들의 ID 추출
-        foreach (GameObject cardObj in _selectedCards)
+        if (handManager == null) handManager = HandCardControllManager.instance;
+        if (handManager != null)
         {
-            var cardScript = cardObj.GetComponent<GameCardDisplay>();
-            if (cardScript != null) idsToSend.Add(cardScript.InstanceId);
+            handManager.isMulliganPhase = false;
+            handManager.isMulligan = false;
+            handManager.AlignHand();
         }
 
-        // 애니메이션: 카드들이 덱으로 날아감
-        Sequence returnSequence = DOTween.Sequence();
-        List<GameObject> cardsToReturn = new List<GameObject>(_selectedCards);
-        _selectedCards.Clear(); // 리스트 비움
-
-        for (int i = 0; i < cardsToReturn.Count; i++)
+        if (BattleManager.Instance != null)
         {
-            GameObject card = cardsToReturn[i];
-            float startTime = i * 0.1f;
-            float flightDuration = 0.5f;
-
-            // 이제 여기서 실제 손패 리스트에서 제거합니다.
-            handManager.RemoveCardFromHandListOnly(card);
-
-            // 덱으로 이동 + 회전
-            returnSequence.Insert(startTime, card.transform.DOMove(deckTransform.position, flightDuration).SetEase(Ease.InCubic));
-            returnSequence.Insert(startTime, card.transform.DORotateQuaternion(deckTransform.rotation, flightDuration));
-
-            // 도착 후 파괴
-            returnSequence.InsertCallback(startTime + flightDuration, () => { Destroy(card); });
+            BattleManager.Instance.isMulliganPhase = false;
         }
 
-        // 애니메이션 끝나면 서버로 전송
-        returnSequence.OnComplete(() =>
+        if (mulliganImg != null)
         {
-            Debug.Log($"[Mulligan] 결정 완료. 교체 수: {idsToSend.Count}");
+            mulliganImg.SetActive(false);
+        }
 
-            var decision = new C_MulliganDecision
+        ClearMulliganState();
+        _isConfirming = false;
+    }
+
+    public void ClearMulliganState()
+    {
+        _selectedCards.Clear();
+        _originalCardOrder.Clear();
+        _isConfirming = false;
+    }
+
+    // ==========================================================
+    // 씬 뷰 3D 기즈모 (중앙 선택 카드 나열 가이드 및 덱 위치 시각화)
+    // ==========================================================
+    private void OnDrawGizmosSelected()
+    {
+        Transform anchor = centerAnchor != null ? centerAnchor : transform;
+        Gizmos.color = Color.cyan;
+
+        int previewCount = _selectedCards.Count > 0 ? _selectedCards.Count : 3;
+        float totalWidth = (previewCount - 1) * cardSpacing;
+        float startX = -totalWidth / 2.0f;
+
+        Vector3 prevPos = Vector3.zero;
+        for (int i = 0; i < previewCount; i++)
+        {
+            Vector3 localPos = new Vector3(startX + (i * cardSpacing), 0f, 0f);
+            Vector3 worldPos = anchor.TransformPoint(localPos);
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(worldPos, 0.2f);
+
+            if (i > 0)
             {
-                action = ActionTypes.MulliganDecision,
-                cardInstanceIdsToReplace = idsToSend
-            };
-            GameClient.Instance.SendMessageAsync(decision);
-            mulliganImg.SetActive(false); // UI 끄기
-        });
+                Gizmos.DrawLine(prevPos, worldPos);
+            }
+            prevPos = worldPos;
+        }
 
-        if (HandInteractionManager.instance != null)
+        if (deckTransform != null)
         {
-            HandInteractionManager.instance.isMulliganPhase = false; // 멀리건 모드 종료
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireCube(deckTransform.position, new Vector3(1f, 0.1f, 1.4f));
         }
     }
 }
-
-*/

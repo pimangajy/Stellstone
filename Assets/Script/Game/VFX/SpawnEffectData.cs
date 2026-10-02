@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// 소환될 때의 카드 이동 물리 연출 종류입니다.
@@ -68,13 +68,31 @@ public class SpawnEffectData : ScriptableObject
     }
 
     /// <summary>
-    /// 지정된 AudioSource를 통해 소환음을 재생합니다.
+    /// SoundManager를 통해 위치 기반으로 소환음을 재생합니다. (AudioSource가 넘어온 경우 Fallback 지원)
     /// </summary>
-    public void PlaySpawnSound(AudioSource source)
+    public void PlaySpawnSound(AudioSource source = null, Vector3 position = default)
     {
-        if (spawnSound != null && source != null)
+        if (spawnSound == null) return;
+
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlaySFX3D(spawnSound, position, soundVolume);
+        }
+        else if (source != null)
         {
             source.PlayOneShot(spawnSound, soundVolume);
         }
+        else
+        {
+            AudioSource.PlayClipAtPoint(spawnSound, position, soundVolume);
+        }
+    }
+
+    /// <summary>
+    /// 지정된 3D 위치에서 소환음을 재생합니다.
+    /// </summary>
+    public void PlaySpawnSound(Vector3 position)
+    {
+        PlaySpawnSound(null, position);
     }
 }

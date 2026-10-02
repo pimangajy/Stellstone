@@ -1,8 +1,4 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
-using Unity.Burst.Intrinsics;
-using DG.Tweening.Core.Easing;
+using UnityEngine;
 
 /// <summary>
 /// 카드의 타겟팅 조건 판별, 유효성 검사, 서버 전송을 전담하는 매니저입니다.
@@ -22,9 +18,7 @@ public class CardTargetingManager : MonoBehaviour
     /// </summary>
     public bool RequiresTargeting(CardData cardData)
     {
-        if(cardData == null && cardData.targeting == false) return false;
-
-        return true;
+        return cardData != null && cardData.targeting;
     }
 
     /// <summary>

@@ -5,8 +5,8 @@ using System.Collections.Generic;
 /// 게임 내의 모든 마우스 입력(Hover, Click, Drag)을 중앙에서 관리하는 스크립트입니다.
 /// 
 /// [연동 완료]
-/// - HandInteractionManager의 호버링 기능 (ProcessHover)
-/// - HandInteractionManager의 멀리건 클릭 기능 (OnMulliganCardClicked)
+/// - HandCardControllManager의 호버링 기능 (ProcessHover)
+/// - HandCardControllManager의 멀리건 클릭 기능 (OnMulliganCardClicked)
 /// </summary>
 public class GameInputManager : MonoBehaviour
 {
@@ -35,7 +35,7 @@ public class GameInputManager : MonoBehaviour
         ReadyToDrag,    // 마우스를 꾹 눌렀으나 아직 안 움직임
         DraggingHand,   // 손패 카드를 드래그 중
         DraggingField,   // 필드 하수인을 드래그 중 (공격 조준)
-        WaitingForChoice, // 서버로부터 선택을 기다리는 상태
+        WaitingForChoice // 서버로부터 선택을 기다리는 상태
     }
 
     [Header("현재 상태 (디버그용)")]
@@ -54,6 +54,19 @@ public class GameInputManager : MonoBehaviour
     // 선택 모드 관련 내부 변수 ---
     private string _currentChoiceType = "";
     private int _choiceSourceEntityId = -1;
+    private int _memberSkillSourceEntityId = 0;
+    private int _memberSkillPendingSkillId = 0;
+    private List<int> _validMemberSkillTargets = new List<int>();
+
+    // 필드 하수인 1초 호버 프리뷰 관련 변수
+    private GameCardDisplay _hoveredFieldCard;
+    private float _fieldHoverTimer = 0f;
+    private bool _hasShownFieldPreview = false;
+    private const float FIELD_HOVER_DELAY = 1.0f;
+
+    // UI 레이캐스트 재사용 버퍼 (클릭 시 힙 할당 방지)
+    private readonly List<RaycastResult> _uiRaycastResults = new List<RaycastResult>(16);
+    private PointerEventData _cachedPointerData;
 
     private void Awake()
     {
@@ -63,11 +76,49 @@ public class GameInputManager : MonoBehaviour
         _mainCamera = Camera.main;
     }
 
+    private void Start()
+    {
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.OnPlayCardFailedEvent += OnPlayCardFailed;
+            GameClient.Instance.OnValidMemberSkillTargetsResponseEvent += OnValidMemberSkillTargetsResponse;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (GameClient.Instance != null)
+        {
+            GameClient.Instance.OnPlayCardFailedEvent -= OnPlayCardFailed;
+            GameClient.Instance.OnValidMemberSkillTargetsResponseEvent -= OnValidMemberSkillTargetsResponse;
+        }
+    }
+
+    private void OnValidMemberSkillTargetsResponse(S_ValidMemberSkillTargetsResponse response)
+    {
+        if (currentState == InputState.WaitingForChoice && _currentChoiceType == "MEMBER_SKILL")
+        {
+            if (response != null && response.validTargetIds != null)
+            {
+                _validMemberSkillTargets = new List<int>(response.validTargetIds);
+            }
+        }
+    }
+
+    private void OnPlayCardFailed(string reason)
+    {
+        // 타겟팅/선택 대기 모드 중 실패 패킷(더 이상 유효한 대상/슬롯 없음 등)을 수신하면 즉시 타겟팅 종료
+        if (currentState == InputState.WaitingForChoice)
+        {
+            CleanUpTargetingMode();
+        }
+    }
+
     void Update()
     {
         // 1. 현재 내 턴인지 확인합니다.
-        bool isMyTurn = GameStateManager.Instance == null || GameStateManager.Instance.IsMyTurn;
-        bool isFold = HandCardControllManager.instance.isFolded;
+        bool isMyTurn = BattleManager.Instance == null || BattleManager.Instance.isPlayerTurn;
+        bool isFold = HandCardControllManager.instance != null && HandCardControllManager.instance.isFolded;
 
         // 상대 턴인데 마우스를 쥐고 있거나 드래그 상태라면 강제로 취소시킵니다 (Idle 상태로 복귀).
         if (!isMyTurn && currentState != InputState.Idle && currentState != InputState.WaitingForChoice)
@@ -101,22 +152,33 @@ public class GameInputManager : MonoBehaviour
     // =========================================================
     // 1. 평상시 (Idle) : 호버링(Hover) 감지 및 클릭(Down) 대기
     // =========================================================
-    // UI 요소 감지용 함수
+    // UI 요소 감지용 함수 (클릭 시 힙 할당 방지를 위해 내부 리스트 재사용)
     private List<RaycastResult> GetUIElementsUnderPointer()
     {
-        PointerEventData pointerData = new PointerEventData(EventSystem.current)
+        _uiRaycastResults.Clear();
+        if (EventSystem.current == null) return _uiRaycastResults;
+
+        if (_cachedPointerData == null)
         {
-            position = Input.mousePosition
-        };
-        List<RaycastResult> results = new List<RaycastResult>();
-        EventSystem.current.RaycastAll(pointerData, results);
-        return results;
+            _cachedPointerData = new PointerEventData(EventSystem.current);
+        }
+        _cachedPointerData.position = Input.mousePosition;
+        EventSystem.current.RaycastAll(_cachedPointerData, _uiRaycastResults);
+        return _uiRaycastResults;
     }
 
     private void HandleIdleAndHover(bool isMyTurn, bool isFold)
     {
-        if (isMyTurn && Input.GetMouseButtonDown(0))
+        // 멤버 스킬 선택창이 열려 있으면 3D 입력 및 호버링 중단
+        if (MemberSkillSelectUI.Instance != null && MemberSkillSelectUI.Instance.IsOpen)
         {
+            CancelFieldMinionHover();
+            return;
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            CancelFieldMinionHover();
             _mouseDownPos = Input.mousePosition;
 
             // =======================================================
@@ -127,27 +189,44 @@ public class GameInputManager : MonoBehaviour
 
             foreach (RaycastResult hit in uiHits)
             {
-                if (((1 << hit.gameObject.layer) & handCardLayer) != 0)
+                GameCardDisplay cardDisplay = hit.gameObject.GetComponentInParent<GameCardDisplay>();
+                if (cardDisplay != null)
                 {
-                    isUIClicked = true;
-
-                    if (HandCardControllManager.instance.isFolded)
+                    // 부모 또는 자식의 레이어가 handCardLayer에 포함되어 있는지 확인
+                    if (((1 << cardDisplay.gameObject.layer) & handCardLayer) != 0 || ((1 << hit.gameObject.layer) & handCardLayer) != 0)
                     {
-                        HandCardControllManager.instance.ToggleHandFold();
-                        return;
-                    }
+                        isUIClicked = true;
+                        GameObject cardRoot = cardDisplay.gameObject;
 
-                    if (HandCardControllManager.instance != null && HandCardControllManager.instance.isMulliganPhase)
-                    {
-                        HandCardControllManager.instance.OnMulliganCardClicked(hit.gameObject);
-                        return;
-                    }
+                        // 손패가 접혀있을 때 클릭하면 펼치기 (내 턴/상대 턴 모두 허용)
+                        if (HandCardControllManager.instance != null && HandCardControllManager.instance.isFolded)
+                        {
+                            HandCardControllManager.instance.ToggleHandFold();
+                            return;
+                        }
 
-                    _selectedHandCard = hit.gameObject.GetComponentInParent<GameCardDisplay>();
-                    if (_selectedHandCard != null)
-                    {
-                        currentState = InputState.ReadyToDrag;
-                        return;
+                        if (HandCardControllManager.instance != null && HandCardControllManager.instance.isMulliganPhase)
+                        {
+                            HandCardControllManager.instance.OnMulliganCardClicked(cardRoot);
+                            return;
+                        }
+
+                        // 손패 카드 드래그는 내 턴에만 허용 (상대 턴에는 드래그 불가)
+                        if (isMyTurn)
+                        {
+                            _selectedHandCard = cardDisplay;
+
+                            if (_selectedHandCard != null)
+                            {
+                                currentState = InputState.ReadyToDrag;
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            // 상대 턴에는 손패 카드를 클릭해도 드래그를 시작하지 않고 리턴
+                            return;
+                        }
                     }
                 }
             }
@@ -159,40 +238,78 @@ public class GameInputManager : MonoBehaviour
             {
                 Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
 
-                // 필드 하수인 클릭 판정 [2]
+                // 필드 하수인/리더 클릭 판정 [2]
                 if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
                 {
                     if (EntityDetailViewer.Instance != null) EntityDetailViewer.Instance.HideDetail();
 
-                    _selectedFieldEntity = minionHit.collider.GetComponentInParent<GameCardDisplay>();
-
-                    if (_selectedFieldEntity != null)
+                    var clickedDisplay = minionHit.collider.GetComponentInParent<GameCardDisplay>();
+                    if (clickedDisplay != null)
                     {
-                        if (GameEntityManager.Instance != null && GameEntityManager.Instance.test)
+                        // [감정표현] 내 리더를 클릭한 경우 감정표현 메뉴 토글 (내 턴 / 상대 턴 모두 지원)
+                        bool isMyLeader = (GameEntityManager.Instance != null && GameEntityManager.Instance.myLeader == clickedDisplay) ||
+                                          (clickedDisplay is LeaderCardDisplay && clickedDisplay.CurrentEntityData != null && clickedDisplay.CurrentEntityData.ownerUid == GameEntityManager.Instance?.MyUid);
+                        if (isMyLeader)
                         {
-                            currentState = InputState.ReadyToDrag;
+                            EmotionManager.Instance?.ToggleEmoteMenu();
+                            ResetInput();
                             return;
                         }
 
-                        if (EntityAttackManager.Instance != null && EntityAttackManager.Instance.IsValidAttacker(_selectedFieldEntity))
+                        // 리더가 아닌 다른 필드 유닛을 클릭한 경우 열려있던 감정표현 메뉴 닫기
+                        EmotionManager.Instance?.HideEmoteMenu();
+
+                        // 내 턴일 때만 아군 멤버 스킬 팝업 및 공격 조준 드래그 허용
+                        if (isMyTurn)
                         {
-                            currentState = InputState.ReadyToDrag;
+                            _selectedFieldEntity = clickedDisplay;
+
+                            if (_selectedFieldEntity != null)
+                            {
+                                // [멤버 체크] 내 필드의 멤버 카드를 클릭한 경우 스킬 선택 팝업을 엽니다.
+                                if (IsFriendlyMember(_selectedFieldEntity))
+                                {
+                                    if (MemberSkillSelectUI.Instance != null)
+                                    {
+                                        MemberSkillSelectUI.Instance.Open(_selectedFieldEntity);
+                                    }
+                                    ResetInput();
+                                    return;
+                                }
+
+                                if (GameEntityManager.Instance != null && GameEntityManager.Instance.test)
+                                {
+                                    currentState = InputState.ReadyToDrag;
+                                    return;
+                                }
+
+                                if (EntityAttackManager.Instance != null && EntityAttackManager.Instance.IsFriendlyMinion(_selectedFieldEntity))
+                                {
+                                    currentState = InputState.ReadyToDrag;
+                                }
+                            }
                         }
                     }
                     return;
                 }
-                // 필드 배경 클릭 판정 [3]
-                else if (Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer) && !HandCardControllManager.instance.isMulliganPhase)
+                // 필드 배경 및 빈 슬롯 클릭 판정 [3]
+                else if (Physics.Raycast(ray, out RaycastHit fieldHit, 100f, fieldEntityLayer | fieldSlotLayer))
                 {
+                    EmotionManager.Instance?.HideEmoteMenu();
                     if (EntityDetailViewer.Instance != null) EntityDetailViewer.Instance.HideDetail();
 
-                    if (!HandCardControllManager.instance.isFolded)
+                    if (HandCardControllManager.instance != null && !HandCardControllManager.instance.isMulliganPhase && !HandCardControllManager.instance.isFolded)
                     {
                         HandCardControllManager.instance.ToggleHandFold();
                     }
 
                     ResetInput();
                     return;
+                }
+                else
+                {
+                    // 필드 외부 빈 공간을 클릭한 경우에도 감정표현 메뉴 닫기
+                    EmotionManager.Instance?.HideEmoteMenu();
                 }
             }
         }
@@ -202,11 +319,15 @@ public class GameInputManager : MonoBehaviour
             {
                 HandCardControllManager.instance.ProcessHover(Input.mousePosition);
             }
+
+            // 필드 하수인 1초 호버 프리뷰 감지
+            ProcessFieldMinionHover();
         }
 
         // 우클릭 상세정보 창 띄우기 (3D 기반 유지)
         if (Input.GetMouseButtonDown(1))
         {
+            CancelFieldMinionHover();
             Debug.Log("우클릭");
 
             Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
@@ -220,6 +341,55 @@ public class GameInputManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// 마우스가 필드 하수인 위에 1초 이상 머물렀을 때 DeckCardPreviewManager로 원본 카드 프리뷰를 띄웁니다.
+    /// </summary>
+    private void ProcessFieldMinionHover()
+    {
+        if (_mainCamera == null) _mainCamera = Camera.main;
+        if (_mainCamera == null) return;
+
+        Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit minionHit, 100f, minionEntityLayer))
+        {
+            GameCardDisplay targetCard = minionHit.collider.GetComponentInParent<GameCardDisplay>();
+            if (targetCard != null && targetCard._cardData != null)
+            {
+                if (_hoveredFieldCard == targetCard)
+                {
+                    _fieldHoverTimer += Time.deltaTime;
+                    if (_fieldHoverTimer >= FIELD_HOVER_DELAY && !_hasShownFieldPreview)
+                    {
+                        _hasShownFieldPreview = true;
+                        if (DeckCardPreviewManager.Instance != null)
+                        {
+                            DeckCardPreviewManager.Instance.ShowPreview(targetCard._cardData, targetCard.transform.position, targetCard);
+                        }
+                    }
+                }
+                else
+                {
+                    CancelFieldMinionHover();
+                    _hoveredFieldCard = targetCard;
+                }
+                return;
+            }
+        }
+
+        CancelFieldMinionHover();
+    }
+
+    private void CancelFieldMinionHover()
+    {
+        if (_hasShownFieldPreview)
+        {
+            DeckCardPreviewManager.Instance?.HidePreview();
+        }
+        _hoveredFieldCard = null;
+        _fieldHoverTimer = 0f;
+        _hasShownFieldPreview = false;
     }
 
     // =========================================================
@@ -248,12 +418,30 @@ public class GameInputManager : MonoBehaviour
             }
             else if (_selectedFieldEntity != null)
             {
-                currentState = InputState.DraggingField;
+                // 실제 드래그 시도 순간 공격 가능 여부 판정
+                bool canAttack = EntityAttackManager.Instance != null && EntityAttackManager.Instance.CanAttack(_selectedFieldEntity);
 
-                // [연동 완료] EntityAttackManager에게 공격 조준 시작 명령
-                if (EntityAttackManager.Instance != null)
+                if (canAttack)
                 {
-                    EntityAttackManager.Instance.StartAttackDrag(_selectedFieldEntity);
+                    currentState = InputState.DraggingField;
+
+                    // [연동 완료] EntityAttackManager에게 공격 조준 시작 명령
+                    if (EntityAttackManager.Instance != null)
+                    {
+                        EntityAttackManager.Instance.StartAttackDrag(_selectedFieldEntity);
+                    }
+                }
+                else
+                {
+                    // 공격 불가 상태에서 드래그 시도:
+                    // 1. 로딩씬의 SoundManager를 통해 경고음 재생
+                    if (SoundManager.Instance != null)
+                    {
+                        SoundManager.Instance.PlayUISound(UIButtonSoundType.Warning);
+                    }
+
+                    // 2. 조준선 생성하지 않고 입력 즉시 취소
+                    ResetInput();
                 }
             }
         }
@@ -264,6 +452,16 @@ public class GameInputManager : MonoBehaviour
     // =========================================================
     private void HandleDraggingHand()
     {
+        // 우클릭: 드래그 / 타겟팅 조준 즉시 취소
+        if (Input.GetMouseButtonDown(1))
+        {
+            if (CardDragManager.instance != null)
+                CardDragManager.instance.CancelDrag();
+
+            ResetInput();
+            return;
+        }
+
         if (Input.GetMouseButtonUp(0))
         {
             // [연동 완료] CardDragManager에게 드래그 종료 명령
@@ -279,16 +477,20 @@ public class GameInputManager : MonoBehaviour
     // =========================================================
     private void HandleDraggingField()
     {
+        // 우클릭: 공격 조준 즉시 취소 (공중 부양 즉시 해제)
+        if (Input.GetMouseButtonDown(1))
+        {
+            if (EntityAttackManager.Instance != null)
+                EntityAttackManager.Instance.ResetState(false);
+
+            ResetInput();
+            return;
+        }
+
         // [연동 완료] 조준선 갱신 및 타겟 하이라이트 (매 프레임 실행)
         if (EntityAttackManager.Instance != null)
         {
             EntityAttackManager.Instance.UpdateTargetHighlight();
-        }
-
-        // 테스트
-        if(GameEntityManager.Instance.test)
-        {
-
         }
 
         if (Input.GetMouseButtonUp(0))
@@ -346,6 +548,12 @@ public class GameInputManager : MonoBehaviour
                 TargetingReticle.Instance.StartTargeting(startTransform);
             }
         }
+
+        // 선택 모드 진입 시 손패 접기 (필드/슬롯/리더 시야 확보)
+        if (HandCardControllManager.instance != null && !HandCardControllManager.instance.isFolded)
+        {
+            HandCardControllManager.instance.FoldHand();
+        }
     }
 
     private void HandleWaitingForChoice()
@@ -395,7 +603,10 @@ public class GameInputManager : MonoBehaviour
                 if (Physics.Raycast(ray, out RaycastHit hit, 100f, fieldSlotLayer))
                 {
                     FieldSlot slot = hit.collider.GetComponent<FieldSlot>();
-                    if (slot != null && !slot.IsOccupied) // 빈 자리일 때만 허용
+                    bool isMySlot = GameEntityManager.Instance != null &&
+                                    GameEntityManager.Instance.myFieldSlots != null &&
+                                    System.Array.IndexOf(GameEntityManager.Instance.myFieldSlots, slot) >= 0;
+                    if (slot != null && !slot.IsOccupied && isMySlot) // 내 빈 자리일 때만 허용
                     {
                         GameClient.Instance.SendMakeChoiceRequest(slot.slotIndex, null, -1);
                         CleanUpTargetingMode();
@@ -417,6 +628,43 @@ public class GameInputManager : MonoBehaviour
                     }
                 }
             }
+            // 3. 멤버 스킬 타겟 선택일 경우
+            else if (_currentChoiceType == "MEMBER_SKILL")
+            {
+                if (Physics.Raycast(ray, out RaycastHit hit, 100f, minionEntityLayer))
+                {
+                    GameCardDisplay targetCard = hit.collider.GetComponentInParent<GameCardDisplay>();
+                    if (targetCard != null)
+                    {
+                        // 유효 타겟 목록이 있을 경우 검증
+                        if (_validMemberSkillTargets == null || _validMemberSkillTargets.Count == 0 || _validMemberSkillTargets.Contains(targetCard.EntityId))
+                        {
+                            Debug.Log($"[GameInputManager] 멤버 스킬 타겟 확정: SourceId={_memberSkillSourceEntityId}, SkillId={_memberSkillPendingSkillId}, TargetId={targetCard.EntityId}");
+                            if (GameEntityManager.Instance != null && GameEntityManager.Instance._spawnedEntities.TryGetValue(_memberSkillSourceEntityId, out var srcDisplay))
+                            {
+                                if (srcDisplay.CurrentEntityData != null)
+                                {
+                                    srcDisplay.CurrentEntityData.hasUsedSkillThisTurn = true;
+                                }
+                            }
+                            GameClient.Instance?.SendUseMemberSkill(_memberSkillSourceEntityId, _memberSkillPendingSkillId, targetCard.EntityId);
+                            CleanUpTargetingMode();
+                            ResetInput();
+                        }
+                    }
+                }
+            }
+        }
+
+        // 우클릭 시 멤버 스킬 조준 취소
+        if (Input.GetMouseButtonDown(1))
+        {
+            if (_currentChoiceType == "MEMBER_SKILL")
+            {
+                Debug.Log("[GameInputManager] 멤버 스킬 조준 취소");
+                CleanUpTargetingMode();
+                ResetInput();
+            }
         }
     }
 
@@ -426,7 +674,20 @@ public class GameInputManager : MonoBehaviour
         _pendingTargetPacket = packet;
 
         // 2. 조준선이 시작될 3D 위치를 구합니다.
-        Transform spawnSlotTransform = GameEntityManager.Instance.myFieldSlots[packet.position].transform;
+        Transform spawnSlotTransform = null;
+        if (GameEntityManager.Instance != null && GameEntityManager.Instance.myFieldSlots != null &&
+            packet.position >= 0 && packet.position < GameEntityManager.Instance.myFieldSlots.Length)
+        {
+            spawnSlotTransform = GameEntityManager.Instance.myFieldSlots[packet.position].transform;
+        }
+        else if (GameEntityManager.Instance != null && GameEntityManager.Instance.myLeader != null)
+        {
+            spawnSlotTransform = GameEntityManager.Instance.myLeader.transform;
+        }
+        else
+        {
+            spawnSlotTransform = transform;
+        }
 
         // 3. 입력 상태를 대상 지정 대기 상태로 전환
         currentState = InputState.WaitingForChoice;
@@ -441,6 +702,12 @@ public class GameInputManager : MonoBehaviour
         {
             BattleManager.Instance.OnReceiveValidTargetsRequestTargetForPlay(packet);
         }
+
+        // 전투의 함성 타겟팅 시 손패 접기 (필드/리더 시야 확보)
+        if (HandCardControllManager.instance != null && !HandCardControllManager.instance.isFolded)
+        {
+            HandCardControllManager.instance.FoldHand();
+        }
     }
 
     // =========================================================
@@ -453,11 +720,97 @@ public class GameInputManager : MonoBehaviour
             TargetingReticle.Instance.StopTargeting(); // 조준선 끄기
 
         _pendingTargetPacket = null; // 패킷 비우기
+        _currentChoiceType = "";
+        _choiceSourceEntityId = -1;
+        _memberSkillSourceEntityId = 0;
+        _memberSkillPendingSkillId = 0;
+        if (_validMemberSkillTargets != null) _validMemberSkillTargets.Clear();
+
+        //if (BattleManager.Instance != null)
+            //BattleManager.Instance.ResetHighlights();
+
+        // 접혀있던 손패 다시 펼치기
+        if (HandCardControllManager.instance != null && HandCardControllManager.instance.isFolded)
+        {
+            HandCardControllManager.instance.SpreadHand();
+        }
+
         ResetInput(); // currentState를 Idle 상태로 복구
+    }
+
+    /// <summary>
+    /// 멤버 스킬 타겟팅 모드를 시작합니다.
+    /// </summary>
+    public void StartMemberSkillTargeting(int sourceEntityId, MemberSkillData skill, Transform sourceTransform)
+    {
+        _currentChoiceType = "MEMBER_SKILL";
+        _choiceSourceEntityId = sourceEntityId;
+        _memberSkillSourceEntityId = sourceEntityId;
+        _memberSkillPendingSkillId = skill != null ? skill.skillId : 0;
+        if (_validMemberSkillTargets == null) _validMemberSkillTargets = new List<int>();
+        _validMemberSkillTargets.Clear();
+
+        currentState = InputState.WaitingForChoice;
+
+        if (TargetingReticle.Instance != null && sourceTransform != null)
+        {
+            TargetingReticle.Instance.StartTargeting(sourceTransform);
+        }
+
+        // 서버에 유효 조준 대상 목록 요청
+        GameClient.Instance?.SendValidMemberSkillTargetsRequest(sourceEntityId, _memberSkillPendingSkillId);
+
+        // 손패 접기 (시야 확보)
+        if (HandCardControllManager.instance != null && !HandCardControllManager.instance.isFolded)
+        {
+            HandCardControllManager.instance.FoldHand();
+        }
+    }
+
+    /// <summary>
+    /// 클릭한 개체가 내 필드의 멤버 카드인지 검사합니다.
+    /// </summary>
+    private bool IsFriendlyMember(GameCardDisplay entity)
+    {
+        if (entity == null) return false;
+
+        bool isMemberCard = (entity._cardData != null && entity._cardData.cardType == CardType.멤버);
+        bool isMemberEntity = (entity.CurrentEntityData != null && entity.CurrentEntityData.isMember);
+
+        if (!isMemberCard && !isMemberEntity) return false;
+
+        // 1. 내 멤버 슬롯에 위치하는지 검사
+        if (GameEntityManager.Instance != null && GameEntityManager.Instance.myMemberSlots != null)
+        {
+            foreach (var slot in GameEntityManager.Instance.myMemberSlots)
+            {
+                if (slot != null && entity.transform.IsChildOf(slot.transform))
+                {
+                    return true;
+                }
+            }
+        }
+
+        // 2. 소유자 UID 검사
+        if (entity.CurrentEntityData != null && !string.IsNullOrEmpty(entity.CurrentEntityData.ownerUid))
+        {
+            string myUid = GameClient.Instance != null ? GameClient.Instance.UserUid : "";
+            if (!string.IsNullOrEmpty(myUid) && entity.CurrentEntityData.ownerUid == myUid)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void ResetInput()
     {
+        CancelFieldMinionHover();
+        if (CardDragManager.instance != null)
+            CardDragManager.instance.CancelDrag();
+        if (EntityAttackManager.Instance != null)
+            EntityAttackManager.Instance.ResetState(false);
         currentState = InputState.Idle;
         _selectedHandCard = null;
         _selectedFieldEntity = null;

@@ -1,58 +1,69 @@
 using UnityEngine;
-using UnityEngine.EventSystems; // ¸¶¿ì½º Å¬¸¯ ÀÌº¥Æ®¸¦ Ã³¸®ÇÏ±â À§ÇØ ÇÊ¿äÇÕ´Ï´Ù.
+using UnityEngine.EventSystems; // ë§ˆìš°ìŠ¤ í´ë¦­ ì´ë²¤íŠ¸ë¥¼ ì²˜ë¦¬í•˜ê¸° ìœ„í•´ í•„ìš”í•©ë‹ˆë‹¤.
 
-// IPointerClickHandler: "ÀÌ ¿ÀºêÁ§Æ®´Â Å¬¸¯µÉ ¼ö ÀÖ¾î¿ä"¶ó°í À¯´ÏÆ¼¿¡°Ô ¾à¼Ó(ÀÎÅÍÆäÀÌ½º)ÇÏ´Â °ÍÀÔ´Ï´Ù.
+/// <summary>
+/// ì¹´ë“œì˜ ë§ˆìš°ìŠ¤ í´ë¦­ ì´ë²¤íŠ¸ë¥¼ ì²˜ë¦¬í•˜ëŠ” ì»´í¬ë„ŒíŠ¸ì…ë‹ˆë‹¤.
+/// - ìš°í´ë¦­: ë±ì— ì¹´ë“œ ì¶”ê°€ (ì»¬ë ‰ì…˜) ë˜ëŠ” ë±ì—ì„œ ì œê±° (ë± ë¦¬ìŠ¤íŠ¸)
+/// - ì¢Œí´ë¦­: ì»¬ë ‰ì…˜ ì¹´ë“œì˜ ìƒì„¸ ì •ë³´ ë° ë¶„í•´ íŒì—…(CardDetailPopup) ì—´ê¸°
+/// </summary>
 public class CardInteraction : MonoBehaviour, IPointerClickHandler
 {
-    // Ä«µå°¡ ¾îµğ¿¡ ÀÖ´ÂÁö ±¸ºĞÇÏ±â À§ÇÑ ²¿¸®Ç¥(Enum)ÀÔ´Ï´Ù.
-    // Collection: µ¦ Â¥´Â È­¸éÀÇ Ä«µå ¸ñ·Ï (º¸°üÇÔ)
-    // Deck: ÇöÀç Â¥°í ÀÖ´Â µ¦ ¸®½ºÆ® (¿À¸¥ÂÊ ¸®½ºÆ®)
+    // ì¹´ë“œê°€ ì–´ë””ì— ìˆëŠ”ì§€ êµ¬ë¶„í•˜ê¸° ìœ„í•œ ê¼¬ë¦¬í‘œ(Enum)
     public enum CardLocation { Collection, Deck }
 
-    // ÇöÀç ÀÌ Ä«µå°¡ ¾îµğ¿¡ ¼ÓÇØ ÀÖ´ÂÁö ¼³Á¤ÇÏ´Â º¯¼ö
+    // í˜„ì¬ ì´ ì¹´ë“œê°€ ì–´ë””ì— ì†í•´ ìˆëŠ”ì§€ ì„¤ì •í•˜ëŠ” ë³€ìˆ˜
     public CardLocation location;
 
-    // Ä«µåÀÇ Á¤º¸¸¦ °¡Áö°í ÀÖ´Â ½ºÅ©¸³Æ®¸¦ ÀúÀåÇÒ º¯¼ö (ÀÎÅÍÆäÀÌ½º »ç¿ë)
+    // ì¹´ë“œì˜ ì •ë³´ë¥¼ ê°€ì§€ê³  ìˆëŠ” ìŠ¤í¬ë¦½íŠ¸ë¥¼ ì €ì¥í•  ë³€ìˆ˜ (ICardDataHolder ì¸í„°í˜ì´ìŠ¤ ì‚¬ìš©)
     private ICardDataHolder cardDataHolder;
 
-    // °ÔÀÓ ½ÃÀÛ Àü(ÃÊ±âÈ­ ´Ü°è)¿¡ ½ÇÇàµË´Ï´Ù.
     void Awake()
     {
-        // ³» ¸ö(GameObject)¿¡ ºÙ¾îÀÖ´Â "Ä«µå Á¤º¸ °¡Áö°í ÀÖ´Â ½ºÅ©¸³Æ®"¸¦ Ã£¾Æ¼­ °¡Á®¿É´Ï´Ù.
-        // (DeckCardDisplay³ª DeckListItemDisplay°¡ ¿©±â¿¡ ÇØ´çµË´Ï´Ù)
+        // ë‚´ ì˜¤ë¸Œì íŠ¸ì— ë¶™ì–´ìˆëŠ” ì¹´ë“œ ì •ë³´ ìŠ¤í¬ë¦½íŠ¸(DeckCardDisplay ë“±)ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
         cardDataHolder = GetComponent<ICardDataHolder>();
     }
 
-    // ¾à¼ÓÇß´ø "Å¬¸¯µÇ¾úÀ» ¶§" ½ÇÇàµÇ´Â ÇÔ¼öÀÔ´Ï´Ù.
     public void OnPointerClick(PointerEventData eventData)
     {
-        // ¸¶¿ì½º ¿À¸¥ÂÊ ¹öÆ°À» Å¬¸¯Çß´ÂÁö È®ÀÎÇÕ´Ï´Ù.
+        if (cardDataHolder == null) return;
+
+        CardData cardData = cardDataHolder.GetCardData();
+        if (cardData == null)
+        {
+            Debug.LogError("ì¹´ë“œ ë°ì´í„°ê°€ ì—†ìŠµë‹ˆë‹¤.");
+            return;
+        }
+
+        // 1. ë§ˆìš°ìŠ¤ ì˜¤ë¥¸ìª½ ë²„íŠ¼: ë± ì¶”ê°€ / ì œê±°
         if (eventData.button == PointerEventData.InputButton.Right)
         {
-            // Ä«µå Á¤º¸ ½ºÅ©¸³Æ®°¡ ¾øÀ¸¸é Áß´Ü
-            if (cardDataHolder == null) return;
-
-            // ½ºÅ©¸³Æ®¿¡°Ô¼­ ½ÇÁ¦ 'CardData' Á¤º¸¸¦ ¹Ş¾Æ¿É´Ï´Ù.
-            CardData cardData = cardDataHolder.GetCardData();
-
-            // µ¥ÀÌÅÍ°¡ ºñ¾îÀÖÀ¸¸é ¿¡·¯ ¸Ş½ÃÁö¸¦ ¶ç¿ì°í Áß´Ü
-            if (cardData == null)
-            {
-                Debug.LogError("Ä«µå µ¥ÀÌÅÍ°¡ ¾ø½À´Ï´Ù.");
-                return;
-            }
-
-            // ³»°¡ ¾îµğ¿¡ ÀÖ´Â Ä«µå³Ä¿¡ µû¶ó Çàµ¿ÀÌ ´Ş¶óÁı´Ï´Ù.
             switch (location)
             {
                 case CardLocation.Collection:
-                    // º¸°üÇÔ¿¡ ÀÖ´Â Ä«µå¸¦ ¿ìÅ¬¸¯ -> µ¦¿¡ Ãß°¡
+                    // ë³´ê´€í•¨ì— ìˆëŠ” ì¹´ë“œë¥¼ ìš°í´ë¦­ -> ë±ì— ì¶”ê°€
                     DeckManager.instance.AddCard(cardData);
                     break;
+
                 case CardLocation.Deck:
-                    // µ¦ ¸®½ºÆ®¿¡ ÀÖ´Â Ä«µå¸¦ ¿ìÅ¬¸¯ -> µ¦¿¡¼­ Á¦°Å
+                    // ë± ë¦¬ìŠ¤íŠ¸ì— ìˆëŠ” ì¹´ë“œë¥¼ ìš°í´ë¦­ -> ë±ì—ì„œ ì œê±°
                     DeckManager.instance.RemoveCard(cardData);
                     break;
+            }
+        }
+        // 2. ë§ˆìš°ìŠ¤ ì™¼ìª½ ë²„íŠ¼: ìƒì„¸ ì •ë³´ ë° ë¶„í•´ íŒì—… ì—´ê¸°
+        else if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            // ì»¬ë ‰ì…˜(ë³´ê´€í•¨)ì— ìˆëŠ” ì¹´ë“œë¥¼ ì¢Œí´ë¦­í–ˆì„ ë•Œ ìƒì„¸ íŒì—… ì—´ê¸°
+            if (location == CardLocation.Collection)
+            {
+                if (CardDetailPopup.Instance != null)
+                {
+                    CardDetailPopup.Instance.Open(cardData);
+                }
+                else
+                {
+                    Debug.Log($"[CardInteraction] '{cardData.cardName}' ì¢Œí´ë¦­ë¨ (ì”¬ì— CardDetailPopup ë§¤ë‹ˆì €ê°€ ì•„ì§ ë°°ì¹˜ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤)");
+                }
             }
         }
     }

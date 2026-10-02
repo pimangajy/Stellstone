@@ -1,30 +1,89 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement; // ¾À °ü¸® API »ç¿ëÀ» À§ÇØ Ãß°¡
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using Firebase.Auth;
 
+/// <summary>
+/// ëª¨ë“  ì”¬ì—ì„œ íŒì—… ìŠ¤íƒ ë° ì „ì—­ ì„¤ì •ì°½(ì†Œë¦¬, í™”ë©´, ê³„ì •)ì„ ì´ê´„í•˜ëŠ” UI ë§¤ë‹ˆì €ì…ë‹ˆë‹¤.
+/// </summary>
 public class UIManager : MonoBehaviour
 {
-    // --- ½Ì±ÛÅæ ÀÎ½ºÅÏ½º ---
     public static UIManager Instance { get; private set; }
 
-    // --- ³»ºÎ º¯¼ö ---
-    // [¼öÁ¤] Stack -> List·Î º¯°æÇÏ¿© Æ¯Á¤ Ç×¸ñÀ» Á¦°ÅÇÒ ¼ö ÀÖµµ·Ï ÇÕ´Ï´Ù.
-    // ¿­·ÁÀÖ´Â ÆË¾÷µéÀ» °ü¸®ÇÒ ¸®½ºÆ®
+    #region 1. íŒì—… ê´€ë¦¬ ë³€ìˆ˜
+    // ì—´ë ¤ìˆëŠ” íŒì—…ë“¤ì„ ê´€ë¦¬í•  ë¦¬ìŠ¤íŠ¸ (ìŠ¤íƒ ë°©ì‹)
     private List<GameObject> openPopups = new List<GameObject>();
+    #endregion
+
+    #region 2. ì„¤ì •ì°½ UI ì—°ê²° (ë‹¨ì¼ íŒ¨ë„)
+    [Header("1. ì„¤ì •ì°½ íŒì—…")]
+    [Tooltip("ì„¤ì •ì°½ ì „ì²´ íŒ¨ë„ GameObject")]
+    public GameObject settingsPopup;
+    [Tooltip("ì„¤ì •ì°½ ì—´ê¸° ë²„íŠ¼")]
+    public Button settingsOpenButton;
+    [Tooltip("ì„¤ì •ì°½ ë‹«ê¸° ë²„íŠ¼")]
+    public Button settingsCloseButton;
+
+    [Header("2. ì†Œë¦¬ ì„¤ì • UI")]
+    public Slider masterVolumeSlider;
+    public Slider bgmVolumeSlider;
+    public Slider sfxVolumeSlider;
+    public Slider voiceVolumeSlider;
+
+    [Header("3. í™”ë©´ ì„¤ì • UI")]
+    public TMP_Dropdown resolutionDropdown;
+    public Toggle fullscreenToggle;
+
+    [Header("4. ê³„ì • ë° ì‹œìŠ¤í…œ UI")]
+    public TextMeshProUGUI accountInfoText;
+    [Tooltip("í•­ë³µ ë²„íŠ¼ (ë°°í‹€ ì”¬ì—ì„œë§Œ í™œì„±í™”)")]
+    public Button surrenderButton;
+    public Button logoutButton;
+    public Button quitGameButton;
+    #endregion
+
+    public SceneLoader sceneLoader;
+
+    // ìì£¼ ì‚¬ìš©í•˜ëŠ” 16:9 ê·œê²© ëŒ€í‘œ í•´ìƒë„ 4ì¢… í”„ë¦¬ì…‹ (ì°½ëª¨ë“œ/ì „ì²´í™”ë©´ ìµœì í™”)
+    private readonly (int width, int height)[] _presetResolutions = new (int, int)[]
+    {
+        (1280, 720),
+        (1600, 900),
+        (1920, 1080),
+        (2560, 1440)
+    };
+
+    private List<Resolution> _filteredResolutions = new List<Resolution>();
 
     private void Awake()
     {
-        // --- ½Ì±ÛÅæ ÆĞÅÏ ±¸Çö ---
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
-        else
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void Start()
+    {
+        InitSettingsUIEvents();
+        InitResolutionDropdown();
+        LoadAudioSettings();
+
+        if (settingsPopup != null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            settingsPopup.SetActive(false);
         }
+
+        UpdateSurrenderButton(SceneManager.GetActiveScene().name);
     }
 
     private void OnEnable()
@@ -37,96 +96,103 @@ public class UIManager : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    /// <summary>
-    /// »õ·Î¿î ¾ÀÀÌ ·ÎµåµÇ¾úÀ» ¶§ ÀÚµ¿À¸·Î È£ÃâµÉ ÇÔ¼öÀÔ´Ï´Ù.
-    /// </summary>
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // ¾ÀÀÌ »õ·Î ·ÎµåµÇ¾úÀ¸¹Ç·Î, ±âÁ¸ ÆË¾÷ ¸®½ºÆ®¸¦ ±ú²ıÇÏ°Ô ºñ¿ó´Ï´Ù.
+        // ì”¬ì´ ë³€ê²½ë˜ë©´ ì—´ë ¤ìˆë˜ ì¼ë°˜ íŒì—… ëª©ë¡ ì •ë¦¬
         ClearPopupList();
+        UpdateSurrenderButton(scene.name);
     }
 
     private void Update()
     {
-        // ESC Å°°¡ ´­·È´ÂÁö È®ÀÎÇÕ´Ï´Ù.
+        // ESC í‚¤ ì…ë ¥ ì²˜ë¦¬
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            // ´İÀ» ÆË¾÷ÀÌ ÀÖ´Ù¸é
+            // 1. ì—´ë ¤ìˆëŠ” ì¼ë°˜ íŒì—…ì´ ìˆë‹¤ë©´ ê°€ì¥ ìµœê·¼ íŒì—… ë‹«ê¸°
             if (openPopups.Count > 0)
             {
-                // °¡Àå ¸¶Áö¸·¿¡ ¿­¸° ÆË¾÷À» ´İ½À´Ï´Ù. (±âÁ¸ ±â´É À¯Áö)
                 ClosePopup();
+            }
+            // 2. ì—´ë¦° íŒì—…ì´ ì—†ë‹¤ë©´ ì„¤ì •ì°½ í† ê¸€
+            else if (settingsPopup != null)
+            {
+                ToggleSettingsPopup();
             }
         }
     }
 
+    #region 3. íŒì—… ìŠ¤íƒ ì œì–´
     /// <summary>
-    /// ÆË¾÷À» ¿­°í ¸®½ºÆ®¿¡ Ãß°¡ÇÕ´Ï´Ù.
+    /// íŒì—…ì„ ì—´ê³  ë¦¬ìŠ¤íŠ¸ì— ì¶”ê°€í•©ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="popupObject">¿­°íÀÚ ÇÏ´Â ÆË¾÷ÀÇ GameObject</param>
     public void OpenPopup(GameObject popupObject)
     {
         if (popupObject == null) return;
 
         popupObject.SetActive(true);
-        // [¼öÁ¤] Push -> Add
-        openPopups.Add(popupObject);
+        if (!openPopups.Contains(popupObject))
+        {
+            openPopups.Add(popupObject);
+        }
+
+        // ì„¤ì •ì°½ì´ ì—´ë¦´ ê²½ìš° ìµœì‹  ê³„ì • ì •ë³´ ê°±ì‹ 
+        if (popupObject == settingsPopup)
+        {
+            UpdateAccountInfo();
+        }
     }
 
     /// <summary>
-    /// (ESC Å°¿ë) °¡Àå ¸¶Áö¸·¿¡ ¿¬ ÆË¾÷À» ¸®½ºÆ®¿¡¼­ Á¦°ÅÇÏ°í ´İ½À´Ï´Ù.
+    /// (ESC í‚¤ìš©) ê°€ì¥ ë§ˆì§€ë§‰ì— ì—° íŒì—…ì„ ë‹«ìŠµë‹ˆë‹¤.
     /// </summary>
     public void ClosePopup()
     {
-        if (openPopups.Count == 0)
-        {
-            Debug.Log("¿­·ÁÀÖ´Â ÆË¾÷Ã¢ÀÌ ¾ø½À´Ï´Ù.");
-            return;
-        }
+        if (openPopups.Count == 0) return;
 
-        // [¼öÁ¤] ½ºÅÃÀÇ Pop ´ë½Å ¸®½ºÆ®ÀÇ ¸¶Áö¸· Ç×¸ñÀ» °¡Á®¿É´Ï´Ù.
         int lastIndex = openPopups.Count - 1;
         GameObject popupToClose = openPopups[lastIndex];
-
-        // [¼öÁ¤] ¸®½ºÆ®¿¡¼­ ¸¶Áö¸· Ç×¸ñÀ» Á¦°ÅÇÕ´Ï´Ù.
         openPopups.RemoveAt(lastIndex);
 
-        // ÆË¾÷ ´İ±â ·ÎÁ÷ (UIPanelToggler ¶Ç´Â SetActive)
         ClosePopupObject(popupToClose);
     }
 
     /// <summary>
-    /// [Ãß°¡] Æ¯Á¤ ÆË¾÷À» ´İ°í ¸®½ºÆ®¿¡¼­ Á¦°ÅÇÕ´Ï´Ù.
-    /// ÀÌ ÇÔ¼ö¸¦ ÆË¾÷ÀÇ '´İ±â' ¹öÆ° OnClick¿¡ ¿¬°áÇÏ¼¼¿ä.
+    /// íŠ¹ì • íŒì—…ì„ ë‹«ê³  ë¦¬ìŠ¤íŠ¸ì—ì„œ ì œê±°í•©ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="popupToClose">´İ°íÀÚ ÇÏ´Â Æ¯Á¤ ÆË¾÷ÀÇ GameObject</param>
     public void CloseSpecificPopup(GameObject popupToClose)
     {
         if (popupToClose == null) return;
 
-        // [Ãß°¡] ¸®½ºÆ®¿¡ ÇØ´ç ÆË¾÷ÀÌ ÀÖ´ÂÁö È®ÀÎÇÏ°í Á¦°ÅÇÕ´Ï´Ù.
         if (openPopups.Contains(popupToClose))
         {
             openPopups.Remove(popupToClose);
         }
-        else
-        {
-            // ¸®½ºÆ®¿¡ ¾ø´õ¶óµµ(¿¹: UIManager·Î ¿­Áö ¾ÊÀº °æ¿ì) ´İ±â¸¦ ½ÃµµÇÕ´Ï´Ù.
-            Debug.LogWarning(popupToClose.name + " ÆË¾÷ÀÌ UIManager ¸®½ºÆ®¿¡ ¾ø½À´Ï´Ù. ´İ±â¸¸ ½ÃµµÇÕ´Ï´Ù.");
-        }
 
-        // ÆË¾÷ ´İ±â ·ÎÁ÷
         ClosePopupObject(popupToClose);
     }
 
+    /// <summary>
+    /// ì„¤ì •ì°½ íŒì—…ì„ ì—´ê±°ë‚˜ ë‹«ìŠµë‹ˆë‹¤.
+    /// </summary>
+    public void ToggleSettingsPopup()
+    {
+        if (settingsPopup == null) return;
+
+        if (settingsPopup.activeSelf)
+        {
+            CloseSpecificPopup(settingsPopup);
+        }
+        else
+        {
+            OpenPopup(settingsPopup);
+        }
+    }
 
     /// <summary>
-    /// ¸®½ºÆ®¿¡ ÀÖ´Â ¸ğµç ÆË¾÷À» °­Á¦·Î ´İ°í ¸®½ºÆ®¸¦ ºñ¿ó´Ï´Ù.
-    /// (ÀÌ¸§ º¯°æ: ClearPopupStack -> ClearPopupList)
+    /// ì—´ë ¤ìˆëŠ” ëª¨ë“  íŒì—…ì„ ë‹«ìŠµë‹ˆë‹¤.
     /// </summary>
     public void ClearPopupList()
     {
-        // ¸®½ºÆ®¿¡ ÀÖ´Â ¸ğµç ÆË¾÷À» ºñÈ°¼ºÈ­ÇÕ´Ï´Ù.
         foreach (var popup in openPopups)
         {
             if (popup != null)
@@ -134,28 +200,348 @@ public class UIManager : MonoBehaviour
                 popup.SetActive(false);
             }
         }
-        // ¸®½ºÆ®¸¦ ¿ÏÀüÈ÷ ºñ¿ó´Ï´Ù.
         openPopups.Clear();
     }
 
-    /// <summary>
-    /// [Ãß°¡] ÆË¾÷ ´İ±â °øÅë ·ÎÁ÷ (Áßº¹ Á¦°Å¿ë)
-    /// </summary>
-    /// <param name="popupObject">´İÀ» ÆË¾÷</param>
     private void ClosePopupObject(GameObject popupObject)
     {
         if (popupObject == null) return;
 
-        // UIPanelToggler¿¡°Ô ¾Ö´Ï¸ŞÀÌ¼Ç°ú ÇÔ²² ´İÀ¸¶ó°í ¸í·ÉÇÕ´Ï´Ù.
         UIPanelToggler toggler = popupObject.GetComponent<UIPanelToggler>();
         if (toggler != null)
         {
-            toggler.HidePanel(); // HidePanelÀº ¾Ö´Ï¸ŞÀÌ¼Ç ½ÇÇà ÈÄ ºñÈ°¼ºÈ­¸¦ Ã³¸®ÇØ¾ß ÇÕ´Ï´Ù.
+            toggler.HidePanel();
         }
         else
         {
-            // UIPanelToggler°¡ ¾ø´Â UI¶ó¸é Áï½Ã ºñÈ°¼ºÈ­ÇÕ´Ï´Ù.
             popupObject.SetActive(false);
         }
     }
+    #endregion
+
+    #region 4. ì„¤ì •ì°½ UI ì´ë²¤íŠ¸ ì—°ê²°
+    private void InitSettingsUIEvents()
+    {
+        // ì—´ê¸° ë²„íŠ¼
+        if (settingsOpenButton != null)
+        {
+            settingsOpenButton.onClick.AddListener(() => ToggleSettingsPopup());
+        }
+
+        // ë‹«ê¸° ë²„íŠ¼
+        if (settingsCloseButton != null)
+        {
+            settingsCloseButton.onClick.AddListener(() => CloseSpecificPopup(settingsPopup));
+        }
+
+        // ë³¼ë¥¨ ìŠ¬ë¼ì´ë” ì—°ê²°
+        if (masterVolumeSlider != null) masterVolumeSlider.onValueChanged.AddListener(SetMasterVolume);
+        if (bgmVolumeSlider != null) bgmVolumeSlider.onValueChanged.AddListener(SetBGMVolume);
+        if (sfxVolumeSlider != null) sfxVolumeSlider.onValueChanged.AddListener(SetSFXVolume);
+        if (voiceVolumeSlider != null) voiceVolumeSlider.onValueChanged.AddListener(SetVoiceVolume);
+
+        // í™”ë©´ ì„¤ì • ì—°ê²°
+        if (resolutionDropdown != null) resolutionDropdown.onValueChanged.AddListener(SetResolution);
+        if (fullscreenToggle != null) fullscreenToggle.onValueChanged.AddListener(OnWindowedToggleChanged);
+
+        // ê³„ì • ë° ì‹œìŠ¤í…œ ë²„íŠ¼ ì—°ê²°
+        if (surrenderButton != null)
+        {
+            surrenderButton.onClick.RemoveAllListeners();
+            surrenderButton.onClick.AddListener(OnSurrenderClicked);
+        }
+        if (logoutButton != null) logoutButton.onClick.AddListener(OnLogoutClicked);
+        if (quitGameButton != null) quitGameButton.onClick.AddListener(OnQuitGameClicked);
+    }
+    #endregion
+
+    #region 5. ì†Œë¦¬ ì„¤ì • ë¡œì§
+    public void SetMasterVolume(float volume)
+    {
+        AudioListener.volume = volume;
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.SetMasterVolume(volume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("Sound_MasterVolume", volume);
+            PlayerPrefs.SetFloat("MasterVolume", volume);
+            PlayerPrefs.Save();
+        }
+    }
+
+    public void SetBGMVolume(float volume)
+    {
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.SetBGMVolume(volume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("Sound_BGMVolume", volume);
+            PlayerPrefs.SetFloat("BGMVolume", volume);
+            PlayerPrefs.Save();
+        }
+    }
+
+    public void SetSFXVolume(float volume)
+    {
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.SetSFXVolume(volume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("Sound_SFXVolume", volume);
+            PlayerPrefs.SetFloat("SFXVolume", volume);
+            PlayerPrefs.Save();
+        }
+    }
+
+    public void SetVoiceVolume(float volume)
+    {
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.SetVoiceVolume(volume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("Sound_VoiceVolume", volume);
+            PlayerPrefs.SetFloat("VoiceVolume", volume);
+            PlayerPrefs.Save();
+        }
+    }
+
+    private void LoadAudioSettings()
+    {
+        float master = PlayerPrefs.GetFloat("Sound_MasterVolume", PlayerPrefs.GetFloat("MasterVolume", 1f));
+        float bgm = PlayerPrefs.GetFloat("Sound_BGMVolume", PlayerPrefs.GetFloat("BGMVolume", 0.8f));
+        float sfx = PlayerPrefs.GetFloat("Sound_SFXVolume", PlayerPrefs.GetFloat("SFXVolume", 1f));
+        float voice = PlayerPrefs.GetFloat("Sound_VoiceVolume", PlayerPrefs.GetFloat("VoiceVolume", 1f));
+
+        if (masterVolumeSlider != null) masterVolumeSlider.value = master;
+        if (bgmVolumeSlider != null) bgmVolumeSlider.value = bgm;
+        if (sfxVolumeSlider != null) sfxVolumeSlider.value = sfx;
+        if (voiceVolumeSlider != null) voiceVolumeSlider.value = voice;
+
+        AudioListener.volume = master;
+    }
+    #endregion
+
+    #region 6. í™”ë©´ ì„¤ì • ë¡œì§
+    private void InitResolutionDropdown()
+    {
+        if (resolutionDropdown == null) return;
+
+        resolutionDropdown.ClearOptions();
+        _filteredResolutions.Clear();
+
+        List<string> options = new List<string>();
+
+        // ì£¼ìš” 16:9 ê·œê²© 4ì¢… ë“±ë¡
+        for (int i = 0; i < _presetResolutions.Length; i++)
+        {
+            var preset = _presetResolutions[i];
+            Resolution res = new Resolution { width = preset.width, height = preset.height };
+            _filteredResolutions.Add(res);
+            options.Add($"{preset.width} x {preset.height}");
+        }
+
+        resolutionDropdown.AddOptions(options);
+
+        // ì²« ì‹œì‘ ì‹œ ê¸°ë³¸ê°’: ì „ì²´í™”ë©´(ì°½ëª¨ë“œ í† ê¸€ OFF: isWindowed = false) ë° 1920x1080
+        bool hasSavedSettings = PlayerPrefs.HasKey("IsWindowed") || PlayerPrefs.HasKey("IsFullscreen");
+        bool isWindowed = false;
+
+        if (PlayerPrefs.HasKey("IsWindowed"))
+        {
+            isWindowed = PlayerPrefs.GetInt("IsWindowed", 0) == 1;
+        }
+        else if (PlayerPrefs.HasKey("IsFullscreen"))
+        {
+            isWindowed = PlayerPrefs.GetInt("IsFullscreen", 1) == 0;
+        }
+
+        int defaultWidth = isWindowed ? 1600 : 1920;
+        int defaultHeight = isWindowed ? 900 : 1080;
+        int savedWidth = PlayerPrefs.GetInt("ResolutionWidth", defaultWidth);
+        int savedHeight = PlayerPrefs.GetInt("ResolutionHeight", defaultHeight);
+
+        // ì²« ì‹œì‘ ì‹œ ì „ì²´í™”ë©´ 1920x1080ìœ¼ë¡œ ì´ˆê¸°í™” ë° ì €ì¥
+        if (!hasSavedSettings)
+        {
+            Screen.SetResolution(1920, 1080, FullScreenMode.FullScreenWindow);
+            PlayerPrefs.SetInt("IsWindowed", 0);
+            PlayerPrefs.SetInt("IsFullscreen", 1);
+            PlayerPrefs.SetInt("ResolutionWidth", 1920);
+            PlayerPrefs.SetInt("ResolutionHeight", 1080);
+            PlayerPrefs.Save();
+            isWindowed = false;
+            savedWidth = 1920;
+            savedHeight = 1080;
+        }
+        else
+        {
+            FullScreenMode mode = isWindowed ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
+            Screen.SetResolution(savedWidth, savedHeight, mode);
+        }
+
+        UpdateDropdownSelection(savedWidth, savedHeight);
+
+        if (fullscreenToggle != null)
+        {
+            fullscreenToggle.SetIsOnWithoutNotify(isWindowed);
+        }
+    }
+
+    private void UpdateDropdownSelection(int width, int height)
+    {
+        if (resolutionDropdown == null) return;
+
+        int selectedIndex = -1;
+        for (int i = 0; i < _filteredResolutions.Count; i++)
+        {
+            if (_filteredResolutions[i].width == width && _filteredResolutions[i].height == height)
+            {
+                selectedIndex = i;
+                break;
+            }
+        }
+
+        if (selectedIndex >= 0)
+        {
+            resolutionDropdown.SetValueWithoutNotify(selectedIndex);
+            resolutionDropdown.RefreshShownValue();
+        }
+    }
+
+    public void SetResolution(int resolutionIndex)
+    {
+        if (resolutionIndex < 0 || resolutionIndex >= _filteredResolutions.Count) return;
+
+        Resolution resolution = _filteredResolutions[resolutionIndex];
+        bool isWindowed = fullscreenToggle != null ? fullscreenToggle.isOn : (PlayerPrefs.GetInt("IsWindowed", 0) == 1);
+        FullScreenMode mode = isWindowed ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
+
+        Screen.SetResolution(resolution.width, resolution.height, mode);
+
+        PlayerPrefs.SetInt("ResolutionWidth", resolution.width);
+        PlayerPrefs.SetInt("ResolutionHeight", resolution.height);
+        PlayerPrefs.Save();
+
+        Debug.Log($"[UIManager] í•´ìƒë„ ìˆ˜ë™ ë³€ê²½: {resolution.width}x{resolution.height} (ì°½ëª¨ë“œ: {isWindowed})");
+    }
+
+    /// <summary>
+    /// ì°½ëª¨ë“œ í† ê¸€ ë³€ê²½ ì‹œ í˜¸ì¶œ (ì²´í¬ ì‹œ 1600x900 ì°½ëª¨ë“œ ìë™ ì „í™˜ / í•´ì œ ì‹œ 1920x1080 ì „ì²´í™”ë©´ ìë™ ë³µê·€)
+    /// </summary>
+    public void OnWindowedToggleChanged(bool isWindowed)
+    {
+        int targetWidth = isWindowed ? 1600 : 1920;
+        int targetHeight = isWindowed ? 900 : 1080;
+
+        // ë“œë¡­ë‹¤ìš´ UI ì¸ë±ìŠ¤ë„ ìë™ ë³€ê²½ (1600x900 or 1920x1080)
+        UpdateDropdownSelection(targetWidth, targetHeight);
+
+        FullScreenMode mode = isWindowed ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
+        Screen.SetResolution(targetWidth, targetHeight, mode);
+
+        PlayerPrefs.SetInt("IsWindowed", isWindowed ? 1 : 0);
+        PlayerPrefs.SetInt("IsFullscreen", isWindowed ? 0 : 1);
+        PlayerPrefs.SetInt("ResolutionWidth", targetWidth);
+        PlayerPrefs.SetInt("ResolutionHeight", targetHeight);
+        PlayerPrefs.Save();
+
+        Debug.Log($"[UIManager] í™”ë©´ ëª¨ë“œ ë³€ê²½: {(isWindowed ? "ì°½ëª¨ë“œ" : "ì „ì²´í™”ë©´")} ({targetWidth}x{targetHeight})");
+    }
+
+    /// <summary>
+    /// í•˜ìœ„ í˜¸í™˜ìš© ì „ì²´í™”ë©´ ë©”ì„œë“œ (ì™¸ë¶€ í˜¸ì¶œ ëŒ€ë¹„)
+    /// </summary>
+    public void SetFullscreen(bool isFullscreen)
+    {
+        OnWindowedToggleChanged(!isFullscreen);
+    }
+    #endregion
+
+    #region 7. ê³„ì • ë° ì‹œìŠ¤í…œ ë¡œì§
+    private void UpdateAccountInfo()
+    {
+        if (accountInfoText == null) return;
+
+        FirebaseUser user = FirebaseAuth.DefaultInstance?.CurrentUser;
+        string username = SinginManager.CurrentUserData?.username ?? "ì‚¬ìš©ì";
+        string uid = user != null ? user.UserId : "ë¹„ë¡œê·¸ì¸ ìƒíƒœ";
+
+        accountInfoText.text = $"<b>ë‹‰ë„¤ì„:</b> {username}\n<b>UID:</b> {uid}";
+    }
+
+    public void OnLogoutClicked()
+    {
+        Debug.Log("[UIManager] ë¡œê·¸ì•„ì›ƒ ìš”ì²­");
+
+        // Firebase ë¡œê·¸ì•„ì›ƒ
+        FirebaseAuth.DefaultInstance?.SignOut();
+        PlayerPrefs.DeleteKey("CurrentUserId");
+        PlayerPrefs.Save();
+        SinginManager.CurrentUserData = null;
+
+        // ì„¤ì •ì°½ ë‹«ê³  ë¡œê·¸ì¸ ì”¬ìœ¼ë¡œ ì´ë™
+        ClearPopupList();
+        if (settingsPopup != null) settingsPopup.SetActive(false);
+
+        SceneManager.LoadScene("Login");
+    }
+
+    public void OnQuitGameClicked()
+    {
+        Debug.Log("[UIManager] ê²Œì„ ì¢…ë£Œ");
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
+    /// <summary>
+    /// ë°°í‹€ ì”¬ì—ì„œ ì„¤ì •ì°½ í•­ë³µ ë²„íŠ¼ í´ë¦­ ì‹œ í˜¸ì¶œë©ë‹ˆë‹¤.
+    /// </summary>
+    public void OnSurrenderClicked()
+    {
+        Debug.Log("[UIManager] ì„¤ì •ì°½ í•­ë³µ ë²„íŠ¼ í´ë¦­ -> í•­ë³µ ìš”ì²­ ì „ì†¡");
+
+        // 1. í˜„ì¬ ì”¬ì— SurrenderManagerê°€ ì¡´ì¬í•˜ë©´ í˜¸ì¶œ
+        SurrenderManager surrenderMgr = FindFirstObjectByType<SurrenderManager>();
+        if (surrenderMgr != null)
+        {
+            surrenderMgr.Surrender();
+        }
+        // 2. SurrenderManagerê°€ ì—†ë”ë¼ë„ GameClientë¥¼ í†µí•´ ì§ì ‘ í•­ë³µ ìš”ì²­(CONCEDE) ì „ì†¡
+        else if (GameClient.Instance != null)
+        {
+            GameClient.Instance.SendConcedeRequest();
+        }
+
+        // ì„¤ì •ì°½ íŒì—… ë‹«ê¸°
+        if (settingsPopup != null)
+        {
+            CloseSpecificPopup(settingsPopup);
+        }
+    }
+
+    /// <summary>
+    /// ì”¬ ì´ë¦„ì— ë”°ë¼ í•­ë³µ ë²„íŠ¼ì˜ í™œì„±í™” ì—¬ë¶€ë¥¼ ê°±ì‹ í•©ë‹ˆë‹¤. (ë°°í‹€ ì”¬ì—ì„œë§Œ í™œì„±í™”)
+    /// </summary>
+    public void UpdateSurrenderButton(string sceneName)
+    {
+        if (surrenderButton != null)
+        {
+            bool isBattle = !string.IsNullOrEmpty(sceneName) &&
+                            sceneName.IndexOf("Battle", StringComparison.OrdinalIgnoreCase) >= 0;
+            surrenderButton.gameObject.SetActive(isBattle);
+            Debug.Log($"[UIManager] ì”¬ '{sceneName}' ì„¤ì •ì°½ í•­ë³µ ë²„íŠ¼ í™œì„±í™”: {isBattle}");
+        }
+    }
+    #endregion
 }

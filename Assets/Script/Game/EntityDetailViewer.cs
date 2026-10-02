@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
@@ -47,8 +47,16 @@ public class EntityDetailViewer : MonoBehaviour
         if (cardPortrait != null)
             cardPortrait.sprite = data.memberIcon;
 
-        if (nameText != null) nameText.text = data.cardName;
-        if (descriptionText != null) descriptionText.text = data.description;
+        if (nameText != null)
+        {
+            CardTextFormatter.EnsureTextAutoFit(nameText, 12f, 26f, false, TextOverflowModes.Ellipsis);
+            nameText.text = data.cardName;
+        }
+        if (descriptionText != null)
+        {
+            CardTextFormatter.EnsureTextAutoFit(descriptionText, 10f, 22f, true, TextOverflowModes.Ellipsis);
+            CardTextFormatter.FormatAndBind(descriptionText, data.description, data, cardDisplay._cardInfo);
+        }
 
         // 3. 종족 텍스트 설정 (없음이 아닐 때만 표시)
         if (tribeText != null)

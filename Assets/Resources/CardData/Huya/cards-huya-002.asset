@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d2dfa44f927be4cb522f776e055118, type: 3}
+  m_Name: cards-huya-002
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardID: cards-huya-002
+  cardName: "\uC0AC\uD0A4\uD558\uB124 \uAC00\uBB38 \uC694\uB9AC\uC0AC"
+  isToken: 0
+  cardClass: 2
+  cardType: 1
+  rarity: 0
+  expansion: 0
+  manaCost: 2
+  attack: 1
+  health: 1
+  minionTribe: 3
+  description: "\uBB34\uC791\uC704 \uC8FC\uBB38\uCE74\uB4DC 1\uC7A5\uC744 \uB371\uC5D0\uC11C
+    \uAC00\uC838\uC635\uB2C8\uB2E4."
+  additionalExplanation: 
+  keywords: 
+  targeting: 0
+  memberSkills: []
+  spellAmp: 0
+  spellWeakness: 0
+  drawSeal: 0
+  buffAmpAttack: 0
+  buffAmpHealth: 0
+  triggerVFXList:
+  - {fileID: 11400000, guid: 92280356eee89af4dba63c90f5595733, type: 2}
+  animationFrames:
+  - {fileID: 21300000, guid: 2cdf653026027334297bedc2ecbe3b89, type: 3}
+  spawnEffectData: {fileID: 11400000, guid: b84083979aa9d06489c9bce7400a3f25, type: 2}
+  memberIcon: {fileID: 21300000, guid: 3e71285d203177746af815366a74dd20, type: 3}
+  projectilePrefab: {fileID: 3300439051078825739, guid: 8956ba645d25b12408a28a67a9b401a5, type: 3}
+  heavyProjectilePrefab: {fileID: 3300439051078825739, guid: 4bc21eed08f1996479a81769c272fdfe, type: 3}

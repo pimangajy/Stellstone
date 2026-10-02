@@ -2,185 +2,197 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
-using System; // Action ÀÌº¥Æ®¸¦ À§ÇØ ÇÊ¿ä
+using System; // Action ì´ë²¤íŠ¸ë¥¼ ìœ„í•´ í•„ìš”
 
 /// <summary>
-/// 'µ¦ ¼±ÅÃ' ÆË¾÷Ã¢ÀÇ ¸ğµç UI¿Í ·ÎÁ÷À» °ü¸®ÇÕ´Ï´Ù.
-/// ÆË¾÷ÀÇ ¿­±â/´İ±â ¾Ö´Ï¸ŞÀÌ¼ÇÀº UIPanelToggler°¡ ´ã´çÇÕ´Ï´Ù.
+/// 'ë± ì„ íƒ' íŒì—…ì°½ì˜ ëª¨ë“  UIì™€ ë¡œì§ì„ ê´€ë¦¬í•©ë‹ˆë‹¤.
+/// íŒì—…ì˜ ì—´ê¸°/ë‹«ê¸° ì• ë‹ˆë©”ì´ì…˜ì€ UIPanelTogglerê°€ ë‹´ë‹¹í•©ë‹ˆë‹¤.
 /// </summary>
-[RequireComponent(typeof(UIPanelToggler))] // ÀÌ ½ºÅ©¸³Æ®´Â UIPanelToggler¿Í ÇÔ²² ÀÖ¾î¾ß ÇÔ
+[RequireComponent(typeof(UIPanelToggler))] // ì´ ìŠ¤í¬ë¦½íŠ¸ëŠ” UIPanelTogglerì™€ í•¨ê»˜ ìˆì–´ì•¼ í•¨
 public class DeckSelectPopup : MonoBehaviour
 {
-    // [»èÁ¦] ÆË¾÷ ¿­°í ´İ±â´Â UIPanelToggler°¡ ´ã´çÇÏ¹Ç·Î ÀÌ º¯¼ö´Â Á¦°ÅÇÕ´Ï´Ù.
+    // [ì‚­ì œ] íŒì—… ì—´ê³  ë‹«ê¸°ëŠ” UIPanelTogglerê°€ ë‹´ë‹¹í•˜ë¯€ë¡œ ì´ ë³€ìˆ˜ëŠ” ì œê±°í•©ë‹ˆë‹¤.
     // [SerializeField] private GameObject popupPanel;
-    [SerializeField] private Button closeButton; // ´İ±â ¹öÆ°
+    [SerializeField] private Button closeButton; // ë‹«ê¸° ë²„íŠ¼
 
-    [Header("µ¦ ¸ñ·Ï (¿ŞÂÊ)")]
-    [SerializeField] private Transform deckListParent; // µ¦ ¹öÆ° ÇÁ¸®ÆÕÀÌ »ı¼ºµÉ ºÎ¸ğ (ScrollViewÀÇ Content)
-    [SerializeField] private GameObject deckButtonPrefab; // µ¦ ¹öÆ° ÇÁ¸®ÆÕ
+    [Header("ë± ëª©ë¡ (ì™¼ìª½)")]
+    [SerializeField] private Transform deckListParent; // ë± ë²„íŠ¼ í”„ë¦¬íŒ¹ì´ ìƒì„±ë  ë¶€ëª¨ (ScrollViewì˜ Content)
+    [SerializeField] private GameObject deckButtonPrefab; // ë± ë²„íŠ¼ í”„ë¦¬íŒ¹
 
-    [Header("µ¦ »ó¼¼ (¿À¸¥ÂÊ)")]
-    [SerializeField] private TextMeshProUGUI deckNameText; // ¼±ÅÃµÈ µ¦ÀÇ ÀÌ¸§
-    [SerializeField] private Image leaderImage; // ¼±ÅÃµÈ µ¦ÀÇ ¸®´õ(Á÷¾÷) ÀÌ¹ÌÁö
-    [SerializeField] private Button selectDeckButton; // ÆË¾÷Ã¢ÀÇ 'µ¦ ¼±ÅÃ' (È®Á¤) ¹öÆ°
-    [SerializeField] private Button editDeckButton; // 'µ¦ ÆíÁı' ¹öÆ°
+    [Header("ë± ìƒì„¸ (ì˜¤ë¥¸ìª½)")]
+    [SerializeField] private TextMeshProUGUI deckNameText; // ì„ íƒëœ ë±ì˜ ì´ë¦„
+    [SerializeField] private Image leaderImage; // ì„ íƒëœ ë±ì˜ ë¦¬ë”(ì§ì—…) ì´ë¯¸ì§€
+    [SerializeField] private Button selectDeckButton; // íŒì—…ì°½ì˜ 'ë± ì„ íƒ' (í™•ì •) ë²„íŠ¼
+    [SerializeField] private Button editDeckButton; // 'ë± í¸ì§‘' ë²„íŠ¼
 
-    // ÇöÀç ÆË¾÷Ã¢¿¡¼­ ¼±ÅÃ(Å¬¸¯)ÇÑ µ¦ÀÇ Á¤º¸
+    // í˜„ì¬ íŒì—…ì°½ì—ì„œ ì„ íƒ(í´ë¦­)í•œ ë±ì˜ ì •ë³´
     private DeckData currentlyViewedDeck;
 
-    // ÇÃ·¹ÀÌ¾î°¡ µ¦À» ÃÖÁ¾ 'È®Á¤'ÇßÀ» ¶§ ¹ß»ıÇÏ´Â ÀÌº¥Æ®
-    // LobbyManager°¡ ÀÌ ÀÌº¥Æ®¸¦ ±¸µ¶ÇÏ¿© ¼±ÅÃµÈ µ¦ Á¤º¸¸¦ ¹Ş½À´Ï´Ù.
+    // í”Œë ˆì´ì–´ê°€ ë±ì„ ìµœì¢… 'í™•ì •'í–ˆì„ ë•Œ ë°œìƒí•˜ëŠ” ì´ë²¤íŠ¸
+    // LobbyManagerê°€ ì´ ì´ë²¤íŠ¸ë¥¼ êµ¬ë…í•˜ì—¬ ì„ íƒëœ ë± ì •ë³´ë¥¼ ë°›ìŠµë‹ˆë‹¤.
     public static event Action<DeckData> OnDeckConfirmed;
 
-    // (Ãß°¡) ÆË¾÷ ¾Ö´Ï¸ŞÀÌ¼ÇÀ» Á¦¾îÇÒ Toggler
+    // (ì¶”ê°€) íŒì—… ì• ë‹ˆë©”ì´ì…˜ì„ ì œì–´í•  Toggler
     [SerializeField] private UIPanelToggler panelToggler;
 
     private void Awake()
     {
-        // UIPanelToggler ÄÄÆ÷³ÍÆ®¸¦ ÀÌ ¿ÀºêÁ§Æ®¿¡¼­ Á÷Á¢ °¡Á®¿É´Ï´Ù.
+        // UIPanelToggler ì»´í¬ë„ŒíŠ¸ë¥¼ ì´ ì˜¤ë¸Œì íŠ¸ì—ì„œ ì§ì ‘ ê°€ì ¸ì˜µë‹ˆë‹¤.
         panelToggler = GetComponent<UIPanelToggler>();
         if (panelToggler == null)
         {
-            Debug.LogError("DeckSelectPopup ½ºÅ©¸³Æ®°¡ ÀÖ´Â ¿ÀºêÁ§Æ®¿¡ UIPanelToggler°¡ ¾ø½À´Ï´Ù!");
+            Debug.LogError("DeckSelectPopup ìŠ¤í¬ë¦½íŠ¸ê°€ ìˆëŠ” ì˜¤ë¸Œì íŠ¸ì— UIPanelTogglerê°€ ì—†ìŠµë‹ˆë‹¤!");
         }
     }
 
     private void Start()
     {
-        // ÆË¾÷Ã¢ÀÇ ¹öÆ°µé¿¡ ¸®½º³Ê ¿¬°á
+        // íŒì—…ì°½ì˜ ë²„íŠ¼ë“¤ì— ë¦¬ìŠ¤ë„ˆ ì—°ê²°
         closeButton.onClick.AddListener(ClosePopup);
         selectDeckButton.onClick.AddListener(ConfirmSelection);
         editDeckButton.onClick.AddListener(GoToDeckEdit);
 
-        // [»èÁ¦] ÆË¾÷ ¼û±è Ã³¸®´Â UIPanelTogglerÀÇ Awake()°¡ ´ã´çÇÕ´Ï´Ù.
+        // [ì‚­ì œ] íŒì—… ìˆ¨ê¹€ ì²˜ë¦¬ëŠ” UIPanelTogglerì˜ Awake()ê°€ ë‹´ë‹¹í•©ë‹ˆë‹¤.
         // popupPanel.SetActive(false);
     }
 
     /// <summary>
-    /// ÆË¾÷À» ¿±´Ï´Ù. (·ÎºñÀÇ 'µ¦ ¼±ÅÃ' ¹öÆ°¿¡¼­ È£Ãâ)
-    /// ÀÌÀü¿¡ ¼±ÅÃÇÑ µ¦À» Àü´Ş¹Ş½À´Ï´Ù.
+    /// íŒì—…ì„ ì—½ë‹ˆë‹¤. (ë¡œë¹„ì˜ 'ë± ì„ íƒ' ë²„íŠ¼ì—ì„œ í˜¸ì¶œ)
+    /// ì´ì „ì— ì„ íƒí•œ ë±ì„ ì „ë‹¬ë°›ìŠµë‹ˆë‹¤.
     /// </summary>
     public void OpenPopup(DeckData previouslySelectedDeck)
     {
         if (panelToggler == null) return;
 
-        // 1. ÆĞ³Î Åä±Û·¯¸¦ »ç¿ëÇØ ÆË¾÷À» ¿±´Ï´Ù.
+        // 1. íŒ¨ë„ í† ê¸€ëŸ¬ë¥¼ ì‚¬ìš©í•´ íŒì—…ì„ ì—½ë‹ˆë‹¤.
         panelToggler.ShowPanel();
 
-        // 2. µ¦ ¸ñ·ÏÀ» Ã¤¿ó´Ï´Ù. (ÀÌ°Ç Ç×»ó ½ÇÇà)
+        // 2. ë± ëª©ë¡ì„ ì±„ì›ë‹ˆë‹¤. (ì´ê±´ í•­ìƒ ì‹¤í–‰)
         PopulateDeckList();
 
-        // 3. (¼öÁ¤) ÀÌÀü¿¡ ¼±ÅÃÇÑ µ¦ÀÌ ÀÖ´ÂÁö È®ÀÎ
+        // 3. (ìˆ˜ì •) ì´ì „ì— ì„ íƒí•œ ë±ì´ ìˆëŠ”ì§€ í™•ì¸
         if (previouslySelectedDeck != null)
         {
-            // ÀÌÀü¿¡ ¼±ÅÃÇÑ µ¦ÀÌ ÀÖÀ¸¸é, ±× µ¦ÀÇ »ó¼¼ Á¤º¸¸¦ ¹Ù·Î Ç¥½Ã
+            // ì´ì „ì— ì„ íƒí•œ ë±ì´ ìˆìœ¼ë©´, ê·¸ ë±ì˜ ìƒì„¸ ì •ë³´ë¥¼ ë°”ë¡œ í‘œì‹œ
             ShowDeckDetails(previouslySelectedDeck);
         }
         else
         {
-            // ÀÌÀü¿¡ ¼±ÅÃÇÑ µ¦ÀÌ ¾øÀ¸¸é (Ã³À½ °í¸£´Â °æ¿ì), ÆË¾÷À» ÃÊ±âÈ­
+            // ì´ì „ì— ì„ íƒí•œ ë±ì´ ì—†ìœ¼ë©´ (ì²˜ìŒ ê³ ë¥´ëŠ” ê²½ìš°), íŒì—…ì„ ì´ˆê¸°í™”
             currentlyViewedDeck = null;
-            deckNameText.text = "µ¦À» ¼±ÅÃÇÏ¼¼¿ä";
-            // leaderImage.sprite = null; // ±âº» ÀÌ¹ÌÁö·Î ¼³Á¤
-            selectDeckButton.interactable = false; // µ¦ ¼±ÅÃ Àü±îÁö ºñÈ°¼ºÈ­
-            editDeckButton.interactable = false; // µ¦ ¼±ÅÃ Àü±îÁö ºñÈ°¼ºÈ­
+            deckNameText.text = "ë±ì„ ì„ íƒí•˜ì„¸ìš”";
+            // leaderImage.sprite = null; // ê¸°ë³¸ ì´ë¯¸ì§€ë¡œ ì„¤ì •
+            selectDeckButton.interactable = false; // ë± ì„ íƒ ì „ê¹Œì§€ ë¹„í™œì„±í™”
+            editDeckButton.interactable = false; // ë± ì„ íƒ ì „ê¹Œì§€ ë¹„í™œì„±í™”
         }
     }
 
     /// <summary>
-    /// ÆË¾÷À» ´İ½À´Ï´Ù. (UIPanelToggler¿¡°Ô ´İ±â¸¦ ¿äÃ»)
+    /// íŒì—…ì„ ë‹«ìŠµë‹ˆë‹¤. (UIPanelTogglerì—ê²Œ ë‹«ê¸°ë¥¼ ìš”ì²­)
     /// </summary>
     public void ClosePopup()
     {
-        // [¼öÁ¤] ÆË¾÷À» Á÷Á¢ ²ô´Â ´ë½Å TogglerÀÇ HidePanel()À» È£ÃâÇÕ´Ï´Ù.
+        // [ìˆ˜ì •] íŒì—…ì„ ì§ì ‘ ë„ëŠ” ëŒ€ì‹  Togglerì˜ HidePanel()ì„ í˜¸ì¶œí•©ë‹ˆë‹¤.
         panelToggler.HidePanel();
     }
 
     /// <summary>
-    /// DeckSaveManager¿¡¼­ µ¦ ¸ñ·ÏÀ» °¡Á®¿Í ¿ŞÂÊ ½ºÅ©·Ñ ºä¸¦ Ã¤¿ó´Ï´Ù.
+    /// DeckSaveManagerì—ì„œ ë± ëª©ë¡ì„ ê°€ì ¸ì™€ ì™¼ìª½ ìŠ¤í¬ë¡¤ ë·°ë¥¼ ì±„ì›ë‹ˆë‹¤.
     /// </summary>
     private void PopulateDeckList()
     {
-        // 1. ±âÁ¸ µ¦ ¹öÆ°µéÀ» ¸ğµÎ »èÁ¦
+        // 1. ê¸°ì¡´ ë± ë²„íŠ¼ë“¤ì„ ëª¨ë‘ ì‚­ì œ
         foreach (Transform child in deckListParent)
         {
             Destroy(child.gameObject);
         }
 
-        // 2. ¿µ±¸ ¸Å´ÏÀú¿¡¼­ µ¦ ¸ñ·ÏÀ» °¡Á®¿É´Ï´Ù. (³×Æ®¿öÅ© È£Ãâ X, Ä³½ÃµÈ µ¥ÀÌÅÍ Áï½Ã ¹İÈ¯)
+        // 2. ì˜êµ¬ ë§¤ë‹ˆì €ì—ì„œ ë± ëª©ë¡ì„ ê°€ì ¸ì˜µë‹ˆë‹¤. (ë„¤íŠ¸ì›Œí¬ í˜¸ì¶œ X, ìºì‹œëœ ë°ì´í„° ì¦‰ì‹œ ë°˜í™˜)
         List<DeckData> allDecks = DeckSaveManager_Firebase.instance.GetAllDecks();
 
         if (allDecks == null || allDecks.Count == 0)
         {
-            Debug.LogWarning("ºÒ·¯¿Ã µ¦ÀÌ ¾ø½À´Ï´Ù.");
+            Debug.LogWarning("ë¶ˆëŸ¬ì˜¬ ë±ì´ ì—†ìŠµë‹ˆë‹¤.");
             return;
         }
 
-        // 3. ¸ğµç µ¦¿¡ ´ëÇØ ¹öÆ° »ı¼º
+        // 3. ëª¨ë“  ë±ì— ëŒ€í•´ ë²„íŠ¼ ìƒì„±
         foreach (DeckData deck in allDecks)
         {
             GameObject buttonGO = Instantiate(deckButtonPrefab, deckListParent);
             PopupDeckButton deckButton = buttonGO.GetComponent<PopupDeckButton>();
 
-            // µ¦ ¹öÆ°¿¡ µ¦ Á¤º¸(deck)¿Í Å¬¸¯ ½Ã È£ÃâÇÒ ÇÔ¼ö(ShowDeckDetails)¸¦ ³Ñ°ÜÁİ´Ï´Ù.
+            // ë± ë²„íŠ¼ì— ë± ì •ë³´(deck)ì™€ í´ë¦­ ì‹œ í˜¸ì¶œí•  í•¨ìˆ˜(ShowDeckDetails)ë¥¼ ë„˜ê²¨ì¤ë‹ˆë‹¤.
             deckButton.Setup(deck, ShowDeckDetails);
         }
     }
 
     /// <summary>
-    /// µ¦ ¸ñ·ÏÀÇ ¹öÆ°(PopupDeckButton)ÀÌ Å¬¸¯µÇ¾úÀ» ¶§ È£ÃâµÇ´Â Äİ¹é ÇÔ¼öÀÔ´Ï´Ù.
+    /// ë± ëª©ë¡ì˜ ë²„íŠ¼(PopupDeckButton)ì´ í´ë¦­ë˜ì—ˆì„ ë•Œ í˜¸ì¶œë˜ëŠ” ì½œë°± í•¨ìˆ˜ì…ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="deck">Å¬¸¯µÈ ¹öÆ°ÀÌ °¡Áö°í ÀÖ´ø µ¦ µ¥ÀÌÅÍ</param>
+    /// <param name="deck">í´ë¦­ëœ ë²„íŠ¼ì´ ê°€ì§€ê³  ìˆë˜ ë± ë°ì´í„°</param>
     private void ShowDeckDetails(DeckData deck)
     {
         currentlyViewedDeck = deck;
 
         deckNameText.text = deck.deckName;
 
-        // TODO: deck.deckClass (Á÷¾÷)¿¡ ¸Â´Â ¸®´õ ÀÌ¹ÌÁö¸¦ leaderImage.sprite¿¡ ÇÒ´çÇØ¾ß ÇÕ´Ï´Ù.
-        // (ÀÌ ºÎºĞÀº Á÷¾÷º° ¸®´õ ÀÌ¹ÌÁö¸¦ °ü¸®ÇÏ´Â º°µµ ¸Å´ÏÀú°¡ ÇÊ¿äÇÒ ¼ö ÀÖ½À´Ï´Ù.)
-        // ¿¹: leaderImage.sprite = LeaderImageManager.instance.GetLeaderSprite(deck.deckClass);
-        leaderImage.gameObject.SetActive(true); // ¸®´õ ÀÌ¹ÌÁö Ç¥½Ã
+        // ë±ì— ì¥ì°©ëœ ë¦¬ë” ìŠ¤í‚¨ ì´ë¯¸ì§€ í‘œì‹œ
+        if (leaderImage != null)
+        {
+            string skinId = deck.GetEquippedSkinId();
+            var master = LeaderCardDisplay.LoadSkinData(skinId, deck.deckClass);
+            if (master != null && master.skinSprite != null)
+            {
+                leaderImage.sprite = master.skinSprite;
+            }
+            else
+            {
+                string fallbackClass = !string.IsNullOrEmpty(deck.deckClass) ? deck.deckClass : "Gangzi";
+                ShopManager.LoadProductImage($"Items/Skins/{fallbackClass}_Skin_0001.png", leaderImage);
+            }
+            leaderImage.gameObject.SetActive(true);
+        }
 
-        // µ¦ÀÌ ¼±ÅÃµÇ¾úÀ¸¹Ç·Î 'È®Á¤' ¹öÆ° È°¼ºÈ­
+        // ë±ì´ ì„ íƒë˜ì—ˆìœ¼ë¯€ë¡œ 'í™•ì •' ë²„íŠ¼ í™œì„±í™”
         selectDeckButton.interactable = true;
     }
 
     /// <summary>
-    /// 'µ¦ ¼±ÅÃ' (È®Á¤) ¹öÆ°À» ´­·¶À» ¶§ È£ÃâµË´Ï´Ù.
+    /// 'ë± ì„ íƒ' (í™•ì •) ë²„íŠ¼ì„ ëˆŒë €ì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void ConfirmSelection()
     {
         if (currentlyViewedDeck != null)
         {
-            Debug.Log($"'{currentlyViewedDeck.deckName}' µ¦À» ¼±ÅÃÇß½À´Ï´Ù.");
+            Debug.Log($"'{currentlyViewedDeck.deckName}' ë±ì„ ì„ íƒí–ˆìŠµë‹ˆë‹¤.");
 
-            // ·Îºñ ¸Å´ÏÀú¿¡°Ô µ¦ÀÌ È®Á¤µÇ¾úÀ½À» ÀÌº¥Æ®¸¦ ÅëÇØ ¾Ë¸²
+            // ë¡œë¹„ ë§¤ë‹ˆì €ì—ê²Œ ë±ì´ í™•ì •ë˜ì—ˆìŒì„ ì´ë²¤íŠ¸ë¥¼ í†µí•´ ì•Œë¦¼
             OnDeckConfirmed?.Invoke(currentlyViewedDeck);
 
-            // ÆË¾÷ ´İ±â
+            // íŒì—… ë‹«ê¸°
             ClosePopup();
         }
     }
 
     /// <summary>
-    /// 'µ¦ ÆíÁı' ¹öÆ°À» ´­·¶À» ¶§ È£ÃâµË´Ï´Ù.
+    /// 'ë± í¸ì§‘' ë²„íŠ¼ì„ ëˆŒë €ì„ ë•Œ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void GoToDeckEdit()
     {
         if (currentlyViewedDeck != null)
         {
-            Debug.Log($"'{currentlyViewedDeck.deckName}' µ¦À» ÆíÁıÇÏ·¯ µ¦ ºô´õ ¾ÀÀ¸·Î ÀÌµ¿ÇÕ´Ï´Ù.");
+            Debug.Log($"'{currentlyViewedDeck.deckName}' ë±ì„ í¸ì§‘í•˜ëŸ¬ ë± ë¹Œë” ì”¬ìœ¼ë¡œ ì´ë™í•©ë‹ˆë‹¤.");
 
-            // SceneLoader¿¡ ÆíÁıÇÒ µ¦ Á¤º¸¸¦ ÀúÀåÇÏ°í ¾À ·Îµå¸¦ ¿äÃ»ÇÕ´Ï´Ù.
-            // "DeckBuilderScene" ºÎºĞÀº ½ÇÁ¦ µ¦ Æí¼º ¾ÀÀÇ ÀÌ¸§À¸·Î Á¤È®È÷ ¹Ù²ãÁÖ¼¼¿ä.
+            // SceneLoaderì— í¸ì§‘í•  ë± ì •ë³´ë¥¼ ì €ì¥í•˜ê³  ì”¬ ë¡œë“œë¥¼ ìš”ì²­í•©ë‹ˆë‹¤.
+            // "DeckBuilderScene" ë¶€ë¶„ì€ ì‹¤ì œ ë± í¸ì„± ì”¬ì˜ ì´ë¦„ìœ¼ë¡œ ì •í™•íˆ ë°”ê¿”ì£¼ì„¸ìš”.
             if (SceneLoader.instance != null)
             {
                 SceneLoader.instance.LoadDeckEditorScene(currentlyViewedDeck, "DeckBuildingScene");
             }
             else
             {
-                Debug.LogError("SceneLoader ÀÎ½ºÅÏ½º¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù!");
+                Debug.LogError("SceneLoader ì¸ìŠ¤í„´ìŠ¤ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
             }
         }
     }
